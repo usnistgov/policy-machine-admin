@@ -1,0 +1,30 @@
+.navbar {
+    padding: var(--mantine-spacing-md);
+    display: flex;
+    flex-direction: column;
+    border-right: rem(1px) solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
+
+.navbarMain {
+    flex: 1;
+}
+
+.link {
+    height: rem(50px);
+    border-radius: 30%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+
+    &:hover {
+        background-color: var(--mantine-color-blue-2);
+    }
+
+    &[data-active] {
+        &,
+        &:hover {
+            background-color: var(--mantine-color-blue-2);
+        }
+    }
+}
