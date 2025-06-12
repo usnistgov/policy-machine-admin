@@ -158,39 +158,6 @@ function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
   return { nodes, edges };
 }
 
-function createHandle(data: any, id: string, handleType: 'target' | 'source', position: Position, top: string, right: string, bottom: string, left: string) {
-  const nodeType = data.type;
-
-  let color;
-  if (id.startsWith('assignment')) {
-    color = 'black';
-  } else {
-    color = 'var(--mantine-color-green-7)';
-  }
-
-  return (
-    (
-      <Handle
-        type={handleType}
-        position={position}
-        id={id}
-        className="handle"
-        style={{
-          background: color,
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          border: '1px solid ' + color,
-          top: top,
-          right: right,
-          bottom: bottom,
-          left: left,
-        }}
-      />
-    )
-  )
-}
-
 // Custom Node Component with specific handles
 function CustomDAGNode({ data, selected }: NodeProps) {
   const theme = useMantineTheme();
@@ -209,39 +176,50 @@ function CustomDAGNode({ data, selected }: NodeProps) {
         background: 'transparent',
         borderRadius: 6,
         border: '2px solid ' + typeColor,
-        padding: '6px 4px',
+        padding: '2px 2px',
         fontSize: '14px',
         color: 'black',
         boxShadow: selected ? '0 0 0 2px ' + typeColor : 'none',
         whiteSpace: 'nowrap',
       }}
     >
-      {nodeType == 'PC' && [
-        createHandle(data, 'assignment-in', 'target', Position.Right, '50%', '-5', 'auto', 'auto')
-      ]}
-
-      {nodeType == 'UA' && [
-        createHandle(data, 'association-in', 'target', Position.Left, '30%', 'auto', 'auto', '-5'),
-        createHandle(data, 'assignment-in', 'target', Position.Left, '70%', 'auto', 'auto', '-5'),
-        createHandle(data, 'association-out', 'source', Position.Right, '30%', '-5', 'auto', 'auto'),
-        createHandle(data, 'assignment-out', 'source', Position.Right, '70%', '-5', 'auto', 'auto')
-      ]}
-
-      {nodeType == 'OA' && [
-        createHandle(data, 'association-in', 'target', Position.Left, '30%', 'auto', 'auto', '-5'),
-        createHandle(data, 'assignment-out', 'source', Position.Left, '70%', 'auto', 'auto', '-5'),
-        createHandle(data, 'assignment-in', 'target', Position.Right, '50%', '-5', 'auto', 'auto')
-      ]}
-
-      {nodeType == 'O' && [
-        createHandle(data, 'association-in', 'target', Position.Left, '30%', 'auto', 'auto', '-5'),
-        createHandle(data, 'assignment-out', 'source', Position.Left, '70%', 'auto', 'auto', '-5'),
-      ]}
-
-      {nodeType == 'U' && [
-        createHandle(data, 'assignment-out', 'source', Position.Right, '50%', '-5', 'auto', 'auto'),
-      ]}
-
+      {/* Assignment In (Top) - PC, UA, OA */}
+      {showAssignmentIn && (
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="assignment-in"
+          className="handle assignment-in"
+          style={{
+            background: 'black',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            border: '1px solid black',
+            top: -5,
+          }}
+        />
+      )}
+      
+      {/* Association In (Left) - UA, OA */}
+      {showAssociationIn && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="association-in"
+          className="handle association-in"
+          style={{
+            background: 'var(--mantine-color-green-7)',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            border: '1px solid var(--mantine-color-green-7)',
+            left: -5,
+          }}
+        />
+      )}
+      
+      {/* Node Content */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
         <div style={{
           fontSize: '10px',
@@ -260,6 +238,42 @@ function CustomDAGNode({ data, selected }: NodeProps) {
         </div>
         <span style={{ fontWeight: 800, lineHeight: '14px', fontSize: '14px' }}>{data.name}</span>
       </div>
+      
+      {/* Assignment Out (Bottom) - UA, OA, U, O */}
+      {showAssignmentOut && (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="assignment-out"
+          className="handle assignment-out"
+          style={{
+            background: 'black',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            border: '1px solid black',
+            bottom: -5,
+          }}
+        />
+      )}
+      
+      {/* Association Out (Right) - UA only */}
+      {showAssociationOut && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="association-out"
+          className="handle association-out"
+          style={{
+            background: 'var(--mantine-color-green-7)',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            border: '1px solid var(--mantine-color-green-7)',
+            right: -5,
+          }}
+        />
+      )}
     </div>
   );
 }
