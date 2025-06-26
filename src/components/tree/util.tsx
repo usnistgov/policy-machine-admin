@@ -2,24 +2,27 @@ import {v4 as uuidv4} from "uuid";
 import {TreeNode, sortTreeNodes} from "@/utils/tree.utils";
 import {Node, NodeType} from "@/api/pdp.api";
 import {DescendantsIcon} from "@/components/icons/DescendantsIcon";
-import {useMantineTheme} from "@mantine/core";
+import {px, useMantineTheme} from "@mantine/core";
 
 export const INDENT_NUM = 30;
 
 export type NodeIconProps = {
 	type: string,
-	classes: any,
 	isDescendant?: boolean,
+	size?: string,
+	fontSize?: string,
+	style?: React.CSSProperties,
 }
 
-export function NodeIcon({type, classes, isDescendant = false}: NodeIconProps) {
+export function NodeIcon({type, isDescendant = false, size = '16px', fontSize = '11px', style}: NodeIconProps) {
 	const color = getTypeColor(type);
+	const numericSize = parseInt(size);
 
 	return (
 		<>
 			{isDescendant ?
 				<>
-					<DescendantsIcon stroke={2} size={20} />
+					<DescendantsIcon stroke={2} color={color} size={numericSize} style={{marginRight: "8px"}} />
 				</>
 				:
 				<></>
@@ -28,9 +31,17 @@ export function NodeIcon({type, classes, isDescendant = false}: NodeIconProps) {
 				style={{
 					borderRadius: '30%',
 					color,
-					//border: `solid 2px ${color}`,
+					fontSize,
+					fontWeight: 'bold',
+					width: size,
+					height: size,
+					display: 'flex',
+					textAlign: 'center',
+					justifyContent: 'center',
+					alignItems: 'center',
+					...style,
 				}}
-				className={classes.nodeRowItem}
+				
 			>
 				{type}
 			</div>
@@ -81,6 +92,8 @@ export function toTreeNodes(parentId: string, pmNodes: any[], allowedTypes: Node
 			parent: parentId,
 			expanded: false,
 			selected: false,
+			cachedSecondLevel: undefined,
+			hasCachedSecondLevel: false,
 		});
 	}
 
@@ -113,3 +126,30 @@ export function updateNodeChildren(treeData: TreeNode[], nodeId: string, childre
 		return treeDataNode;
 	});
 }
+
+export const isValidAssignment = (selectedType: string, targetType: string): boolean => {
+	switch (selectedType) {
+		case 'PC': return false; // PC cannot be assigned to anything
+		case 'OA': return targetType === 'OA' || targetType === 'PC';
+		case 'UA': return targetType === 'UA' || targetType === 'PC';
+		case 'O': return targetType === 'OA' || targetType === 'PC';
+		case 'U': return targetType === 'UA';
+		default: return false;
+	}
+};
+
+/**
+ * Determines if a node should show expansion icon (chevron) or leaf icon (dot)
+ * Based on cached second level children
+ */
+export const shouldShowExpansionIcon = (node: TreeNode): boolean => {
+	// If we have cached second level data, use it to determine icon
+	if (node.hasCachedSecondLevel && node.cachedSecondLevel !== undefined) {
+		return node.cachedSecondLevel.length > 0;
+	}
+	
+	// If no cached data and this is a container type (PC, UA, OA), show chevron
+	// This maintains backward compatibility for nodes without cached data
+	// U and O nodes without cached data default to dot (no expansion)
+	return node.type === 'PC' || node.type === 'UA' || node.type === 'OA';
+};

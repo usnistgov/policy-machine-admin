@@ -1,6 +1,13 @@
 import React from 'react';
 import { NodeApi } from 'react-arborist';
-import { IconArrowBigRightLines, IconArrowBigLeftLines } from "@tabler/icons-react";
+import {
+	IconArrowBigRightLines,
+	IconArrowBigLeftLines,
+	IconCircleArrowRight,
+	IconCircleArrowLeft,
+	IconArrowBigLeftFilled,
+	IconArrowBigLeftLinesFilled, IconArrowBigRightLinesFilled
+} from "@tabler/icons-react";
 import { NodeIcon } from '@/components/tree/util';
 import classes from '@/components/tree/pmtree.module.css';
 
@@ -14,26 +21,27 @@ export function NodeContent({ node, isUserTree, isDescendantNode }: NodeContentP
 	const isAssociation = node.data.properties?.isAssociation === 'true';
 
 	return (
-		<>
-			{/* Show association icon if this is an association node */}
+		<div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: '3px' }}>
 			{isAssociation && (
 				isUserTree ? (
-					<IconArrowBigRightLines stroke={2} size={20} style={{ marginRight: '4px', color: 'var(--mantine-color-green-9)' }} />
+					<IconArrowBigRightLinesFilled stroke={2} size={18} style={{ color: 'var(--mantine-color-green-9)' }} />
 				) : (
-					<IconArrowBigLeftLines stroke={2} size={20} style={{ marginRight: '4px', color: 'var(--mantine-color-green-9)' }} />
+					<IconArrowBigLeftLinesFilled stroke={2} size={18} style={{ color: 'var(--mantine-color-green-9)' }} />
 				)
 			)}
 
-			{/* Only show node type icon for non-association nodes */}
 			{!isAssociation && (
-				<NodeIcon 
-					type={node.data.type} 
-					classes={classes} 
-					isDescendant={isDescendantNode}
-				/>
+				<div style={{ display: 'flex', alignItems: 'center' }}>
+					<NodeIcon 
+						type={node.data.type} 
+						isDescendant={isDescendantNode}
+						size="16px"
+						fontSize="14px"
+					/>
+				</div>
 			)}
 
-			<span style={{ margin: 'auto 5px' }}>{node.data.name}</span>
-		</>
+			<span style={{ marginLeft: '5px', fontSize: '16px' }}>{node.data.name}</span>
+		</div>
 	);
 } 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Button, Group, Stack, Text, Alert, LoadingOverlay, Box } from '@mantine/core';
-import { IconPlayerPlay, IconTrash, IconInfoCircle } from '@tabler/icons-react';
+import { IconPlayerPlay, IconTrash, IconInfoCircle, IconFileUpload } from '@tabler/icons-react';
 import { AdjudicationService } from '@/api/pdp.api';
 
 interface PMLEditorProps {
@@ -15,7 +15,9 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [fileName, setFileName] = useState<string>('');
   const editorRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Monaco Editor configuration for PML syntax highlighting
   useEffect(() => {
@@ -295,6 +297,9 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
     };
 
     configurePMLLanguage(monaco);
+    
+    // Set the theme after language configuration
+    monaco.editor.setTheme('pml-theme');
   };
 
   const handleSubmit = async () => {
@@ -324,14 +329,64 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
     setCode('');
     setResult('');
     setError('');
+    setFileName('');
     if (editorRef.current) {
       editorRef.current.setValue('');
     }
   };
 
+  const handleOpenFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if it's a .pml file
+    if (!file.name.toLowerCase().endsWith('.pml')) {
+      setError('Please select a .pml file');
+      return;
+    }
+
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        setCode(content);
+        setFileName(file.name);
+        setError('');
+        setResult('');
+        if (editorRef.current) {
+          editorRef.current.setValue(content);
+        }
+      }
+    };
+
+    reader.onerror = () => {
+      setError('Failed to read file');
+    };
+
+    reader.readAsText(file);
+    
+    // Reset the file input so the same file can be selected again
+    event.target.value = '';
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <Text size="lg" fw={600}>{title}</Text>
+      <Text size="lg" fw={600}>
+        {fileName ? `${title} - ${fileName}` : title}
+      </Text>
+      
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pml"
+        style={{ display: 'none' }}
+      />
       
       <div style={{ 
         flex: 1, 
@@ -348,8 +403,8 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
           onChange={(value) => setCode(value || '')}
           onMount={handleEditorDidMount}
           options={{
-            minimap: { enabled: false },
-            fontSize: 14,
+            minimap: { enabled: true },
+            fontSize: 12,
             lineNumbers: 'on',
             lineNumbersMinChars: 3,
             roundedSelection: false,
@@ -367,6 +422,7 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
             acceptSuggestionOnCommitCharacter: true,
             acceptSuggestionOnEnter: 'on',
             accessibilitySupport: 'off',
+            bracketPairColorization: { enabled: false },
           }}
         />
       </div>
@@ -390,6 +446,14 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
       )}
 
       <Group justify="flex-end">
+        <Button 
+          variant="outline" 
+          leftSection={<IconFileUpload size={16} />}
+          onClick={handleOpenFile}
+          disabled={isExecuting}
+        >
+          Open .pml
+        </Button>
         <Button 
           variant="outline" 
           leftSection={<IconTrash size={16} />}

@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { IconChevronDown, IconChevronRight, IconPoint, IconEye, IconArrowBigRightLines, IconPencil, IconTrash, IconArrowBigRight, IconCircleX } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronRight, IconPoint, IconEye, IconArrowBigRightLines, IconPencil, IconTrash, IconArrowBigRight, IconCircleX, IconHandFinger } from "@tabler/icons-react";
 import clsx from "clsx";
 import { PrimitiveAtom, useAtom, useSetAtom, useAtomValue } from "jotai";
 import { NodeApi, NodeRendererProps, TreeApi } from "react-arborist";
-import { ActionIcon, Menu } from "@mantine/core";
+import { ActionIcon, Menu, Portal } from "@mantine/core";
 import { NodeType, AdjudicationService } from "@/api/pdp.api";
 import { TreeNode } from "@/utils/tree.utils";
 import classes from "@/components/tree/pmtree.module.css";
 import { TARGET_ALLOWED_TYPES, USER_ALLOWED_TYPES } from "@/components/tree/PMTree";
 import { targetTreeDataAtom, userTreeDataAtom, targetTreeFilterAtom, TargetTreeFilter, selectedUserNodeAtom, selectedTargetNodeAtom, activeDescendantsNodeAtom, descendantNodesAtom } from "@/components/tree/tree-atoms";
-import { INDENT_NUM, getTypeColor, NodeIcon } from "@/components/tree/util";
+import { INDENT_NUM, getTypeColor, NodeIcon, isValidAssignment, shouldShowExpansionIcon } from "@/components/tree/util";
+import { DescendantsIcon } from "@/components/icons/DescendantsIcon";
 import { useTreeOperations } from "./hooks/useTreeOperations";
 import { NodeContent, Input } from "./components";
 import { AssociationModal } from "./components/AssociationModal";
-import { ShowDescendants } from "./components/ShowDescendants";
+import { DescendantsPopup } from "./components/DescendantsPopup";
 
 // Helper function to filter allowed types based on target tree filter
 function getFilteredAllowedTypes(baseAllowedTypes: NodeType[], filter: TargetTreeFilter): NodeType[] {
@@ -44,7 +45,7 @@ function PMNode(
 	treeDataAtom: PrimitiveAtom<TreeNode[]>,
 	isUserTree: boolean,
 ) {
-	const { fetchAndUpdateChildren, descendantNodes, treeData } = useTreeOperations(treeDataAtom, allowedTypes, isUserTree);
+	const { fetchAndUpdateChildren, clearNodeChildren, descendantNodes, treeData } = useTreeOperations(treeDataAtom, allowedTypes, isUserTree);
 	const setSelectedUserNode = useSetAtom(selectedUserNodeAtom);
 	const setSelectedTargetNode = useSetAtom(selectedTargetNodeAtom);
 	const setActiveDescendantsNode = useSetAtom(activeDescendantsNodeAtom);
@@ -54,6 +55,8 @@ function PMNode(
 	const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 	const [associationModalOpened, setAssociationModalOpened] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
+	const [showDescendantsPopup, setShowDescendantsPopup] = useState(false);
+	const [descendantsPopupPosition, setDescendantsPopupPosition] = useState({ x: 0, y: 0 });
 	const [creatingNodeId, setCreatingNodeId] = useState<string | null>(null);
 	const selectedUserNode = useAtomValue(selectedUserNodeAtom);
 	const selectedTargetNode = useAtomValue(selectedTargetNodeAtom);
@@ -77,18 +80,6 @@ function PMNode(
 		selectedUserNode.type === 'UA' && // UA can only be associated
 		(node.data.type === 'UA' || node.data.type === 'OA') && // UA can associate with UA and OA
 		!isAssociation;
-
-	// Valid assignment combinations
-	const isValidAssignment = (selectedType: string, targetType: string): boolean => {
-		switch (selectedType) {
-			case 'PC': return false; // PC cannot be assigned to anything
-			case 'OA': return targetType === 'OA' || targetType === 'PC';
-			case 'UA': return targetType === 'UA' || targetType === 'PC';
-			case 'O': return targetType === 'OA' || targetType === 'PC';
-			case 'U': return targetType === 'UA';
-			default: return false;
-		}
-	};
 
 	// Assignment logic - show assign option if there's a selected node from the same tree
 	const selectedNodeForTree = isUserTree ? selectedUserNode : selectedTargetNode;
@@ -144,7 +135,7 @@ function PMNode(
 		}
 	}, [node.isSelected, isUserTree, node.data, setSelectedUserNode, setSelectedTargetNode]);
 	
-	async function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+	async function handleClick(e: React.MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -157,13 +148,19 @@ function PMNode(
 		// Check if the node is currently open (about to be closed)
 		const isClosing = node.isOpen;
 
-		// If closing and this node has active descendants, reset the descendants state
-		if (isClosing && activeDescendantsNode === node.data.id) {
-			// Clear all descendant nodes
-			const newDescendantNodes = new Set<string>();
-			setDescendantNodes(newDescendantNodes);
-			// Clear active descendants node
-			setActiveDescendantsNode(null);
+		// If closing, clear children to prevent flash effect
+		if (isClosing) {
+			// Clear all children from the tree data to prevent showing old nested children
+			clearNodeChildren(node.data.id);
+			
+			// If this node has active descendants, reset the descendants state
+			if (activeDescendantsNode === node.data.id) {
+				// Clear all descendant nodes
+				const newDescendantNodes = new Set<string>();
+				setDescendantNodes(newDescendantNodes);
+				// Clear active descendants node
+				setActiveDescendantsNode(null);
+			}
 		}
 
 		node.toggle();
@@ -294,6 +291,43 @@ function PMNode(
 		}
 	};
 
+	const handleShowDescendants = () => {
+		setContextMenuOpened(false);
+		
+		// Calculate position relative to the context menu position
+		const popupWidth = 400;
+		const popupHeight = 500;
+		const margin = 10;
+		
+		let x = contextMenuPosition.x + margin;
+		let y = contextMenuPosition.y;
+		
+		// If not enough space on the right, position to the left
+		if (x + popupWidth > window.innerWidth - margin) {
+			x = Math.max(margin, contextMenuPosition.x - popupWidth - margin);
+		}
+		
+		// Center vertically around the menu position
+		y = contextMenuPosition.y - (popupHeight / 2);
+		
+		// Ensure popup doesn't go off-screen vertically
+		if (y + popupHeight > window.innerHeight - margin) {
+			y = window.innerHeight - popupHeight - margin;
+		}
+		if (y < margin) {
+			y = margin;
+		}
+		
+		setDescendantsPopupPosition({ x, y });
+		setShowDescendantsPopup(true);
+	};
+
+	const handleSelectNode = () => {
+		setContextMenuOpened(false);
+		// Select the node - this will trigger the useEffect that handles selection
+		node.select();
+	};
+
 	const renderGuideLines = () => {
 		const lines = [];
 		let depth = node.level;
@@ -348,6 +382,7 @@ function PMNode(
 			onContextMenu={handleContextMenu}
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
+			onClick={handleClick}
 		>
 			{renderGuideLines()}
 			
@@ -356,17 +391,16 @@ function PMNode(
 				variant="transparent"
 				style={{marginRight: '0'}}
 				c="black"
-				onClick={handleClick}
 			>
-				{node.data.type === 'UA' || node.data.type === 'OA' || node.data.type === 'PC' ? (
+				{shouldShowExpansionIcon(node.data) ? (
 					node.isOpen ? (
-						<IconChevronDown stroke={2} size={18}/>
+						<IconChevronDown stroke={2} size={16}/>
 					) : (
-						<IconChevronRight stroke={2} size={18}/>
+						<IconChevronRight stroke={2} size={16}/>
 					)
 				) : (
-					// Show point icon for leaf nodes (U and O)
-					<IconPoint stroke={2} size={18}/>
+					// Show point icon for leaf nodes or nodes with no cached children
+					<IconPoint stroke={2} size={16}/>
 				)}
 			</ActionIcon>
 
@@ -379,19 +413,7 @@ function PMNode(
 						isUserTree={isUserTree} 
 						isDescendantNode={isDescendantNode}
 					/>
-					{!isDescendantNode && (
-						<ShowDescendants 
-							type={node.data.type} 
-							node={node} 
-							treeApi={tree}
-							allowedTypes={allowedTypes}
-							treeDataAtom={treeDataAtom}
-							isDescendantNode={isDescendantNode}
-							isUserTree={isUserTree}
-							hasDescendantChildren={hasDescendantChildren}
-							isHovered={isHovered}
-						/>
-					)}
+
 				</>
 			)}
 
@@ -414,7 +436,12 @@ function PMNode(
 					<div style={{ display: 'none' }} />
 				</Menu.Target>
 				<Menu.Dropdown>
-					<Menu.Label>ID: {node.data.pmId}</Menu.Label>
+					<Menu.Item 
+						leftSection={<IconHandFinger size={16} />}
+						onClick={handleSelectNode}
+					>
+						Select
+					</Menu.Item>
 					{isAssociation ? (
 						// Association nodes: only show View and Delete
 						<>
@@ -437,10 +464,19 @@ function PMNode(
 						// Non-association nodes: show regular menu
 						<>
 							{/* Relations section */}
-							{(showAssociateOption || showAssignOption || showDeassignOption) && (
+							{(showAssociateOption || showAssignOption || showDeassignOption || (node.data.type !== "PC" && !isDescendantNode && !isAssociation)) && (
 								<>
 									<Menu.Divider />
 									<Menu.Label>Relations</Menu.Label>
+
+									{(node.data.type !== "PC" && !isDescendantNode && !isAssociation) && (
+										<Menu.Item 
+											leftSection={<DescendantsIcon size={16} />}
+											onClick={handleShowDescendants}
+										>
+											Show Descendants
+										</Menu.Item>
+									)}
 									
 									{showAssociateOption && (
 										<Menu.Item 
@@ -448,7 +484,7 @@ function PMNode(
 											onClick={handleCreateAssociation}
 										>
 											<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-												Associate <NodeIcon type={selectedUserNode?.type || ''} classes={classes} /> {selectedUserNode?.name} with
+												Associate <NodeIcon type={selectedUserNode?.type || ''} /> {selectedUserNode?.name} with
 											</span>
 										</Menu.Item>
 									)}
@@ -459,7 +495,7 @@ function PMNode(
 											onClick={handleAssign}
 										>
 											<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-												Assign <NodeIcon type={selectedNodeForTree?.type || ''} classes={classes} /> {selectedNodeForTree?.name} to
+												Assign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} to
 											</span>
 										</Menu.Item>
 									)}
@@ -471,7 +507,7 @@ function PMNode(
 											color="red"
 										>
 											<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-												Deassign <NodeIcon type={selectedNodeForTree?.type || ''} classes={classes} /> {selectedNodeForTree?.name} from
+												Deassign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} from
 											</span>
 										</Menu.Item>
 									)}
@@ -485,7 +521,7 @@ function PMNode(
 									{allowedNodeTypes.map((nodeType) => (
 										<Menu.Item 
 											key={nodeType}
-											leftSection={<NodeIcon type={nodeType} classes={classes} />}
+											leftSection={<NodeIcon type={nodeType} />}
 											onClick={async () => {
 												await handleCreate(nodeType);
 											}}
@@ -523,6 +559,18 @@ function PMNode(
 				selectedTargetNode={selectedTargetNode}
 				isUserTree={isUserTree}
 			/>
+
+			{showDescendantsPopup && (
+				<Portal>
+					<DescendantsPopup
+						rootNode={node.data}
+						isUserTree={isUserTree}
+						allowedTypes={allowedTypes}
+						initialPosition={descendantsPopupPosition}
+						onClose={() => setShowDescendantsPopup(false)}
+					/>
+				</Portal>
+			)}
 		</div>
 	);
 }

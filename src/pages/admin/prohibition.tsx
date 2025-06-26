@@ -14,7 +14,7 @@ export function Prohibition() {
             padding="md"
         >
             <AppShell.Navbar p="sm" style={{height: "100vh"}} className={classes.navbar}>
-                <NavBar activePageIndex={1} />
+                <NavBar activePageIndex={2} />
             </AppShell.Navbar>
             <AppShell.Main style={{height: "100vh"}}>
                 <UserMenu />

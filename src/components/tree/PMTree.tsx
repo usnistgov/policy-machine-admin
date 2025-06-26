@@ -3,7 +3,7 @@ import {Tree, TreeApi} from "react-arborist";
 import {useElementSize, useMergedRef} from "@mantine/hooks";
 import {ActionIcon, Stack, Switch, Title, Group, Text, Box} from "@mantine/core";
 import classes from "@/components/tree/pmtree.module.css";
-import {useAtom} from "jotai";
+import {useAtom, useAtomValue} from "jotai";
 import {OpenMap} from "react-arborist/dist/main/state/open-slice";
 import {useTargetDynamicTree} from "@/hooks/dynamic-tree";
 import {TreeNode} from "@/utils/tree.utils";
@@ -12,7 +12,7 @@ import {QueryService, NodeType} from "@/api/pdp.api";
 import {transformNodesToTreeNodes} from "@/utils/tree.utils";
 import {PrimitiveAtom} from "jotai/index";
 import {IconEye, IconFlipVertical, IconRefresh, IconSettings, IconUser, IconUserSquare} from "@tabler/icons-react";
-import { hideUserNodesAtom } from "./tree-atoms";
+import { hideUserNodesAtom, selectedUserNodeAtom, selectedTargetNodeAtom } from "./tree-atoms";
 
 export const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O];
 export const USER_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.U];
@@ -44,9 +44,10 @@ function SelectedNodeIndicator({ selectedNode, isUserTree }: { selectedNode: Tre
 			<Group gap={4} align="center" style={{ width: '100%' }}>
 				<NodeIcon 
 					type={selectedNode.type} 
-					classes={classes}
+					size="24px"
+					fontSize="16px"
 				/>
-				<Text size="s" fw={500} truncate style={{ flex: 1 }}>
+				<Text size="s" fw={500} truncate style={{ flex: 1, fontSize: '16px' }}>
 					{selectedNode.name}
 				</Text>
 			</Group>
@@ -73,12 +74,16 @@ export function PMTree(props: PMTreeProps) {
 	const { ref: sizeRef, width, height } = useElementSize();
 	const mergedRef = useMergedRef(rootElement, sizeRef);
 	const [openTreeNodes, setOpenTreeNodes] = useAtom<OpenMap>(props.openTreeNodesAtom);
-	const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
 	const [hideUserNodes, setHideUserNodes] = useAtom(hideUserNodesAtom);
 	const [originalTreeData, setOriginalTreeData] = useState<TreeNode[]>([]);
-
+	
 	// Determine if this is a user tree based on the title
 	const isUserTree = props.title === "User";
+	
+	// Get selected node from atoms based on tree type
+	const selectedUserNode = useAtomValue(selectedUserNodeAtom);
+	const selectedTargetNode = useAtomValue(selectedTargetNodeAtom);
+	const selectedNode = isUserTree ? selectedUserNode : selectedTargetNode;
 
 	// Function to recursively filter tree nodes (remove UA/U except associations)
 	const filterTreeNodes = (nodes: TreeNode[]): TreeNode[] => {
@@ -175,13 +180,7 @@ export function PMTree(props: PMTreeProps) {
 		}
 	}, [treeApiRef.current, setTreeApi]);
 
-	const handleSelection = (nodes: any[]) => {
-		if (nodes.length > 0) {
-			setSelectedNode(nodes[0].data);
-		} else {
-			setSelectedNode(null);
-		}
-	};
+
 
 	return (
 		<Stack style={{height: "100%", borderLeft: `2px solid ${props.borderColor}`, padding: "4px"}} gap="sm">
@@ -213,7 +212,7 @@ export function PMTree(props: PMTreeProps) {
 					title="Create Policy Class"
 					className={classes.toolbarIcon}
 				>
-					<NodeIcon type="PC" classes={classes} />
+					<NodeIcon type="PC" size="16px" fontSize="14px" />
 				</ActionIcon>
 				<ActionIcon
 					variant="subtle"
@@ -249,7 +248,6 @@ export function PMTree(props: PMTreeProps) {
 					size="md"
 					color={props.borderColor}
 					onClick={() => {
-						// Future: Open tree settings
 						console.log('Tree settings clicked');
 					}}
 					title="Tree settings"
@@ -291,10 +289,10 @@ export function PMTree(props: PMTreeProps) {
 					indent={INDENT_NUM}
 					ref={treeApiRef}
 					className={classes.tree}
-					rowHeight={30}
-					disableMultiSelection={false}
+					rowHeight={22}
+					disableMultiSelection={true}
+					disableSelection={true}
 					overscanCount={20}
-					onSelect={handleSelection}
 					onToggle={() => {
 						if (treeApiRef.current) {
 							setOpenTreeNodes(treeApiRef.current.openState);

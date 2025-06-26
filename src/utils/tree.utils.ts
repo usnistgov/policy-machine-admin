@@ -10,6 +10,9 @@ export interface TreeNode {
   parent?: string; // Parent tree node ID (UUID)
   expanded?: boolean;
   selected?: boolean;
+  // Cache for second level children to determine expansion icon
+  cachedSecondLevel?: TreeNode[];
+  hasCachedSecondLevel?: boolean;
 }
 
 /**
@@ -86,6 +89,8 @@ export function transformNodeToTreeNode(
     parent: parentId,
     expanded: false,
     selected: false,
+    cachedSecondLevel: undefined,
+    hasCachedSecondLevel: false,
   };
 }
 

@@ -59,5 +59,5 @@ export const theme = createTheme({
     blue,
     green,
     red
-  }
+  },
 });

@@ -215,9 +215,9 @@ export function Execute() {
 
       let response;
       if (selectedTab === "operations") {
-        response = await AdjudicationService.adjudicateGenericOperation(selectedSignature.name, args);
+        response = await AdjudicationService.genericAdminCmd(selectedSignature.name, args);
       } else {
-        response = await AdjudicationService.adjudicateGenericRoutine(selectedSignature.name, args);
+        response = await AdjudicationService.genericRoutineCmd(selectedSignature.name, args);
       }
       setResult(response);
     } catch (err) {
@@ -245,7 +245,7 @@ export function Execute() {
       padding="md"
     >
       <AppShell.Navbar p="sm" style={{height: "100vh"}} className={classes.navbar}>
-        <NavBar activePageIndex={3} />
+        <NavBar activePageIndex={4} />
       </AppShell.Navbar>
       <AppShell.Main>
         <UserMenu />
@@ -266,10 +266,6 @@ export function Execute() {
 
                 <Tabs.Panel value="operations" pt="md">
                   <Stack gap="md">
-                    <Text size="sm" c="dimmed">
-                      Execute administrative operations with dynamic parameter forms
-                    </Text>
-                    
                     <Grid>
                       <Grid.Col span={6}>
                         <Stack gap="md">
@@ -340,10 +336,6 @@ export function Execute() {
 
                 <Tabs.Panel value="routines" pt="md">
                   <Stack gap="md">
-                    <Text size="sm" c="dimmed">
-                      Execute administrative routines with dynamic parameter forms
-                    </Text>
-                    
                     <Grid>
                       <Grid.Col span={6}>
                         <Stack gap="md">

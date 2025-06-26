@@ -24,10 +24,6 @@ export function NavBar({activePageIndex}: {activePageIndex: number}) {
         navigate(path);
     }
 
-    const handleLogout = () => {
-        AuthService.logout(true);
-    };
-
     const links = linkData.map((link, index) => (
         <NavbarLink
             {...link}

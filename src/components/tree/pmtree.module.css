@@ -47,7 +47,7 @@
 }
 
 .descendantNode {
-    background-color: var(--mantine-color-blue-0); /* Light blue from theme - blue[0] */
+    background-color: var(--mantine-color-blue-0);
 }
 
 .descendantNode::before {
@@ -61,7 +61,7 @@
 }
 
 .descendantNodeUserTree {
-    background-color: var(--mantine-color-red-0); /* Light red from theme - red[0] */
+    background-color: var(--mantine-color-red-0);
 }
 
 .descendantNodeUserTree::before {
@@ -136,10 +136,10 @@
 
 .nodeRowItem {
     border-radius: 30%;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: bold;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     display: flex;
     text-align: center;
     justify-content: center;
