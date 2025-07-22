@@ -1,18 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Button, Group, Stack, Text, Alert, LoadingOverlay, Box } from '@mantine/core';
-import { IconPlayerPlay, IconTrash, IconInfoCircle, IconFileUpload } from '@tabler/icons-react';
-import { AdjudicationService } from '@/api/pdp.api';
+import { IconPlayerPlay, IconTrash, IconInfoCircle, IconFileUpload, IconDatabase } from '@tabler/icons-react';
+import { AdjudicationService, QueryService } from '@/api/pdp.api';
 
 interface PMLEditorProps {
   title: string;
   placeholder?: string;
   initialValue?: string;
+  onChange?: (value: string) => void;
+  readOnly?: boolean;
+  hideButtons?: boolean;
 }
 
-export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorProps) {
+export function PMLEditor({ title, placeholder, initialValue = '', onChange, readOnly = false, hideButtons = false }: PMLEditorProps) {
   const [code, setCode] = useState(initialValue);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isLoadingObligations, setIsLoadingObligations] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
@@ -374,6 +378,40 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
     event.target.value = '';
   };
 
+  const handleLoadObligations = async () => {
+    setIsLoadingObligations(true);
+    setError('');
+    setResult('');
+
+    try {
+      const obligations = await QueryService.getObligations();
+      
+      if (obligations.length === 0) {
+        setResult('No obligations found in the system.');
+        return;
+      }
+
+      // Combine all obligations into a single PML string
+      const obligationsPML = obligations.map(obligation => 
+        `// Obligation: ${obligation.name}${obligation.author ? ` (Author: ${obligation.author.name})` : ''}\n${obligation.pml}`
+      ).join('\n\n');
+
+      setCode(obligationsPML);
+      setFileName('obligations.pml');
+      if (editorRef.current) {
+        editorRef.current.setValue(obligationsPML);
+      }
+      
+      setResult(`Loaded ${obligations.length} obligation(s) successfully.`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(`Failed to load obligations: ${errorMessage}`);
+      console.error('Error loading obligations:', error);
+    } finally {
+      setIsLoadingObligations(false);
+    }
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <Text size="lg" fw={600}>
@@ -389,20 +427,26 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
       />
       
       <div style={{ 
-        flex: 1, 
+        flex: hideButtons ? 'none' : 1, 
         border: '1px solid #e9ecef', 
         borderRadius: '8px',
         position: 'relative',
-        minHeight: '500px'
+        minHeight: hideButtons ? 'auto' : '500px',
+        height: hideButtons ? '100%' : 'auto'
       }}>
         <LoadingOverlay visible={isExecuting} />
         <Editor
           height="100%"
           language="pml"
           value={code}
-          onChange={(value) => setCode(value || '')}
+          onChange={(value) => {
+            const newValue = value || '';
+            setCode(newValue);
+            onChange?.(newValue);
+          }}
           onMount={handleEditorDidMount}
           options={{
+            readOnly,
             minimap: { enabled: true },
             fontSize: 12,
             lineNumbers: 'on',
@@ -423,7 +467,7 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
             acceptSuggestionOnEnter: 'on',
             accessibilitySupport: 'off',
             bracketPairColorization: { enabled: false },
-          }}
+                    }}
         />
       </div>
 
@@ -445,32 +489,43 @@ export function PMLEditor({ title, placeholder, initialValue = '' }: PMLEditorPr
         </Alert>
       )}
 
-      <Group justify="flex-end">
-        <Button 
-          variant="outline" 
-          leftSection={<IconFileUpload size={16} />}
-          onClick={handleOpenFile}
-          disabled={isExecuting}
-        >
-          Open .pml
-        </Button>
-        <Button 
-          variant="outline" 
-          leftSection={<IconTrash size={16} />}
-          onClick={handleClear}
-          disabled={isExecuting}
-        >
-          Clear
-        </Button>
-        <Button 
-          leftSection={<IconPlayerPlay size={16} />}
-          onClick={handleSubmit}
-          loading={isExecuting}
-          disabled={!code.trim()}
-        >
-          Execute PML
-        </Button>
-      </Group>
+      {!hideButtons && (
+        <Group justify="flex-end">
+          <Button 
+            variant="outline" 
+            leftSection={<IconDatabase size={16} />}
+            onClick={handleLoadObligations}
+            loading={isLoadingObligations}
+            disabled={isExecuting}
+          >
+            Load Obligations
+          </Button>
+          <Button 
+            variant="outline" 
+            leftSection={<IconFileUpload size={16} />}
+            onClick={handleOpenFile}
+            disabled={isExecuting}
+          >
+            Open .pml
+          </Button>
+          <Button 
+            variant="outline" 
+            leftSection={<IconTrash size={16} />}
+            onClick={handleClear}
+            disabled={isExecuting}
+          >
+            Clear
+          </Button>
+          <Button 
+            leftSection={<IconPlayerPlay size={16} />}
+            onClick={handleSubmit}
+            loading={isExecuting}
+            disabled={!code.trim()}
+          >
+            Execute PML
+          </Button>
+        </Group>
+      )}
     </div>
   );
 } 

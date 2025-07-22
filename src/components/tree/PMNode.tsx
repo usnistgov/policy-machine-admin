@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { IconChevronDown, IconChevronRight, IconPoint, IconEye, IconArrowBigRightLines, IconPencil, IconTrash, IconArrowBigRight, IconCircleX, IconHandFinger } from "@tabler/icons-react";
 import clsx from "clsx";
-import { PrimitiveAtom, useAtom, useSetAtom, useAtomValue } from "jotai";
+import { PrimitiveAtom, atom, useAtom, useSetAtom, useAtomValue } from "jotai";
 import { NodeApi, NodeRendererProps, TreeApi } from "react-arborist";
-import { ActionIcon, Menu, Portal } from "@mantine/core";
+import { ActionIcon, Menu, Portal, Loader } from "@mantine/core";
+import { notifications } from '@mantine/notifications';
 import { NodeType, AdjudicationService } from "@/api/pdp.api";
 import { TreeNode } from "@/utils/tree.utils";
 import classes from "@/components/tree/pmtree.module.css";
@@ -29,14 +30,18 @@ function getFilteredAllowedTypes(baseAllowedTypes: NodeType[], filter: TargetTre
 	return baseAllowedTypes;
 }
 
+// Create shared loading state atoms for each tree
+const userTreeLoadingNodesAtom = atom<Set<string>>(new Set<string>());
+const targetTreeLoadingNodesAtom = atom<Set<string>>(new Set<string>());
+
 export function UserTreeNode({ node, style, tree }: NodeRendererProps<any>) {
-	return PMNode({ node, style, tree }, USER_ALLOWED_TYPES, userTreeDataAtom, true)
+	return PMNode({ node, style, tree }, USER_ALLOWED_TYPES, userTreeDataAtom, true, userTreeLoadingNodesAtom)
 }
 
 export function TargetTreeNode({ node, style, tree }: NodeRendererProps<any>) {
 	const [targetTreeFilter] = useAtom(targetTreeFilterAtom);
 	const filteredAllowedTypes = getFilteredAllowedTypes(TARGET_ALLOWED_TYPES, targetTreeFilter);
-	return PMNode({ node, style, tree }, filteredAllowedTypes, targetTreeDataAtom, false)
+	return PMNode({ node, style, tree }, filteredAllowedTypes, targetTreeDataAtom, false, targetTreeLoadingNodesAtom)
 }
 
 function PMNode(
@@ -44,6 +49,7 @@ function PMNode(
 	allowedTypes: NodeType[],
 	treeDataAtom: PrimitiveAtom<TreeNode[]>,
 	isUserTree: boolean,
+	loadingNodesAtom: PrimitiveAtom<Set<string>>,
 ) {
 	const { fetchAndUpdateChildren, clearNodeChildren, descendantNodes, treeData } = useTreeOperations(treeDataAtom, allowedTypes, isUserTree);
 	const setSelectedUserNode = useSetAtom(selectedUserNodeAtom);
@@ -51,6 +57,8 @@ function PMNode(
 	const setActiveDescendantsNode = useSetAtom(activeDescendantsNodeAtom);
 	const setDescendantNodes = useSetAtom(descendantNodesAtom);
 	const activeDescendantsNode = useAtomValue(activeDescendantsNodeAtom);
+	const [loadingNodes, setLoadingNodes] = useAtom(loadingNodesAtom);
+	
 	const [contextMenuOpened, setContextMenuOpened] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 	const [associationModalOpened, setAssociationModalOpened] = useState(false);
@@ -63,6 +71,7 @@ function PMNode(
 	
 	// Check if this node is a descendant node
 	const isDescendantNode = descendantNodes.has(node.data.id);
+	const isLoading = loadingNodes.has(node.data.id);
 	
 	// Check if this node has descendant children currently showing
 	const hasDescendantChildren = node.data.children?.some((child: TreeNode) => 
@@ -139,6 +148,9 @@ function PMNode(
 		e.preventDefault();
 		e.stopPropagation();
 
+		// Don't allow click if already loading
+		if (isLoading) return;
+
 		// Check if this is an association node
 		const isAssociation = node.data.properties?.isAssociation === 'true';
 		
@@ -169,14 +181,47 @@ function PMNode(
 		
 		// Only fetch data if we're expanding the node AND it's not an association in descendant mode
 		if (!isClosing && !(isAssociation && inDescendantMode)) {
-			await fetchAndUpdateChildren(node, isDescendantNode);
+			// Set loading state
+			setLoadingNodes(prev => new Set(prev).add(node.data.id));
+			
+			try {
+				await fetchAndUpdateChildren(node, isDescendantNode);
+			} finally {
+				// Clear loading state
+				setLoadingNodes(prev => {
+					const next = new Set(prev);
+					next.delete(node.data.id);
+					return next;
+				});
+			}
 		}
 	}
 
 	function handleContextMenu(e: React.MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
-		setContextMenuPosition({ x: e.pageX, y: e.pageY });
+		
+		// Estimate menu height based on number of visible menu items
+		const estimatedMenuHeight = 300; // Conservative estimate for menu height
+		const margin = 10; // Safety margin from screen edges
+		
+		let x = e.pageX;
+		let y = e.pageY;
+		
+		// Check if menu would go off-screen vertically
+		if (y + estimatedMenuHeight > window.innerHeight - margin) {
+			// Position menu above the click point
+			y = Math.max(margin, y - estimatedMenuHeight);
+		}
+		
+		// Check if menu would go off-screen horizontally
+		const estimatedMenuWidth = 250; // Conservative estimate for menu width
+		if (x + estimatedMenuWidth > window.innerWidth - margin) {
+			// Position menu to the left of the click point
+			x = Math.max(margin, x - estimatedMenuWidth);
+		}
+		
+		setContextMenuPosition({ x, y });
 		setContextMenuOpened(true);
 	}
 
@@ -186,53 +231,90 @@ function PMNode(
 			node.toggle();
 		}
 
-		// Fetch and update children
-		await fetchAndUpdateChildren(node, false);
+		// Set loading state
+		setLoadingNodes(prev => new Set(prev).add(node.data.id));
 
-		// Create a new input node in the tree at the correct sorted position
-		// Use a longer delay to ensure the DOM is fully updated and the Input component can auto-focus
-		setTimeout(() => {
-			tree?.create({ 
-				type: type as any, 
-				parentId: node.id
-			});
+		try {
+			// Fetch and update children
+			await fetchAndUpdateChildren(node, false);
 
-			// Focus the input field after creation
+			// Create a new input node in the tree at the correct sorted position
+			// Use a longer delay to ensure the DOM is fully updated and the Input component can auto-focus
 			setTimeout(() => {
-				// Target the input with empty value (the newly created one)
-				const inputElement = document.querySelector('input[type="text"][value=""]') as HTMLInputElement;
-				if (inputElement) {
-					inputElement.focus();
-					inputElement.select();
-				}
-			}, 100);
-		}, 200); // Increased delay to ensure DOM updates and autoFocus works
+				tree?.create({ 
+					type: type as any, 
+					parentId: node.id
+				});
+
+				// Focus the input field after creation
+				setTimeout(() => {
+					// Target the input with empty value (the newly created one)
+					const inputElement = document.querySelector('input[type="text"][value=""]') as HTMLInputElement;
+					if (inputElement) {
+						inputElement.focus();
+						inputElement.select();
+					}
+				}, 100);
+			}, 200); // Increased delay to ensure DOM updates and autoFocus works
+		} finally {
+			// Clear loading state
+			setLoadingNodes(prev => {
+				const next = new Set(prev);
+				next.delete(node.data.id);
+				return next;
+			});
+		}
 	}
 
-	const handleDelete = async () => {
+	const handleDelete = async (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		try {
 			await AdjudicationService.deleteNode(node.data.pmId);
-			console.log(`Deleted node: ${node.data.name} (${node.data.pmId})`);
 			tree.delete(node.data.id);
+			notifications.show({
+				title: 'Node Deleted',
+				message: `Successfully deleted ${node.data.name}`,
+				color: 'green',
+			});
 		} catch (error) {
 			console.error('Failed to delete node:', error);
+			notifications.show({
+				title: 'Delete Failed',
+				message: `Failed to delete ${node.data.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				color: 'red',
+			});
 		}
 	};
 
-	const handleSetProperties = async () => {
+	const handleSetProperties = async (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		// This would typically open a dialog for property editing
 		// For now, just log the action
 		console.log(`Set properties for node: ${node.data.name} (${node.data.id})`);
 	};
 
-	const handleViewAssociation = () => {
+	const handleViewAssociation = (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		setAssociationModalOpened(true);
 	};
 
-	const handleDeleteAssociation = async () => {
+	const handleDeleteAssociation = async (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		try {
 			// Use the stored UA and target IDs from the association properties
@@ -244,17 +326,30 @@ function PMNode(
 			}
 			
 			await AdjudicationService.dissociate(uaId, targetId);
-			console.log(`Dissociated association between UA:${uaId} and Target:${targetId}`);
 			
 			// Remove the association node from the tree
 			tree.delete(node.data.id);
+			
+			notifications.show({
+				title: 'Association Deleted',
+				message: `Successfully deleted association`,
+				color: 'green',
+			});
 		} catch (error) {
 			console.error('Failed to delete association:', error);
-			alert(`Failed to delete association: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			notifications.show({
+				title: 'Delete Association Failed',
+				message: `Failed to delete association: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				color: 'red',
+			});
 		}
 	};
 
-	const handleCreateAssociation = () => {
+	const handleCreateAssociation = (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		// If this is a target tree node, automatically select it as target
 		if (!isUserTree) {
@@ -263,56 +358,86 @@ function PMNode(
 		setAssociationModalOpened(true);
 	};
 
-	const handleAssign = async () => {
+	const handleAssign = async (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		if (!selectedNodeForTree) return;
 		
 		try {
 			await AdjudicationService.assign(selectedNodeForTree.pmId, [node.data.pmId]);
-			console.log(`Assigned ${selectedNodeForTree.name} to ${node.data.name}`);
+			
+			notifications.show({
+				title: 'Assignment Successful',
+				message: `Successfully assigned ${selectedNodeForTree.name} to ${node.data.name}`,
+				color: 'green',
+			});
 
 			// TODO add new child node here -- same for assign and others
 		} catch (error) {
 			console.error('Failed to assign node:', error);
-			alert(`Failed to assign ${selectedNodeForTree.name} to ${node.data.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			notifications.show({
+				title: 'Assignment Failed',
+				message: `Failed to assign ${selectedNodeForTree.name} to ${node.data.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				color: 'red',
+			});
 		}
 	};
 
-	const handleDeassign = async () => {
+	const handleDeassign = async (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		if (!selectedNodeForTree) return;
 		
 		try {
 			await AdjudicationService.deassign(selectedNodeForTree.pmId, [node.data.pmId]);
-			console.log(`Deassigned ${selectedNodeForTree.name} from ${node.data.name}`);
+			
+			notifications.show({
+				title: 'Deassignment Successful',
+				message: `Successfully deassigned ${selectedNodeForTree.name} from ${node.data.name}`,
+				color: 'green',
+			});
 		} catch (error) {
 			console.error('Failed to deassign node:', error);
-			alert(`Failed to deassign ${selectedNodeForTree.name} from ${node.data.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			notifications.show({
+				title: 'Deassignment Failed',
+				message: `Failed to deassign ${selectedNodeForTree.name} from ${node.data.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				color: 'red',
+			});
 		}
 	};
 
-	const handleShowDescendants = () => {
+	const handleShowDescendants = (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		
 		// Calculate position relative to the context menu position
-		const popupWidth = 400;
-		const popupHeight = 500;
+		const initialPopupWidth = 400;
+		const initialPopupHeight = 500;
 		const margin = 10;
 		
 		let x = contextMenuPosition.x + margin;
 		let y = contextMenuPosition.y;
 		
 		// If not enough space on the right, position to the left
-		if (x + popupWidth > window.innerWidth - margin) {
-			x = Math.max(margin, contextMenuPosition.x - popupWidth - margin);
+		if (x + initialPopupWidth > window.innerWidth - margin) {
+			x = Math.max(margin, contextMenuPosition.x - initialPopupWidth - margin);
 		}
 		
 		// Center vertically around the menu position
-		y = contextMenuPosition.y - (popupHeight / 2);
+		y = contextMenuPosition.y - (initialPopupHeight / 2);
 		
 		// Ensure popup doesn't go off-screen vertically
-		if (y + popupHeight > window.innerHeight - margin) {
-			y = window.innerHeight - popupHeight - margin;
+		if (y + initialPopupHeight > window.innerHeight - margin) {
+			y = window.innerHeight - initialPopupHeight - margin;
 		}
 		if (y < margin) {
 			y = margin;
@@ -322,7 +447,11 @@ function PMNode(
 		setShowDescendantsPopup(true);
 	};
 
-	const handleSelectNode = () => {
+	const handleSelectNode = (e?: React.MouseEvent) => {
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 		setContextMenuOpened(false);
 		// Select the node - this will trigger the useEffect that handles selection
 		node.select();
@@ -392,7 +521,9 @@ function PMNode(
 				style={{marginRight: '0'}}
 				c="black"
 			>
-				{shouldShowExpansionIcon(node.data) ? (
+				{isLoading ? (
+					<Loader size={16} color="black" />
+				) : shouldShowExpansionIcon(node.data) ? (
 					node.isOpen ? (
 						<IconChevronDown stroke={2} size={16}/>
 					) : (
@@ -438,7 +569,7 @@ function PMNode(
 				<Menu.Dropdown>
 					<Menu.Item 
 						leftSection={<IconHandFinger size={16} />}
-						onClick={handleSelectNode}
+						onClick={(e) => handleSelectNode(e)}
 					>
 						Select
 					</Menu.Item>
@@ -448,13 +579,13 @@ function PMNode(
 							<Menu.Divider />
 							<Menu.Item 
 								leftSection={<IconEye size={16} />}
-								onClick={handleViewAssociation}
+								onClick={(e) => handleViewAssociation(e)}
 							>
 								View
 							</Menu.Item>
 							<Menu.Item 
 								leftSection={<IconTrash size={16} />}
-								onClick={handleDeleteAssociation}
+								onClick={(e) => handleDeleteAssociation(e)}
 								color="red"
 							>
 								Delete
@@ -470,46 +601,46 @@ function PMNode(
 									<Menu.Label>Relations</Menu.Label>
 
 									{(node.data.type !== "PC" && !isDescendantNode && !isAssociation) && (
-										<Menu.Item 
-											leftSection={<DescendantsIcon size={16} />}
-											onClick={handleShowDescendants}
-										>
-											Show Descendants
-										</Menu.Item>
+																			<Menu.Item 
+										leftSection={<DescendantsIcon size={16} />}
+										onClick={(e) => handleShowDescendants(e)}
+									>
+										Show Descendants
+									</Menu.Item>
 									)}
 									
 									{showAssociateOption && (
-										<Menu.Item 
-											leftSection={<IconArrowBigRightLines size={16} style={{ color: 'var(--mantine-color-green-9)' }} />}
-											onClick={handleCreateAssociation}
-										>
-											<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-												Associate <NodeIcon type={selectedUserNode?.type || ''} /> {selectedUserNode?.name} with
-											</span>
-										</Menu.Item>
+																			<Menu.Item 
+										leftSection={<IconArrowBigRightLines size={16} style={{ color: 'var(--mantine-color-green-9)' }} />}
+										onClick={(e) => handleCreateAssociation(e)}
+									>
+										<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+											Associate <NodeIcon type={selectedUserNode?.type || ''} /> {selectedUserNode?.name} with
+										</span>
+									</Menu.Item>
 									)}
 
 									{showAssignOption && (
-										<Menu.Item 
-											leftSection={<IconArrowBigRight size={16} />}
-											onClick={handleAssign}
-										>
-											<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-												Assign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} to
-											</span>
-										</Menu.Item>
+																			<Menu.Item 
+										leftSection={<IconArrowBigRight size={16} />}
+										onClick={(e) => handleAssign(e)}
+									>
+										<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+											Assign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} to
+										</span>
+									</Menu.Item>
 									)}
 
 									{showDeassignOption && (
-										<Menu.Item 
-											leftSection={<IconCircleX size={16} style={{ color: 'var(--mantine-color-red-6)' }} />}
-											onClick={handleDeassign}
-											color="red"
-										>
-											<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-												Deassign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} from
-											</span>
-										</Menu.Item>
+																			<Menu.Item 
+										leftSection={<IconCircleX size={16} style={{ color: 'var(--mantine-color-red-6)' }} />}
+										onClick={(e) => handleDeassign(e)}
+										color="red"
+									>
+										<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+											Deassign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} from
+										</span>
+									</Menu.Item>
 									)}
 								</>
 							)}
@@ -521,7 +652,7 @@ function PMNode(
 									{allowedNodeTypes.map((nodeType) => (
 										<Menu.Item 
 											key={nodeType}
-											leftSection={<NodeIcon type={nodeType} />}
+											leftSection={<NodeIcon size="20px" fontSize="16px" type={nodeType} />}
 											onClick={async () => {
 												await handleCreate(nodeType);
 											}}
@@ -534,13 +665,13 @@ function PMNode(
 							<Menu.Label>Update</Menu.Label>
 							<Menu.Item 
 								leftSection={<IconPencil size={16} />}
-								onClick={handleSetProperties}
+								onClick={(e) => handleSetProperties(e)}
 							>
 								Set Properties
 							</Menu.Item>
 							<Menu.Item 
 								leftSection={<IconTrash size={16} />}
-								onClick={handleDelete}
+								onClick={(e) => handleDelete(e)}
 								color="red"
 							>
 								Delete Node

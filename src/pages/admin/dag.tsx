@@ -34,6 +34,8 @@ import { useMantineTheme } from '@mantine/core';
 import { IconCamera, IconJson, IconSitemap } from '@tabler/icons-react';
 import dagre from 'dagre';
 import { layout } from '@/components/dag/Graph';
+import { AssociationModal } from '@/components/tree/components/AssociationModal';
+import { TreeNode } from '@/utils/tree.utils';
 
 const getNodeTypeColorFromTheme = (type: string) => {
   switch (type) {
@@ -66,7 +68,7 @@ function graphToJson(nodes: Node[], edges: Edge[]) {
     assignments: edges.filter(e => e.data?.edgeType === 'assignment' && e.source === n.id).map(e => parseId(e.target)),
     associations: edges.filter(e => e.data?.edgeType === 'association' && e.source === n.id).map(e => ({
       target: parseId(e.target),
-      arset: [], // No access rights in edge data; stub as empty array
+      arset: e.data?.accessRights ? e.data.accessRights.split(', ').filter(Boolean) : [],
     })),
     properties: [],
   }));
@@ -112,10 +114,14 @@ function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
   (objects as any[]).forEach((n: any) => nodes.push({ id: idStr(n.id), type: 'dagNode', position: { x: 0, y: 0 }, data: { name: n.name, type: NodeType.O } }));
 
   // Add assignment edges (source = node.id, target = assignment id)
-  const addAssignmentEdges = (arr: any[], type: string) => {
+  const addAssignmentEdges = (arr: any[], sourceType: string) => {
     arr.forEach((n: any) => {
       if (Array.isArray(n.assignments)) {
         n.assignments.forEach((targetId: any) => {
+          // Find target node type
+          const targetNode = nodes.find(node => node.id === idStr(targetId));
+          const targetNodeType = targetNode?.data.type;
+          
           edges.push({
             id: `e${n.id}-${targetId}`,
             source: idStr(n.id),
@@ -123,7 +129,11 @@ function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
             type: getEdgeType('assignment'),
             sourceHandle: 'assignment-out',
             targetHandle: 'assignment-in',
-            data: { edgeType: 'assignment' },
+            data: { 
+              edgeType: 'assignment',
+              sourceNodeType: sourceType,
+              targetNodeType: targetNodeType
+            },
             style: getEdgeStyle('assignment', false, false),
             markerEnd: getMarkerEnd('assignment', false, false),
           } as Edge);
@@ -131,15 +141,19 @@ function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
       }
     });
   };
-  addAssignmentEdges(uas as any[], 'UA');
-  addAssignmentEdges(oas as any[], 'OA');
-  addAssignmentEdges(users as any[], 'U');
-  addAssignmentEdges(objects as any[], 'O');
+  addAssignmentEdges(uas as any[], NodeType.UA);
+  addAssignmentEdges(oas as any[], NodeType.OA);
+  addAssignmentEdges(users as any[], NodeType.U);
+  addAssignmentEdges(objects as any[], NodeType.O);
 
   // Add association edges (UA only)
   (uas as any[]).forEach((n: any) => {
     if (Array.isArray(n.associations)) {
       n.associations.forEach((assoc: any, i: number) => {
+        const accessRights = Array.isArray(assoc.arset) ? assoc.arset.join(', ') : '';
+        const targetNode = nodes.find(node => node.id === idStr(assoc.target));
+        const targetNodeType = targetNode?.data.type;
+        
         edges.push({
           id: `a${n.id}-${assoc.target}-${i}`,
           source: idStr(n.id),
@@ -147,9 +161,26 @@ function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
           type: getEdgeType('association'),
           sourceHandle: 'association-out',
           targetHandle: 'association-in',
-          data: { edgeType: 'association' },
+          data: { 
+            edgeType: 'association',
+            accessRights: accessRights,
+            sourceNodeType: NodeType.UA,
+            targetNodeType: targetNodeType
+          },
           style: getEdgeStyle('association', false, false),
           markerEnd: getMarkerEnd('association', false, false),
+          label: accessRights,
+          labelStyle: { 
+            fontSize: '12px', 
+            fontWeight: 600,
+            fill: 'black'
+          },
+          labelBgStyle: { 
+            fill: 'white', 
+            fillOpacity: 0.8,
+            stroke: 'var(--mantine-color-green-7)',
+            strokeWidth: 1
+          },
         } as Edge);
       });
     }
@@ -169,8 +200,8 @@ function createHandle(data: any, id: string, handleType: 'target' | 'source', po
   }
 
   return (
-      (
           <Handle
+              key={id}
               type={handleType}
               position={position}
               id={id}
@@ -187,7 +218,6 @@ function createHandle(data: any, id: string, handleType: 'target' | 'source', po
                 left,
               }}
           />
-      )
   )
 }
 
@@ -257,34 +287,131 @@ function CustomDAGNode({ data, selected }: NodeProps) {
           fontSize: '10px',
           lineHeight: '14px',
           display: 'flex',
+          width: '14px', // Fixed width container for consistent icon spacing
+          justifyContent: 'center'
         }}>
           <NodeIcon 
             type={nodeType} 
             style={{
               fontSize: '10px',
               lineHeight: '14px',
-              width: 'auto',
-              height: 'auto'
+              width: '14px', // Fixed width for all icons
+              height: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           />
         </div>
-        <span style={{ fontWeight: 800, lineHeight: '14px', fontSize: '14px' }}>{data.name}</span>
+        <span style={{ fontWeight: 800, lineHeight: '14px', fontSize: '14px', fontFamily: 'Source Code Pro, monospace' }}>{data.name}</span>
       </div>
     </div>
   );
 }
 
-// Node types for ReactFlow
+// Custom Orthogonal Edge Component for both assignment and association edges
+function CustomOrthogonalEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  data,
+  markerEnd,
+  source,
+  target,
+}: any) {
+  // Different horizontal offsets for different edge types
+  const horizontalOffset = data?.edgeType === 'association' ? 60 : 50;
+  const nodeHeight = 40; // Approximate node height
+  const nodePadding = 10; // Padding around node for border routing
+  
+  // Determine direction based on handle positions
+  const sourceDirection = sourcePosition === Position.Left ? -1 : 1; // -1 for left, 1 for right
+  const targetDirection = targetPosition === Position.Left ? -1 : 1; // -1 for left, 1 for right
+  
+  // Check if this is a UA->PC assignment (special routing case)
+  const isUAToPCAssignment = data?.sourceNodeType === 'UA' && data?.targetNodeType === 'PC';
+  
+  // Calculate intermediate points based on handle directions
+  const midX1 = sourceX + (horizontalOffset * sourceDirection);
+  
+  let path: string;
+  let labelX: number, labelY: number;
+  
+  if (isUAToPCAssignment && sourceDirection === 1 && targetDirection === 1) {
+    // Special routing for UA->PC: go right, then along top border, then down to handle
+    const pcTopY = targetY - nodeHeight / 2 - nodePadding;
+    const pcRightX = targetX + nodePadding; // Just past the PC node edge
+    
+    path = `M ${sourceX},${sourceY} L ${midX1},${sourceY} L ${midX1},${pcTopY} L ${pcRightX},${pcTopY} L ${pcRightX},${targetY} L ${targetX},${targetY}`;
+    labelX = (midX1 + pcRightX) / 2;
+    labelY = pcTopY - 10;
+  } else {
+    // Standard orthogonal routing for other cases
+    let midX2: number;
+    if (targetDirection === 1) {
+      // Target handle is on the right - approach from the right
+      midX2 = Math.max(midX1, targetX + Math.min(horizontalOffset, Math.abs(midX1 - targetX)));
+    } else {
+      // Target handle is on the left - approach from the left
+      midX2 = Math.min(midX1, targetX - Math.min(horizontalOffset, Math.abs(midX1 - targetX)));
+    }
+    
+    path = `M ${sourceX},${sourceY} L ${midX1},${sourceY} L ${midX1},${targetY} L ${midX2},${targetY} L ${targetX},${targetY}`;
+    labelX = (midX1 + midX2) / 2;
+    labelY = targetY - 10;
+  }
+  
+  return (
+    <g>
+      <path
+        id={id}
+        style={style}
+        className="react-flow__edge-path"
+        d={path}
+        markerEnd={markerEnd}
+        fill="none"
+      />
+      {data?.accessRights && (
+        <text
+          x={labelX}
+          y={labelY}
+          textAnchor="middle"
+          fontSize="12px"
+          fontWeight="600"
+          fill="black"
+          style={{
+            backgroundColor: 'white',
+            padding: '2px 4px',
+          }}
+        >
+          {data.accessRights}
+        </text>
+      )}
+    </g>
+  );
+}
+
+// Node types for ReactFlow (defined outside component to prevent recreation)
 const nodeTypes = {
   dagNode: CustomDAGNode,
 };
 
+// Edge types for ReactFlow (defined outside component to prevent recreation)
+const edgeTypes = {
+  customOrthogonal: CustomOrthogonalEdge,
+};
+
 // Edge types with specific styling
 const getEdgeStyle = (edgeType: 'assignment' | 'association', isHighlighted: boolean, isObjectDag: boolean) => {
-  // If edge is highlighted, use OA blue color
+  // If edge is highlighted, use O blue color for object-side and U red color for user-side
   if (isHighlighted) {
     return {
-      stroke: isObjectDag ? getNodeTypeColorFromTheme(NodeType.OA) : getNodeTypeColorFromTheme(NodeType.UA),
+      stroke: isObjectDag ? getNodeTypeColorFromTheme(NodeType.O) : getNodeTypeColorFromTheme(NodeType.U),
       strokeWidth: 4,
       strokeDasharray: 'none',
     };
@@ -306,15 +433,15 @@ const getEdgeStyle = (edgeType: 'assignment' | 'association', isHighlighted: boo
 };
 
 const getEdgeType = (edgeType: 'assignment' | 'association') => {
-  return edgeType === 'assignment' ? 'smoothstep' : 'default';
+  return 'default'; // Use default edge type for both assignment and association edges
 };
 
 const getMarkerEnd = (edgeType: 'assignment' | 'association', isHighlighted: boolean, isObjectDag: boolean) => {
-  // If edge is highlighted, use OA blue color
+  // If edge is highlighted, use O blue color for object-side and U red color for user-side
   if (isHighlighted) {
     return {
       type: MarkerType.ArrowClosed,
-      color: isObjectDag ? getNodeTypeColorFromTheme(NodeType.OA) : getNodeTypeColorFromTheme(NodeType.UA),
+      color: isObjectDag ? getNodeTypeColorFromTheme(NodeType.O) : getNodeTypeColorFromTheme(NodeType.U),
       width: 10,
       height: 10,
     };
@@ -335,23 +462,23 @@ const initialGraphJson = {
       { "id": 1749733033759, "name": "Wards", "properties": [] },
       { "id": 1749733037102, "name": "RBAC", "properties": [] }
     ],
-    // "uas": [
-    //   { "id": 1749732983642, "name": "doctor", "assignments": [ 1749733019171, 1749732997042 ], "associations": [ { "target": 1749733043029, "arset": [] } ], "properties": [] },
-    //   { "id": 1749732997042, "name": "Intern", "assignments": [], "associations": [ { "target": 1749733043029, "arset": [] } ], "properties": [] },
-    //   { "id": 1749733003607, "name": "Ward1", "assignments": [], "associations": [ { "target": 1749733052466, "arset": [] } ], "properties": [] },
-    //   { "id": 1749733013979, "name": "Ward2", "assignments": [], "associations": [ { "target": 1749733048000, "arset": [] } ], "properties": [] },
-    //   { "id": 1749733019171, "name": "Emergency", "assignments": [], "associations": [ { "target": 1749733056543, "arset": [] } ], "properties": [] }
-    // ],
+    "uas": [
+      { "id": 1749732983642, "name": "doctor", "assignments": [ 1749733019171, 1749732997042 ], "associations": [ { "target": 1749733043029, "arset": [] } ], "properties": [] },
+      { "id": 1749732997042, "name": "Intern", "assignments": [], "associations": [ { "target": 1749733043029, "arset": [] } ], "properties": [] },
+      { "id": 1749733003607, "name": "Ward1", "assignments": [], "associations": [ { "target": 1749733052466, "arset": [] } ], "properties": [] },
+      { "id": 1749733013979, "name": "Ward2", "assignments": [], "associations": [ { "target": 1749733048000, "arset": [] } ], "properties": [] },
+      { "id": 1749733019171, "name": "Emergency", "assignments": [], "associations": [ { "target": 1749733056543, "arset": [] } ], "properties": [] }
+    ],
     "oas": [
       { "id": 1749733043029, "name": "Med Records", "assignments": [ 1749733037102 ], "properties": [] },
       { "id": 1749733048000, "name": "Ward2", "assignments": [ 1749733033759 ], "properties": [] },
       { "id": 1749733052466, "name": "Ward1", "assignments": [ 1749733033759 ], "properties": [] },
       { "id": 1749733056543, "name": "Critical", "assignments": [ 1749733033759, 1749733028334 ], "properties": [] }
     ],
-    // "users": [
-    //   { "id": 1749732986909, "name": "u3", "assignments": [ 1749732983642, 1749733013979 ], "properties": [] },
-    //   { "id": 1749732993217, "name": "u4", "assignments": [ 1749732997042, 1749733003607 ], "properties": [] }
-    // ],
+    "users": [
+      { "id": 1749732986909, "name": "u3", "assignments": [ 1749732983642, 1749733013979 ], "properties": [] },
+      { "id": 1749732993217, "name": "u4", "assignments": [ 1749732997042, 1749733003607 ], "properties": [] }
+    ],
     "objects": [
       { "id": 1749733072107, "name": "o5", "assignments": [ 1749733043029, 1749733048000 ], "properties": [] },
       { "id": 1749733076157, "name": "o6", "assignments": [ 1749733043029, 1749733052466 ], "properties": [] },
@@ -366,12 +493,28 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   return layoutPCOAONodes(nodes, edges);
 };
 
-// Custom layout function for PC, OA, and O nodes following specific rules
+// Helper function to convert DAG Node to TreeNode for AssociationModal
+const dagNodeToTreeNode = (dagNode: Node): TreeNode => {
+  return {
+    id: crypto.randomUUID(),
+    pmId: dagNode.id,
+    name: dagNode.data.name,
+    type: dagNode.data.type,
+    properties: {},
+    children: [],
+    expanded: false,
+    selected: false,
+  };
+};
+
+// Custom layout function for all PM nodes following hierarchical rules
 function layoutPCOAONodes(nodes: Node[], edges: Edge[]) {
-  // Filter only PC, OA, and O nodes
+  // Filter all PM nodes (PC, UA, OA, U, O)
   const filteredNodes = nodes.filter(node => 
     node.data.type === NodeType.PC || 
+    node.data.type === NodeType.UA ||
     node.data.type === NodeType.OA || 
+    node.data.type === NodeType.U ||
     node.data.type === NodeType.O
   );
   
@@ -380,126 +523,30 @@ function layoutPCOAONodes(nodes: Node[], edges: Edge[]) {
   }
 
   // Constants for layout
-  const PC_X = -200; // All PCs aligned at x=-200 (left of center)
-  const LEVEL_SPACING = 200; // Horizontal spacing between levels (moving right)
+  const PC_X = 0; // All PCs aligned at x=0 (center)
+  const LEVEL_SPACING = 250; // Horizontal spacing between levels
   const NODE_SPACING_Y = 60; // Vertical spacing between nodes
-  const SUBGRAPH_SPACING = 20; // Vertical spacing between PC subgraphs
-  const NODE_HEIGHT = 40; // Approximate node height
 
-  // Find PC nodes and create subgraphs
+  // Find PC nodes
   const pcNodes = filteredNodes.filter(node => node.data.type === NodeType.PC);
+  const uaNodes = filteredNodes.filter(node => node.data.type === NodeType.UA);
   const oaNodes = filteredNodes.filter(node => node.data.type === NodeType.OA);
+  const uNodes = filteredNodes.filter(node => node.data.type === NodeType.U);
   const oNodes = filteredNodes.filter(node => node.data.type === NodeType.O);
 
-  // Build reachability map from PC nodes
-  const subgraphs = new Map<string, Set<string>>();
-  
-  // Initialize each PC with its own subgraph
-  pcNodes.forEach(pc => {
-    subgraphs.set(pc.id, new Set<string>());
-  });
-
-  // Find all nodes reachable from each PC through assignment edges
-  // In Policy Machine, assignment edges go child -> parent, so we need to find incoming edges to PC
-  const findReachableNodes = (pcNodeId: string): Set<string> => {
-    const reachable = new Set<string>();
-    reachable.add(pcNodeId); // PC is part of its own subgraph
-    
-    // BFS to find all nodes that can reach this PC through assignment edges
-    const queue = [pcNodeId];
-    const visited = new Set<string>();
-    
-    while (queue.length > 0) {
-      const currentNodeId = queue.shift()!;
-      if (visited.has(currentNodeId)) continue;
-      visited.add(currentNodeId);
-      
-      // Find all nodes that assign to the current node
-      const incomingEdges = edges.filter(edge => 
-        edge.target === currentNodeId && edge.data?.edgeType === 'assignment'
-      );
-      
-      incomingEdges.forEach(edge => {
-        if (!visited.has(edge.source)) {
-          reachable.add(edge.source);
-          queue.push(edge.source);
-        }
-      });
-    }
-    
-    return reachable;
-  };
-
-  // Build subgraphs for each PC
-  pcNodes.forEach(pc => {
-    const reachable = findReachableNodes(pc.id);
-    subgraphs.set(pc.id, reachable);
-  });
-
-  // Assign nodes to subgraphs (prefer higher subgraph = lower Y value)
-  // First pass: collect all PC memberships for each node
-  const nodeToMultiplePCs = new Map<string, string[]>();
-  const allOAONodes = [...oaNodes, ...oNodes];
-  
-  allOAONodes.forEach(node => {
-    const belongsToPCs: string[] = [];
-    
-    for (const [pcId, subgraph] of subgraphs.entries()) {
-      if (subgraph.has(node.id)) {
-        belongsToPCs.push(pcId);
-      }
-    }
-    
-    if (belongsToPCs.length > 0) {
-      nodeToMultiplePCs.set(node.id, belongsToPCs);
-    }
-  });
-
-  // Second pass: assign each node to the PC that will have the lowest Y (highest in view)
-  // This ensures nodes are above all their assignment targets
-  const nodeToSubgraph = new Map<string, string>();
-  
-  nodeToMultiplePCs.forEach((pcIds, nodeId) => {
-    // Sort PCs by ID to ensure consistent assignment - first PC will be positioned highest
-    const sortedPCIds = pcIds.sort();
-    nodeToSubgraph.set(nodeId, sortedPCIds[0]);
-  });
-
-  // Validate assignment edge directions and adjust node positions if needed
-  const validateAssignmentDirection = () => {
-    const violations: Array<{source: string, target: string}> = [];
-    
-    edges.forEach(edge => {
-      if (edge.data?.edgeType === 'assignment') {
-        const sourcePC = nodeToSubgraph.get(edge.source);
-        const targetPC = nodeToSubgraph.get(edge.target);
-        
-        // Source should be in higher subgraph (lower index, more negative Y) than target
-        if (sourcePC && targetPC) {
-          const sourcePCIndex = sortedPCs.findIndex(pc => pc.id === sourcePC);
-          const targetPCIndex = sortedPCs.findIndex(pc => pc.id === targetPC);
-          
-          // If source is in a lower subgraph (higher index) than target, move source up
-          if (sourcePCIndex > targetPCIndex) {
-            violations.push({source: edge.source, target: edge.target});
-            // Move source to higher subgraph (target's subgraph or higher)
-            nodeToSubgraph.set(edge.source, targetPC);
-          }
-        }
-      }
-    });
-    
-    return violations.length === 0;
-  };
-
-  // Create horizontal layout within each subgraph using levels
+  // Calculate levels for each node from PC nodes
   // Level 0 = PC, Level 1 = nodes that assign directly to PC, etc.
-  const getNodeLevel = (nodeId: string, pcId: string): number => {
-    if (nodeId === pcId) return 0; // PC is always at level 0
+  const getNodeLevel = (nodeId: string): number => {
+    if (pcNodes.find(pc => pc.id === nodeId)) return 0; // PC is always at level 0
     
-    // BFS from PC, following assignment edges backwards (from target to source)
-    const queue: Array<{ nodeId: string, level: number }> = [{ nodeId: pcId, level: 0 }];
+    // BFS from all PC nodes, following assignment edges backwards (from target to source)
+    const queue: Array<{ nodeId: string, level: number }> = [];
     const visited = new Set<string>();
+    
+    // Start BFS from all PC nodes
+    pcNodes.forEach(pc => {
+      queue.push({ nodeId: pc.id, level: 0 });
+    });
     
     while (queue.length > 0) {
       const { nodeId: currentNodeId, level } = queue.shift()!;
@@ -526,129 +573,326 @@ function layoutPCOAONodes(nodes: Node[], edges: Edge[]) {
     return 1; // Default level if not found in graph
   };
 
-  // Group nodes by PC subgraph and level
-  const subgraphLevels = new Map<string, Map<number, Node[]>>();
-  
-  pcNodes.forEach(pc => {
-    const levels = new Map<number, Node[]>();
-    levels.set(0, [pc]); // PC is at level 0
-    subgraphLevels.set(pc.id, levels);
-  });
-
-  // Add OA and O nodes to their respective subgraph levels
-  allOAONodes.forEach(node => {
-    const pcId = nodeToSubgraph.get(node.id);
-    if (pcId && subgraphLevels.has(pcId)) {
-      const levels = subgraphLevels.get(pcId)!;
-      const level = getNodeLevel(node.id, pcId);
-      
-      if (!levels.has(level)) {
-        levels.set(level, []);
-      }
-      levels.get(level)!.push(node);
-    }
-  });
-
-  // Sort PCs by ID for consistent ordering (first PC will be highest)
-  const sortedPCs = pcNodes.sort((a, b) => a.id.localeCompare(b.id));
-
-  // Validate and fix assignment edge directions
-  let validationPasses = 0;
-  while (!validateAssignmentDirection() && validationPasses < 5) {
-    validationPasses++;
-  }
-
-  // Position nodes
-  const layoutedNodes = [...nodes]; // Copy all original nodes
-  let currentSubgraphY = -400; // Start high up (negative Y)
-
-  sortedPCs.forEach(pc => {
-    const levels = subgraphLevels.get(pc.id);
-    if (!levels) return;
-
-    // Get all nodes in this subgraph for topological sorting
-    const subgraphNodes: Node[] = [];
-    for (const [level, nodesInLevel] of levels.entries()) {
-      subgraphNodes.push(...nodesInLevel);
-    }
-
-    // Topological sort within subgraph to ensure assignment sources come before targets
-    const topologicalSort = (nodes: Node[]): Node[] => {
-      const visited = new Set<string>();
-      const visiting = new Set<string>();
-      const result: Node[] = [];
-      
-      const visit = (node: Node): boolean => {
-        if (visiting.has(node.id)) return false; // Cycle detected
-        if (visited.has(node.id)) return true;
-        
-        visiting.add(node.id);
-        
-        // Visit all nodes this node assigns to (targets come after sources)
-        const assignmentTargets = edges
-          .filter(edge => edge.source === node.id && edge.data?.edgeType === 'assignment')
-          .map(edge => nodes.find(n => n.id === edge.target))
-          .filter(Boolean) as Node[];
-        
-        for (const target of assignmentTargets) {
-          if (!visit(target)) return false;
-        }
-        
-        visiting.delete(node.id);
-        visited.add(node.id);
-        result.unshift(node); // Add to beginning (reverse topological order)
-        return true;
-      };
-      
-      for (const node of nodes) {
-        if (!visited.has(node.id)) {
-          if (!visit(node)) {
-            // Fallback to original order if cycle detected
-            return nodes;
-          }
-        }
-      }
-      
-      return result;
-    };
-
-    const sortedSubgraphNodes = topologicalSort(subgraphNodes);
-
-    // Calculate subgraph height
-    const subgraphHeight = Math.max(sortedSubgraphNodes.length * (NODE_HEIGHT + NODE_SPACING_Y), 100);
-
-    // Position sorted nodes respecting their levels but maintaining topological order
-    // Start positioning at the top of the subgraph (most negative Y in this subgraph)
-    let cumulativeY = currentSubgraphY;
+  // Helper function to find which PC a UA/U node has the most association paths to
+  const findPrimaryPCForUserNode = (nodeId: string): string | null => {
+    const pcPathCounts = new Map<string, number>();
     
-    sortedSubgraphNodes.forEach(node => {
-      if (node.id === pc.id) return; // Skip PC, will position at end
+    // Find all association edges from this node
+    const associationEdges = edges.filter(edge => 
+      edge.source === nodeId && edge.data?.edgeType === 'association'
+    );
+    
+    // For each association target, find which PCs it can reach via assignment edges
+    associationEdges.forEach(assocEdge => {
+      const targetId = assocEdge.target;
       
-      const level = getNodeLevel(node.id, pc.id);
-      const levelX = PC_X + level * LEVEL_SPACING; // Move right for each level
+      // BFS from association target to find all reachable PCs via assignment edges
+      const queue = [targetId];
+      const visited = new Set<string>();
       
-      const nodeIndex = layoutedNodes.findIndex(n => n.id === node.id);
-      if (nodeIndex !== -1) {
-        layoutedNodes[nodeIndex].position = {
-          x: levelX,
-          y: cumulativeY
-        };
-        cumulativeY += NODE_SPACING_Y; // Move down (increase Y)
+      while (queue.length > 0) {
+        const currentNodeId = queue.shift()!;
+        if (visited.has(currentNodeId)) continue;
+        visited.add(currentNodeId);
+        
+        // Check if current node is a PC
+        const pcNode = pcNodes.find(pc => pc.id === currentNodeId);
+        if (pcNode) {
+          pcPathCounts.set(pcNode.id, (pcPathCounts.get(pcNode.id) || 0) + 1);
+        }
+        
+        // Find outgoing assignment edges from current node
+        const outgoingAssignments = edges.filter(edge => 
+          edge.source === currentNodeId && edge.data?.edgeType === 'assignment'
+        );
+        
+        outgoingAssignments.forEach(edge => {
+          if (!visited.has(edge.target)) {
+            queue.push(edge.target);
+          }
+        });
       }
     });
+    
+    // Find PC with most paths
+    let maxCount = 0;
+    let primaryPC = null;
+    
+    for (const [pcId, count] of pcPathCounts.entries()) {
+      if (count > maxCount) {
+        maxCount = count;
+        primaryPC = pcId;
+      }
+    }
+    
+    return primaryPC;
+  };
 
-    // Position PC at the bottom of its subgraph (highest Y value in subgraph)
-    const pcNodeIndex = layoutedNodes.findIndex(n => n.id === pc.id);
-    if (pcNodeIndex !== -1) {
-      layoutedNodes[pcNodeIndex].position = {
-        x: PC_X,
-        y: cumulativeY // PC at the bottom of its subgraph
+  // Helper function to estimate node width based on text content
+  const estimateNodeWidth = (nodeName: string, nodeType: string): number => {
+    // Base width for icon and padding
+    const baseWidth = 40;
+    // Estimate character width (approximate)
+    const charWidth = 8;
+    // Icon takes about 14px
+    const iconWidth = 14;
+    // Total estimated width
+    return baseWidth + iconWidth + (nodeName.length * charWidth);
+  };
+
+  // Build object-side subgraphs - find all nodes reachable from each PC via assignment edges
+  const findObjectSideReachableNodes = (pcNodeId: string): Set<string> => {
+    const reachable = new Set<string>();
+    reachable.add(pcNodeId); // PC is part of its own subgraph
+    
+    // BFS to find all nodes that can reach this PC through assignment edges
+    const queue = [pcNodeId];
+    const visited = new Set<string>();
+    
+    while (queue.length > 0) {
+      const currentNodeId = queue.shift()!;
+      if (visited.has(currentNodeId)) continue;
+      visited.add(currentNodeId);
+      
+      // Find all nodes that assign to the current node
+      const incomingEdges = edges.filter(edge => 
+        edge.target === currentNodeId && edge.data?.edgeType === 'assignment'
+      );
+      
+      incomingEdges.forEach(edge => {
+        const sourceNode = filteredNodes.find(n => n.id === edge.source);
+        // Only include object-side nodes (OA, O) in object-side subgraphs
+        if (sourceNode && (sourceNode.data.type === NodeType.OA || sourceNode.data.type === NodeType.O)) {
+          if (!visited.has(edge.source)) {
+            reachable.add(edge.source);
+            queue.push(edge.source);
+          }
+        }
+      });
+    }
+    
+    return reachable;
+  };
+
+  // Build user-side subgraphs - group UA/U nodes by their primary PC
+  const userSideSubgraphs = new Map<string, Set<string>>();
+  const userNodeToPrimaryPC = new Map<string, string>();
+  
+  // Assign each UA/U node to their primary PC
+  [...uaNodes, ...uNodes].forEach(userNode => {
+    const primaryPC = findPrimaryPCForUserNode(userNode.id);
+    if (primaryPC) {
+      userNodeToPrimaryPC.set(userNode.id, primaryPC);
+      if (!userSideSubgraphs.has(primaryPC)) {
+        userSideSubgraphs.set(primaryPC, new Set());
+      }
+      userSideSubgraphs.get(primaryPC)!.add(userNode.id);
+    }
+  });
+
+  // Build object-side subgraphs
+  const objectSideSubgraphs = new Map<string, Set<string>>();
+  const nodeToObjectSubgraph = new Map<string, string>();
+  
+  pcNodes.forEach(pc => {
+    const reachableNodes = findObjectSideReachableNodes(pc.id);
+    objectSideSubgraphs.set(pc.id, reachableNodes);
+  });
+
+  // Assign object-side nodes to subgraphs, prioritizing larger subgraphs
+  const pcsByObjectSize = pcNodes.sort((a, b) => {
+    const sizeA = objectSideSubgraphs.get(a.id)?.size || 0;
+    const sizeB = objectSideSubgraphs.get(b.id)?.size || 0;
+    return sizeA - sizeB; // Smallest first
+  });
+
+  pcsByObjectSize.forEach(pc => {
+    const reachableNodes = objectSideSubgraphs.get(pc.id) || new Set();
+    reachableNodes.forEach(nodeId => {
+      nodeToObjectSubgraph.set(nodeId, pc.id);
+    });
+  });
+
+  // Calculate subgraph Y positioning and internal node positioning
+  const subgraphStartY = new Map<string, number>();
+  const objectSubgraphLevelStartY = new Map<string, Map<number, number>>();
+  const userSubgraphLevelStartY = new Map<string, Map<number, number>>();
+  let globalCumulativeY = 0;
+  
+  // Sort PC nodes by total subgraph size (object + user side)
+  const sortedPCs = pcNodes.sort((a, b) => {
+    const objectSizeA = objectSideSubgraphs.get(a.id)?.size || 0;
+    const userSizeA = userSideSubgraphs.get(a.id)?.size || 0;
+    const totalSizeA = objectSizeA + userSizeA;
+    
+    const objectSizeB = objectSideSubgraphs.get(b.id)?.size || 0;
+    const userSizeB = userSideSubgraphs.get(b.id)?.size || 0;
+    const totalSizeB = objectSizeB + userSizeB;
+    
+    return totalSizeA - totalSizeB; // Ascending order (smallest first)
+  });
+  
+  sortedPCs.forEach(pc => {
+    // Object-side nodes for this PC
+    const objectSubgraphNodes = Array.from(objectSideSubgraphs.get(pc.id) || [])
+      .map(nodeId => filteredNodes.find(n => n.id === nodeId))
+      .filter(Boolean) as Node[];
+    
+    const objectNodesByLevel = new Map<number, Node[]>();
+    const objectSideNodesInSubgraph = objectSubgraphNodes.filter(node => 
+      node.data.type === NodeType.OA || node.data.type === NodeType.O
+    );
+    
+    objectSideNodesInSubgraph.forEach(node => {
+      const level = getNodeLevel(node.id);
+      if (!objectNodesByLevel.has(level)) {
+        objectNodesByLevel.set(level, []);
+      }
+      objectNodesByLevel.get(level)!.push(node);
+    });
+
+    // User-side nodes for this PC
+    const userSubgraphNodes = Array.from(userSideSubgraphs.get(pc.id) || [])
+      .map(nodeId => filteredNodes.find(n => n.id === nodeId))
+      .filter(Boolean) as Node[];
+    
+    const userNodesByLevel = new Map<number, Node[]>();
+    userSubgraphNodes.forEach(node => {
+      const level = getNodeLevel(node.id);
+      if (!userNodesByLevel.has(level)) {
+        userNodesByLevel.set(level, []);
+      }
+      userNodesByLevel.get(level)!.push(node);
+    });
+
+    // Calculate starting Y for this subgraph
+    subgraphStartY.set(pc.id, globalCumulativeY);
+    
+    // Calculate object-side level starting Y within this subgraph
+    const objectLevelStartY = new Map<number, number>();
+    let objectSubgraphCumulativeY = globalCumulativeY;
+    
+    const sortedObjectLevels = Array.from(objectNodesByLevel.keys()).sort((a, b) => a - b);
+    
+    sortedObjectLevels.forEach(level => {
+      objectLevelStartY.set(level, objectSubgraphCumulativeY);
+      const nodesInLevel = objectNodesByLevel.get(level)?.length || 0;
+      if (nodesInLevel > 0) {
+        objectSubgraphCumulativeY -= (nodesInLevel * NODE_SPACING_Y);
+      }
+    });
+    
+    objectSubgraphLevelStartY.set(pc.id, objectLevelStartY);
+
+    // Calculate user-side level starting Y within this subgraph
+    const userLevelStartY = new Map<number, number>();
+    let userSubgraphCumulativeY = globalCumulativeY;
+    
+    const sortedUserLevels = Array.from(userNodesByLevel.keys()).sort((a, b) => a - b);
+    
+    sortedUserLevels.forEach(level => {
+      userLevelStartY.set(level, userSubgraphCumulativeY);
+      const nodesInLevel = userNodesByLevel.get(level)?.length || 0;
+      if (nodesInLevel > 0) {
+        userSubgraphCumulativeY -= (nodesInLevel * NODE_SPACING_Y);
+      }
+    });
+    
+    userSubgraphLevelStartY.set(pc.id, userLevelStartY);
+    
+    // Calculate the total subgraph height
+    const topOfObjectSubgraph = objectSubgraphCumulativeY;
+    const topOfUserSubgraph = userSubgraphCumulativeY;
+    const topOfSubgraph = Math.min(topOfObjectSubgraph, topOfUserSubgraph);
+    const bottomOfSubgraph = globalCumulativeY + NODE_SPACING_Y; // PC node position
+    
+    // Update global cumulative Y to position next subgraph
+    globalCumulativeY = topOfSubgraph - 30; // 30px spacing between subgraphs
+  });
+
+  // Position nodes based on their type and level
+  const layoutedNodes = [...nodes]; // Copy all original nodes
+  
+  filteredNodes.forEach(node => {
+    const level = getNodeLevel(node.id);
+    const isUserSide = node.data.type === NodeType.UA || node.data.type === NodeType.U;
+    const isObjectSide = node.data.type === NodeType.OA || node.data.type === NodeType.O;
+    const isPC = node.data.type === NodeType.PC;
+    
+    let x: number;
+    let y: number = 0; // Default Y position
+    
+    if (isPC) {
+      // Center PC nodes by offsetting by half their width
+      const nodeWidth = estimateNodeWidth(node.data.name, node.data.type);
+      x = PC_X - (nodeWidth / 2); // PC nodes centered at PC_X
+      
+      // PC nodes are positioned below their subgraph's starting Y
+      y = (subgraphStartY.get(node.id) || 0) + NODE_SPACING_Y;
+    } else if (isUserSide) {
+      // For user-side nodes, align right edges at the level position
+      const rightEdgeX = PC_X - (level * LEVEL_SPACING);
+      const nodeWidth = estimateNodeWidth(node.data.name, node.data.type);
+      x = rightEdgeX - nodeWidth; // Position so right edge aligns
+      
+      // User-side nodes use their primary PC's subgraph positioning
+      const primaryPC = userNodeToPrimaryPC.get(node.id);
+      if (primaryPC) {
+        const subgraphLevels = userSubgraphLevelStartY.get(primaryPC);
+        if (subgraphLevels) {
+          const levelStartingY = subgraphLevels.get(level) || 0;
+          
+          // Find this node's position within its level in the user subgraph
+          const userNodesAtLevel = Array.from(userSideSubgraphs.get(primaryPC) || [])
+            .map(nodeId => filteredNodes.find((n: Node) => n.id === nodeId))
+            .filter(Boolean) as Node[];
+          
+          const nodesAtSameLevel = userNodesAtLevel
+            .filter((n: Node) => getNodeLevel(n.id) === level);
+          
+          const nodeIndexAtLevel = nodesAtSameLevel.findIndex((n: Node) => n.id === node.id);
+          y = levelStartingY - (nodeIndexAtLevel * NODE_SPACING_Y);
+        } else {
+          // Fallback to subgraph starting Y
+          y = subgraphStartY.get(primaryPC) || 0;
+        }
+      } else {
+        // Fallback for nodes without primary PC
+        y = 0;
+      }
+    } else if (isObjectSide) {
+      x = PC_X + (level * LEVEL_SPACING); // Object-side nodes to the right (left-aligned)
+      
+      // Calculate Y position for object-side nodes within their subgraph
+      const subgraphId = nodeToObjectSubgraph.get(node.id);
+      if (subgraphId) {
+        const subgraphLevels = objectSubgraphLevelStartY.get(subgraphId);
+        if (subgraphLevels) {
+          const levelStartingY = subgraphLevels.get(level) || 0;
+          
+          // Find this node's position within its level in the subgraph
+          const subgraphNodes = Array.from(objectSideSubgraphs.get(subgraphId) || [])
+            .map(nodeId => filteredNodes.find((n: Node) => n.id === nodeId))
+            .filter(Boolean) as Node[];
+          
+          const objectNodesAtLevel = subgraphNodes
+            .filter((n: Node) => (n.data.type === NodeType.OA || n.data.type === NodeType.O) && getNodeLevel(n.id) === level);
+          
+          const nodeIndexAtLevel = objectNodesAtLevel.findIndex((n: Node) => n.id === node.id);
+          y = levelStartingY - (nodeIndexAtLevel * NODE_SPACING_Y);
+        }
+      }
+    } else {
+      x = PC_X; // Fallback to center
+    }
+    
+    const nodeIndex = layoutedNodes.findIndex(n => n.id === node.id);
+    if (nodeIndex !== -1) {
+      layoutedNodes[nodeIndex].position = {
+        x: x,
+        y: y
       };
     }
-
-    // Update current Y position for next subgraph (move further down)
-    // Add extra spacing to account for the PC position
-    currentSubgraphY += subgraphHeight + SUBGRAPH_SPACING;
   });
 
   return { nodes: layoutedNodes, edges };
@@ -664,6 +908,10 @@ function DAGContent() {
   const [connectingHandleType, setConnectingHandleType] = useState<'assignment' | 'association' | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { screenToFlowPosition, fitView } = useReactFlow();
+  
+  // Association modal state
+  const [associationModalOpen, setAssociationModalOpen] = useState(false);
+  const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
   
   // Context menu and inline creation state
   const [contextMenuOpened, setContextMenuOpened] = useState(false);
@@ -697,21 +945,16 @@ function DAGContent() {
     setTimeout(() => fitView({ padding: 0.3 }), 300);
   }, [setNodes, setEdges, fitView]);
 
-  useEffect(() => {
-    if (nodes.length > 0) {
-      formatGraph(nodes, edges);
-    }
-  }, [nodes.length, formatGraph]);
-
-  // Additional effect to ensure fit view on initial load
+  // Format graph only on initial load
   useEffect(() => {
     if (initialNodes.length > 0) {
-      // Small delay to ensure nodes are rendered
+      formatGraph(initialNodes, initialEdges);
+      // Ensure fit view happens after formatting
       setTimeout(() => {
         fitView({ padding: 0.3 });
-      }, 200);
+      }, 400);
     }
-  }, [fitView]);
+  }, [formatGraph, fitView]); // Empty dependency array ensures this only runs once on mount
 
   const onConnectStart = useCallback((event: React.MouseEvent | React.TouchEvent, params: OnConnectStartParams) => {
     setConnectingNodeId(params.nodeId || null);
@@ -783,10 +1026,25 @@ function DAGContent() {
         }
       }
       
+      // For association edges, show modal to select access rights
+      if (edgeType === 'association') {
+        setPendingConnection(params);
+        setAssociationModalOpen(true);
+        return;
+      }
+      
+      // For assignment edges, create directly
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find(n => n.id === params.target);
+      
       const newEdge = {
         ...params,
         type: getEdgeType(edgeType),
-        data: { edgeType },
+        data: { 
+          edgeType,
+          sourceNodeType: sourceNode?.data.type,
+          targetNodeType: targetNode?.data.type
+        },
         style: getEdgeStyle(edgeType, false, false),
         markerEnd: getMarkerEnd(edgeType, false, false),
       };
@@ -795,6 +1053,50 @@ function DAGContent() {
     },
     [setEdges, nodes],
   );
+
+  // Handle association modal submission
+  const handleAssociationModalSubmit = useCallback((accessRights: string[]) => {
+    if (!pendingConnection) return;
+    
+    const accessRightsLabel = accessRights.length > 0 ? accessRights.join(', ') : '';
+    const sourceNode = nodes.find(n => n.id === pendingConnection.source);
+    const targetNode = nodes.find(n => n.id === pendingConnection.target);
+    
+    const newEdge = {
+      ...pendingConnection,
+      type: getEdgeType('association'),
+      data: { 
+        edgeType: 'association' as const,
+        accessRights: accessRightsLabel,
+        sourceNodeType: sourceNode?.data.type,
+        targetNodeType: targetNode?.data.type
+      },
+      style: getEdgeStyle('association', false, false),
+      markerEnd: getMarkerEnd('association', false, false),
+      label: accessRightsLabel,
+      labelStyle: { 
+        fontSize: '12px', 
+        fontWeight: 600,
+        fill: 'black'
+      },
+      labelBgStyle: { 
+        fill: 'white', 
+        fillOpacity: 0.8,
+        stroke: 'var(--mantine-color-green-7)',
+        strokeWidth: 1
+      },
+    };
+    
+    setEdges((eds) => addEdge(newEdge, eds));
+    setPendingConnection(null);
+    setAssociationModalOpen(false);
+  }, [pendingConnection, setEdges, nodes]);
+
+  // Handle association modal close
+  const handleAssociationModalClose = useCallback(() => {
+    setPendingConnection(null);
+    setAssociationModalOpen(false);
+  }, []);
 
   const addNode = useCallback(() => {
     const newNode: Node = {
@@ -856,12 +1158,15 @@ function DAGContent() {
     // Use BFS to find all reachable nodes and edges
     const visitedNodes = new Set<string>();
     const highlightedEdges = new Set<string>();
+    const associationEdges = new Set<string>(); // Track association edges separately
     const queue: string[] = [newSelectedNodeId];
     
     visitedNodes.add(newSelectedNodeId);
     
     // Get current edges for BFS traversal
     const currentEdges = edges;
+    const startingNodeType = nodes.find(n => n.id === newSelectedNodeId)?.data.type;
+    const isStartingFromUserSide = startingNodeType === NodeType.U || startingNodeType === NodeType.UA;
     
     while (queue.length > 0) {
       const currentNodeId = queue.shift()!;
@@ -872,10 +1177,21 @@ function DAGContent() {
       outgoingEdges.forEach(edge => {
         highlightedEdges.add(edge.id);
         
+        // Track association edges separately
+        if (edge.data?.edgeType === 'association') {
+          associationEdges.add(edge.id);
+        }
+        
         // Add target node to queue if not visited
         if (!visitedNodes.has(edge.target)) {
           visitedNodes.add(edge.target);
-          queue.push(edge.target);
+          
+          // If we're starting from U/UA and this is an association edge, 
+          // don't continue traversal from the association target
+          const isAssociationEdge = edge.data?.edgeType === 'association';
+          if (!(isStartingFromUserSide && isAssociationEdge)) {
+            queue.push(edge.target);
+          }
         }
       });
     }
@@ -886,10 +1202,28 @@ function DAGContent() {
     setEdges((currentEdges) => {
       return currentEdges.map(edge => {
         const isHighlighted = highlightedEdges.has(edge.id);
+        const isAssociation = associationEdges.has(edge.id);
+        
+        // For association edges, only make them bigger, don't change color
+        if (isHighlighted && isAssociation) {
+          return {
+            ...edge,
+            style: {
+              ...getEdgeStyle(edge.data?.edgeType || 'assignment', false, isObjectDag),
+              strokeWidth: 4, // Make it bigger
+            },
+            markerEnd: {
+              ...getMarkerEnd(edge.data?.edgeType || 'assignment', false, isObjectDag),
+              width: 12, // Make arrow bigger too
+              height: 12,
+            },
+          };
+        }
+        
         return {
           ...edge,
-          style: getEdgeStyle(edge.data?.edgeType || 'assignment', isHighlighted, isObjectDag),
-          markerEnd: getMarkerEnd(edge.data?.edgeType || 'assignment', isHighlighted, isObjectDag),
+          style: getEdgeStyle(edge.data?.edgeType || 'assignment', isHighlighted && !isAssociation, isObjectDag),
+          markerEnd: getMarkerEnd(edge.data?.edgeType || 'assignment', isHighlighted && !isAssociation, isObjectDag),
         };
       });
     });
@@ -1156,6 +1490,7 @@ function DAGContent() {
               onPaneContextMenu={onPaneContextMenu}
               onPaneClick={handlePaneClick}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               connectionMode={ConnectionMode.Loose}
               fitView
               style={{
@@ -1461,6 +1796,20 @@ function DAGContent() {
             </Group>
           </Stack>
         </Modal>
+
+        {/* Association Modal for creating association edges with access rights */}
+        {pendingConnection && (
+          <AssociationModal
+            opened={associationModalOpen}
+            onClose={handleAssociationModalClose}
+            mode="create"
+            node={dagNodeToTreeNode(nodes.find(n => n.id === pendingConnection.target)!)}
+            selectedUserNode={dagNodeToTreeNode(nodes.find(n => n.id === pendingConnection.source)!)}
+            selectedTargetNode={dagNodeToTreeNode(nodes.find(n => n.id === pendingConnection.target)!)}
+            isUserTree={false}
+            onCustomSubmit={handleAssociationModalSubmit}
+          />
+        )}
       </AppShell.Main>
           </AppShell>
     );

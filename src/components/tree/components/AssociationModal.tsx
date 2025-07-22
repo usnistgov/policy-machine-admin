@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Text, SimpleGrid, Group, Title, Button, Checkbox, Divider } from '@mantine/core';
+import { Modal, Text, SimpleGrid, Group, Title, Button, Checkbox, Divider, Stack } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { IconArrowBigRightLines } from '@tabler/icons-react';
 import { QueryService, AdjudicationService } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
@@ -12,6 +13,7 @@ interface AssociationModalProps {
 	selectedUserNode?: TreeNode | null;
 	selectedTargetNode?: TreeNode | null;
 	isUserTree: boolean;
+	onCustomSubmit?: (accessRights: string[]) => void;
 }
 
 export function AssociationModal({ 
@@ -21,7 +23,8 @@ export function AssociationModal({
 	node,
 	selectedUserNode,
 	selectedTargetNode,
-	isUserTree
+	isUserTree,
+	onCustomSubmit
 }: AssociationModalProps) {
 	const [resourceRights, setResourceRights] = useState<string[]>([]);
 	const [adminRights, setAdminRights] = useState<string[]>([]);
@@ -130,6 +133,7 @@ export function AssociationModal({
 		try {
 			// Fetch available resource operations
 			const resourceOpsResponse = await QueryService.getResourceOperations();
+			console.log("resourceOpsResponse", resourceOpsResponse);
 			const resourceOps = resourceOpsResponse.values || [];
 			setAvailableResourceRights(resourceOps);
 
@@ -175,6 +179,13 @@ export function AssociationModal({
 		try {
 			const allRights = [...resourceRights, ...adminRights];
 			
+			// If custom submit callback is provided, use it instead of API calls
+			if (onCustomSubmit) {
+				onCustomSubmit(allRights);
+				onClose();
+				return;
+			}
+			
 			if (mode === 'create' && selectedUserNode && selectedTargetNode) {
 				// Create new association
 				await AdjudicationService.associate(
@@ -182,23 +193,33 @@ export function AssociationModal({
 					selectedTargetNode.pmId,
 					allRights
 				);
-				alert(`Association created successfully between ${selectedUserNode.name} and ${selectedTargetNode.name}`);
-			} else if (mode === 'view') {
-				// Update existing association
-				// Note: You might need to implement an update association API
-				// For now, we'll log the update
-				console.log('Update association with rights:', allRights);
-				alert(`Association updated successfully`);
+				notifications.show({
+					title: 'Association Created',
+					message: `Successfully created association between ${selectedUserNode.name} and ${selectedTargetNode.name}`,
+					color: 'green',
+				});
+			} else if (mode === 'view' && selectedUserNode && selectedTargetNode) {
+				// update association
+				await AdjudicationService.associate(
+					selectedUserNode.pmId,
+					selectedTargetNode.pmId,
+					allRights
+				);
+				notifications.show({
+					title: 'Association Updated',
+					message: `Successfully updated association between ${selectedUserNode.name} and ${selectedTargetNode.name}`,
+					color: 'green',
+				});
 			}
 			
 			onClose();
 		} catch (error) {
 			console.error('Failed to save association:', error);
-			if (error instanceof Error) {
-				alert(`Failed to save association: ${error.message}`);
-			} else {
-				alert('Failed to save association: Unknown error');
-			}
+			notifications.show({
+				title: 'Association Failed',
+				message: `Failed to save association: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				color: 'red',
+			});
 		}
 	};
 
@@ -230,7 +251,14 @@ export function AssociationModal({
 	};
 
 	return (
-		<Modal opened={opened} onClose={onClose} title={getTitle()} size="lg" styles={{ body: { minHeight: '500px' } }}>
+		<Modal 
+			opened={opened} 
+			onClose={onClose} 
+			title={getTitle()} 
+			size="lg" 
+			styles={{ body: { minHeight: '500px' } }}
+		>
+			<div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
 			{loading ? (
 				<Text>Loading...</Text>
 			) : (
@@ -310,8 +338,7 @@ export function AssociationModal({
 					</SimpleGrid>
 
 					<Divider my="md" />
-
-					<Group justify="space-between">
+					<Stack>
 						<div style={{ flex: 1, marginRight: '16px' }}>
 							<Text size="sm" c="dimmed" mb={2}>
 								Selected Access Rights:
@@ -323,20 +350,24 @@ export function AssociationModal({
 								}
 							</Text>
 						</div>
-						<Group>
-							<Button variant="outline" onClick={onClose}>
-								Cancel
-							</Button>
-							<Button 
-								onClick={handleSave}
-								disabled={resourceRights.length + adminRights.length === 0}
-							>
-								{mode === 'create' ? 'Associate' : 'Update'}
-							</Button>
-						</Group>
-					</Group>
+						<div>
+							<Group justify="flex-end">
+								<Button variant="outline" onClick={onClose}>
+									Cancel
+								</Button>
+								<Button 
+									onClick={handleSave}
+									disabled={resourceRights.length + adminRights.length === 0}
+									color={'var(--mantine-color-green-9)'}
+								>
+									{mode === 'create' ? 'Associate' : 'Update'}
+								</Button>
+							</Group>
+						</div>
+					</Stack>
 				</>
 			)}
+			</div>
 		</Modal>
 	);
 } 

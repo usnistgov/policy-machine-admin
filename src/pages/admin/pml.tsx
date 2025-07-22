@@ -15,7 +15,7 @@ export function PML() {
             padding="md"
         >
             <AppShell.Navbar p="sm" style={{height: "100vh"}} className={classes.navbar}>
-                <NavBar activePageIndex={3} />
+                <NavBar activePageIndex={4} />
             </AppShell.Navbar>
             <AppShell.Main>
                 <UserMenu />

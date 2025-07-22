@@ -68,61 +68,22 @@ export function getTypeColor(type: string) {
 	}
 }
 
-// Legacy function kept for backward compatibility, but recommend using transformNodesToTreeNodes from utils/tree.utils.ts
-export function toTreeNodes(parentId: string, pmNodes: any[], allowedTypes: NodeType[], sortByType: boolean = false): TreeNode[] {
-	console.warn('toTreeNodes is deprecated. Use transformNodesToTreeNodes from utils/tree.utils.ts instead');
-	
-	const treeNodes: TreeNode[] = [];
-
-	// Use sortTreeNodes from utils if sorting is requested
-	const nodesToProcess = sortByType ? sortTreeNodes([...pmNodes]) : pmNodes;
-
-	for (const node of nodesToProcess) {
-		if(!allowedTypes.includes(node.type)){
-			continue;
-		}
-
-		treeNodes.push({
-			id: uuidv4(),
-			pmId: node.id,
-			name: node.name,
-			type: node.type,
-			properties: node.properties || {},
-			children: [],
-			parent: parentId,
-			expanded: false,
-			selected: false,
-			cachedSecondLevel: undefined,
-			hasCachedSecondLevel: false,
-		});
-	}
-
-	return treeNodes;
-}
-
-export function updateNodeChildren(treeData: TreeNode[], nodeId: string, children: TreeNode[]): TreeNode[] {
-	console.log(nodeId, children)
-	console.log(treeData);
-	
+export function updateNodeChildren(treeData: TreeNode[], nodeId: string, children: TreeNode[]): TreeNode[] {	
 	// Sort the children before updating
 	const sortedChildren = sortTreeNodes(children);
 	
 	return treeData.map((treeDataNode): TreeNode => {
-		console.log(treeDataNode)
 		if (treeDataNode.id === nodeId) {
-			console.log(1);
 			return {
 				...treeDataNode,
 				children: sortedChildren
 			};
 		} else if (treeDataNode.children) {
-			console.log(2);
 			return {
 				...treeDataNode,
 				children: updateNodeChildren(treeDataNode.children, nodeId, children),
 			};
 		}
-		console.log(3);
 		return treeDataNode;
 	});
 }
@@ -140,16 +101,10 @@ export const isValidAssignment = (selectedType: string, targetType: string): boo
 
 /**
  * Determines if a node should show expansion icon (chevron) or leaf icon (dot)
- * Based on cached second level children
+ * Based on node type - container types (PC, UA, OA) can have children
  */
 export const shouldShowExpansionIcon = (node: TreeNode): boolean => {
-	// If we have cached second level data, use it to determine icon
-	if (node.hasCachedSecondLevel && node.cachedSecondLevel !== undefined) {
-		return node.cachedSecondLevel.length > 0;
-	}
-	
-	// If no cached data and this is a container type (PC, UA, OA), show chevron
-	// This maintains backward compatibility for nodes without cached data
-	// U and O nodes without cached data default to dot (no expansion)
+	// Container node types that can have children show chevron
+	// U and O nodes are leaf nodes and show dot
 	return node.type === 'PC' || node.type === 'UA' || node.type === 'OA';
 };

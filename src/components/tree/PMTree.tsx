@@ -7,7 +7,7 @@ import {useAtom, useAtomValue} from "jotai";
 import {OpenMap} from "react-arborist/dist/main/state/open-slice";
 import {useTargetDynamicTree} from "@/hooks/dynamic-tree";
 import {TreeNode} from "@/utils/tree.utils";
-import {INDENT_NUM, NodeIcon, toTreeNodes} from "@/components/tree/util";
+import {INDENT_NUM, NodeIcon} from "@/components/tree/util";
 import {QueryService, NodeType} from "@/api/pdp.api";
 import {transformNodesToTreeNodes} from "@/utils/tree.utils";
 import {PrimitiveAtom} from "jotai/index";
@@ -289,7 +289,7 @@ export function PMTree(props: PMTreeProps) {
 					indent={INDENT_NUM}
 					ref={treeApiRef}
 					className={classes.tree}
-					rowHeight={22}
+					rowHeight={28}
 					disableMultiSelection={true}
 					disableSelection={true}
 					overscanCount={20}

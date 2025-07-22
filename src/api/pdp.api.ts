@@ -46,6 +46,26 @@ export interface NodePrivilegeInfo {
   accessRights: string[];
 }
 
+export interface Prohibition {
+  name: string;
+  subject?: {
+    node?: PMNode;
+    process?: string;
+  };
+  accessRights: string[];
+  intersection: boolean;
+  containerConditions: {
+    container?: PMNode;
+    complement: boolean;
+  }[];
+}
+
+export interface Obligation {
+  name: string;
+  author?: PMNode;
+  pml: string;
+}
+
 // Re-export PMNode as Node for backward compatibility
 export type Node = PMNode;
 
@@ -236,6 +256,36 @@ export namespace QueryService {
   export async function getAdminRoutine(routineName: string): Promise<PdpQuery.Signature> {
     const result = await queryClient.GetAdminRoutineSignature({ name: routineName });
     return result;
+  }
+
+  // === Prohibition Queries ===
+  export async function getProhibitions(): Promise<Prohibition[]> {
+    const request = Empty.create();
+    const response = await queryClient.GetProhibitions(request);
+    return response.prohibitions.map(p => ({
+      name: p.name,
+      subject: p.subject ? {
+        node: p.subject.node ? transformNode(p.subject.node) : undefined,
+        process: p.subject.process
+      } : undefined,
+      accessRights: p.arset,
+      intersection: p.intersection,
+      containerConditions: p.containerConditions.map(cc => ({
+        container: cc.container ? transformNode(cc.container) : undefined,
+        complement: cc.complement
+      }))
+    }));
+  }
+
+  // === Obligation Queries ===
+  export async function getObligations(): Promise<Obligation[]> {
+    const request = Empty.create();
+    const response = await queryClient.GetObligations(request);
+    return response.obligations.map(o => ({
+      name: o.name,
+      author: o.author ? transformNode(o.author) : undefined,
+      pml: o.pml
+    }));
   }
 }
 

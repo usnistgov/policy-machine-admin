@@ -245,7 +245,7 @@ export function Execute() {
       padding="md"
     >
       <AppShell.Navbar p="sm" style={{height: "100vh"}} className={classes.navbar}>
-        <NavBar activePageIndex={4} />
+                        <NavBar activePageIndex={5} />
       </AppShell.Navbar>
       <AppShell.Main>
         <UserMenu />

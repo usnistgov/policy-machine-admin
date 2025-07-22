@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PML } from './pages/admin/pml';
 import { Execute } from './pages/admin/execute';
 import { DAG } from './pages/admin/dag';
+import ObligationsPage from './pages/admin/obligations';
 
 const router = createBrowserRouter([
   {
@@ -31,6 +32,10 @@ const router = createBrowserRouter([
       {
         path: 'prohibitions',
         element: <Prohibition />,
+      },
+      {
+        path: 'obligations',
+        element: <ObligationsPage />,
       },
       {
         path: 'pml',

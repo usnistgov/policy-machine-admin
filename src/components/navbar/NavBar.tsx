@@ -6,7 +6,8 @@ import {
     IconLogout,
     IconSwitchHorizontal,
     IconPlayerPlay,
-    IconListTree
+    IconListTree,
+    IconAutomation
 } from "@tabler/icons-react";
 import {Divider, Stack, Tooltip, UnstyledButton} from "@mantine/core";
 import classes from "./navbar.module.css";
@@ -76,6 +77,7 @@ const linkData = [
     { icon: IconListTree, label: 'Graph'},
     { icon: IconBinaryTree, label: 'DAG', style: {transform: "rotate(180deg)"}},
     { icon: IconBan, label: 'Prohibitions' },
+    { icon: IconAutomation, label: 'Obligations' },
     { icon: IconFileCode, label: 'PML' },
     { icon: IconPlayerPlay, label: 'Execute' },
 ];

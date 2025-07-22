@@ -51,10 +51,11 @@ export function Input({ node, tree }: InputProps) {
 					console.error('Unknown node type:', nodeType);
 					return;
 			}
+
+			console.log("result", result);
 			
 			// Get the created node ID from the response
-			const nodeIds = result.nodeIds;
-			const createdId = nodeIds[name];
+			const createdId = result.results[0].int64Value;
 			
 			if (createdId) {
 				// Update the node with the actual ID from the server
