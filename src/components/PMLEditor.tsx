@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Button, Group, Stack, Text, Alert, LoadingOverlay, Box } from '@mantine/core';
 import { IconPlayerPlay, IconTrash, IconInfoCircle, IconFileUpload, IconDatabase } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import { AdjudicationService, QueryService } from '@/api/pdp.api';
 
 interface PMLEditorProps {
@@ -17,8 +18,6 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
   const [code, setCode] = useState(initialValue);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isLoadingObligations, setIsLoadingObligations] = useState(false);
-  const [result, setResult] = useState<string>('');
-  const [error, setError] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const editorRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -308,21 +307,31 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
 
   const handleSubmit = async () => {
     if (!code.trim()) {
-      setError('Please enter some PML code before submitting.');
+      notifications.show({
+        title: 'Error',
+        message: 'Please enter some PML code before submitting.',
+        color: 'red',
+      });
       return;
     }
 
     setIsExecuting(true);
-    setError('');
-    setResult('');
 
     try {
       const response = await AdjudicationService.executePML(code);
-      setResult('PML executed successfully!');
+      notifications.show({
+        title: 'Success',
+        message: 'PML executed successfully!',
+        color: 'green',
+      });
       console.log('PML execution result:', response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setError(`Execution failed: ${errorMessage}`);
+      notifications.show({
+        title: 'Error',
+        message: `Execution failed: ${errorMessage}`,
+        color: 'red',
+      });
       console.error('PML execution error:', error);
     } finally {
       setIsExecuting(false);
@@ -331,8 +340,6 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
 
   const handleClear = () => {
     setCode('');
-    setResult('');
-    setError('');
     setFileName('');
     if (editorRef.current) {
       editorRef.current.setValue('');
@@ -349,7 +356,11 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
 
     // Check if it's a .pml file
     if (!file.name.toLowerCase().endsWith('.pml')) {
-      setError('Please select a .pml file');
+      notifications.show({
+        title: 'Error',
+        message: 'Please select a .pml file',
+        color: 'red',
+      });
       return;
     }
 
@@ -360,16 +371,23 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
       if (content) {
         setCode(content);
         setFileName(file.name);
-        setError('');
-        setResult('');
         if (editorRef.current) {
           editorRef.current.setValue(content);
         }
+        notifications.show({
+          title: 'Success',
+          message: `File "${file.name}" loaded successfully`,
+          color: 'green',
+        });
       }
     };
 
     reader.onerror = () => {
-      setError('Failed to read file');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to read file',
+        color: 'red',
+      });
     };
 
     reader.readAsText(file);
@@ -380,14 +398,16 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
 
   const handleLoadObligations = async () => {
     setIsLoadingObligations(true);
-    setError('');
-    setResult('');
 
     try {
       const obligations = await QueryService.getObligations();
       
       if (obligations.length === 0) {
-        setResult('No obligations found in the system.');
+        notifications.show({
+          title: 'Info',
+          message: 'No obligations found in the system.',
+          color: 'blue',
+        });
         return;
       }
 
@@ -402,10 +422,18 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
         editorRef.current.setValue(obligationsPML);
       }
       
-      setResult(`Loaded ${obligations.length} obligation(s) successfully.`);
+      notifications.show({
+        title: 'Success',
+        message: `Loaded ${obligations.length} obligation(s) successfully.`,
+        color: 'green',
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setError(`Failed to load obligations: ${errorMessage}`);
+      notifications.show({
+        title: 'Error',
+        message: `Failed to load obligations: ${errorMessage}`,
+        color: 'red',
+      });
       console.error('Error loading obligations:', error);
     } finally {
       setIsLoadingObligations(false);
@@ -427,12 +455,10 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
       />
       
       <div style={{ 
-        flex: hideButtons ? 'none' : 1, 
+        flex: 1, 
         border: '1px solid #e9ecef', 
         borderRadius: '8px',
-        position: 'relative',
-        minHeight: hideButtons ? 'auto' : '500px',
-        height: hideButtons ? '100%' : 'auto'
+        position: 'relative'
       }}>
         <LoadingOverlay visible={isExecuting} />
         <Editor
@@ -474,18 +500,6 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
       {placeholder && !code && (
         <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
           {placeholder}
-        </Alert>
-      )}
-
-      {error && (
-        <Alert color="red" variant="light">
-          {error}
-        </Alert>
-      )}
-
-      {result && (
-        <Alert color="green" variant="light">
-          {result}
         </Alert>
       )}
 

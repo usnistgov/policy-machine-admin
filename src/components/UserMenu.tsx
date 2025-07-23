@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Menu, Button, rem } from '@mantine/core';
+import { Menu, Button, rem, useMantineTheme } from '@mantine/core';
 import { IconChevronDown, IconLogout, IconUserSquareRounded } from '@tabler/icons-react';
 import { AuthService } from '@/lib/auth';
 
 export function UserMenu() {
+    const theme = useMantineTheme();
     const [username, setUsername] = useState<string | null>(null);
     
     useEffect(() => {
@@ -19,15 +20,12 @@ export function UserMenu() {
             <Menu.Target>
                 <Button 
                     variant="light" 
+                    color={theme.colors.blue[7]}
                     style={{ 
-                        position: 'absolute', 
-                        top: 10, 
-                        right: 20, 
-                        zIndex: 1000,
                         borderRadius: '20px' 
                     }}
                     rightSection={<IconChevronDown size={14} />}
-                    leftSection={<IconUserSquareRounded size={20} />}
+                    leftSection={<IconUserSquareRounded size={24} />}
                 >
                     {username}
                 </Button>

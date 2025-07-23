@@ -41,8 +41,6 @@ export function NavBar({activePageIndex}: {activePageIndex: number}) {
         <>
             <div className={classes.navbarMain}>
                 <Stack justify="center" gap={0}>
-                    <PMIcon />
-                    <Divider style={{marginTop: "20px", marginBottom: "20px"}} />
                     {links}
                 </Stack>
             </div>

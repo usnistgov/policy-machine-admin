@@ -3,19 +3,17 @@ import { IconChevronDown, IconChevronRight, IconPoint, IconEye, IconArrowBigRigh
 import clsx from "clsx";
 import { PrimitiveAtom, atom, useAtom, useSetAtom, useAtomValue } from "jotai";
 import { NodeApi, NodeRendererProps, TreeApi } from "react-arborist";
-import { ActionIcon, Menu, Portal, Loader } from "@mantine/core";
+import { ActionIcon, Menu, Loader, Group, Text } from "@mantine/core";
 import { notifications } from '@mantine/notifications';
 import { NodeType, AdjudicationService } from "@/api/pdp.api";
 import { TreeNode } from "@/utils/tree.utils";
 import classes from "@/components/tree/pmtree.module.css";
 import { TARGET_ALLOWED_TYPES, USER_ALLOWED_TYPES } from "@/components/tree/PMTree";
-import { targetTreeDataAtom, userTreeDataAtom, targetTreeFilterAtom, TargetTreeFilter, selectedUserNodeAtom, selectedTargetNodeAtom, activeDescendantsNodeAtom, descendantNodesAtom } from "@/components/tree/tree-atoms";
+import { targetTreeDataAtom, userTreeDataAtom, targetTreeFilterAtom, TargetTreeFilter, selectedUserNodeAtom, selectedTargetNodeAtom, activeDescendantsNodeAtom, descendantNodesAtom, onOpenDescendantsAtom, onOpenAssociationAtom } from "@/components/tree/tree-atoms";
 import { INDENT_NUM, getTypeColor, NodeIcon, isValidAssignment, shouldShowExpansionIcon } from "@/components/tree/util";
 import { DescendantsIcon } from "@/components/icons/DescendantsIcon";
 import { useTreeOperations } from "./hooks/useTreeOperations";
 import { NodeContent, Input } from "./components";
-import { AssociationModal } from "./components/AssociationModal";
-import { DescendantsPopup } from "./components/DescendantsPopup";
 
 // Helper function to filter allowed types based on target tree filter
 function getFilteredAllowedTypes(baseAllowedTypes: NodeType[], filter: TargetTreeFilter): NodeType[] {
@@ -61,14 +59,13 @@ function PMNode(
 	
 	const [contextMenuOpened, setContextMenuOpened] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-	const [associationModalOpened, setAssociationModalOpened] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
-	const [showDescendantsPopup, setShowDescendantsPopup] = useState(false);
-	const [descendantsPopupPosition, setDescendantsPopupPosition] = useState({ x: 0, y: 0 });
 	const [creatingNodeId, setCreatingNodeId] = useState<string | null>(null);
 	const selectedUserNode = useAtomValue(selectedUserNodeAtom);
 	const selectedTargetNode = useAtomValue(selectedTargetNodeAtom);
-	
+	const onOpenDescendants = useAtomValue(onOpenDescendantsAtom);
+	const onOpenAssociation = useAtomValue(onOpenAssociationAtom);
+
 	// Check if this node is a descendant node
 	const isDescendantNode = descendantNodes.has(node.data.id);
 	const isLoading = loadingNodes.has(node.data.id);
@@ -81,11 +78,11 @@ function PMNode(
 	// NodeMenu logic
 	const color = getTypeColor(node.data.type);
 	const isAssociation = node.data.properties?.isAssociation === 'true';
-	
+
 	// Show associate option for OA/O nodes in target tree when user node is selected
-	const showAssociateOption = !isUserTree && 
-		(node.data.type === 'OA' || node.data.type === 'O' || node.data.type === 'UA') && 
-		selectedUserNode && 
+	const showAssociateOption = !isUserTree &&
+		(node.data.type === 'OA' || node.data.type === 'O' || node.data.type === 'UA') &&
+		selectedUserNode &&
 		selectedUserNode.type === 'UA' && // UA can only be associated
 		(node.data.type === 'UA' || node.data.type === 'OA') && // UA can associate with UA and OA
 		!isAssociation;
@@ -153,7 +150,7 @@ function PMNode(
 
 		// Check if this is an association node
 		const isAssociation = node.data.properties?.isAssociation === 'true';
-		
+
 		// Check if we're in descendant mode (any descendants are active)
 		const inDescendantMode = activeDescendantsNode !== null;
 
@@ -307,7 +304,11 @@ function PMNode(
 			e.stopPropagation();
 		}
 		setContextMenuOpened(false);
-		setAssociationModalOpened(true);
+
+		// Use the callback to open the association tab in the side panel
+		if (onOpenAssociation) {
+			onOpenAssociation(node.data, selectedUserNode, selectedTargetNode, isUserTree);
+		}
 	};
 
 	const handleDeleteAssociation = async (e?: React.MouseEvent) => {
@@ -320,16 +321,16 @@ function PMNode(
 			// Use the stored UA and target IDs from the association properties
 			const uaId = node.data.properties?.uaNodeId;
 			const targetId = node.data.properties?.targetNodeId;
-			
+
 			if (!uaId || !targetId) {
 				throw new Error('Association node missing UA or target node information');
 			}
-			
+
 			await AdjudicationService.dissociate(uaId, targetId);
-			
+
 			// Remove the association node from the tree
 			tree.delete(node.data.id);
-			
+
 			notifications.show({
 				title: 'Association Deleted',
 				message: `Successfully deleted association`,
@@ -351,11 +352,17 @@ function PMNode(
 			e.stopPropagation();
 		}
 		setContextMenuOpened(false);
-		// If this is a target tree node, automatically select it as target
-		if (!isUserTree) {
-			setSelectedTargetNode(node.data);
+
+		// Use the callback to open the association tab in the side panel
+		if (onOpenAssociation) {
+			// If this is a target tree node, automatically select it as target
+			let targetNode = selectedTargetNode;
+			if (!isUserTree) {
+				targetNode = node.data;
+				setSelectedTargetNode(node.data);
+			}
+			onOpenAssociation(node.data, selectedUserNode, targetNode, isUserTree);
 		}
-		setAssociationModalOpened(true);
 	};
 
 	const handleAssign = async (e?: React.MouseEvent) => {
@@ -419,32 +426,10 @@ function PMNode(
 		}
 		setContextMenuOpened(false);
 		
-		// Calculate position relative to the context menu position
-		const initialPopupWidth = 400;
-		const initialPopupHeight = 500;
-		const margin = 10;
-		
-		let x = contextMenuPosition.x + margin;
-		let y = contextMenuPosition.y;
-		
-		// If not enough space on the right, position to the left
-		if (x + initialPopupWidth > window.innerWidth - margin) {
-			x = Math.max(margin, contextMenuPosition.x - initialPopupWidth - margin);
+		// Use the callback to open the descendants tab in the side panel
+		if (onOpenDescendants) {
+			onOpenDescendants(node.data, isUserTree);
 		}
-		
-		// Center vertically around the menu position
-		y = contextMenuPosition.y - (initialPopupHeight / 2);
-		
-		// Ensure popup doesn't go off-screen vertically
-		if (y + initialPopupHeight > window.innerHeight - margin) {
-			y = window.innerHeight - initialPopupHeight - margin;
-		}
-		if (y < margin) {
-			y = margin;
-		}
-		
-		setDescendantsPopupPosition({ x, y });
-		setShowDescendantsPopup(true);
 	};
 
 	const handleSelectNode = (e?: React.MouseEvent) => {
@@ -577,13 +562,13 @@ function PMNode(
 						// Association nodes: only show View and Delete
 						<>
 							<Menu.Divider />
-							<Menu.Item 
+							<Menu.Item
 								leftSection={<IconEye size={16} />}
 								onClick={(e) => handleViewAssociation(e)}
 							>
 								View
 							</Menu.Item>
-							<Menu.Item 
+							<Menu.Item
 								leftSection={<IconTrash size={16} />}
 								onClick={(e) => handleDeleteAssociation(e)}
 								color="red"
@@ -610,7 +595,7 @@ function PMNode(
 									)}
 									
 									{showAssociateOption && (
-																			<Menu.Item 
+																			<Menu.Item
 										leftSection={<IconArrowBigRightLines size={16} style={{ color: 'var(--mantine-color-green-9)' }} />}
 										onClick={(e) => handleCreateAssociation(e)}
 									>
@@ -681,27 +666,6 @@ function PMNode(
 				</Menu.Dropdown>
 			</Menu>
 
-			<AssociationModal
-				opened={associationModalOpened}
-				onClose={() => setAssociationModalOpened(false)}
-				mode={isAssociation ? 'view' : 'create'}
-				node={node.data}
-				selectedUserNode={selectedUserNode}
-				selectedTargetNode={selectedTargetNode}
-				isUserTree={isUserTree}
-			/>
-
-			{showDescendantsPopup && (
-				<Portal>
-					<DescendantsPopup
-						rootNode={node.data}
-						isUserTree={isUserTree}
-						allowedTypes={allowedTypes}
-						initialPosition={descendantsPopupPosition}
-						onClose={() => setShowDescendantsPopup(false)}
-					/>
-				</Portal>
-			)}
 		</div>
 	);
 }

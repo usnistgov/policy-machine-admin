@@ -8,5 +8,9 @@ export const selectedTargetNodeAtom = atom<TreeNode | null>(null);
 export const activeDescendantsNodeAtom = atom<string | null>(null);
 export const hideUserNodesAtom = atom<boolean>(false);
 
+// Callback atoms for opening side panel tabs
+export const onOpenDescendantsAtom = atom<((node: TreeNode, isUserTree: boolean) => void) | null>(null);
+export const onOpenAssociationAtom = atom<((node: TreeNode, selectedUserNode: TreeNode | null, selectedTargetNode: TreeNode | null, isUserTree: boolean) => void) | null>(null);
+
 // Re-export existing atoms for convenience
 export { targetTreeDataAtom, userTreeDataAtom, targetTreeFilterAtom, type TargetTreeFilter } from './tree-atom'; 

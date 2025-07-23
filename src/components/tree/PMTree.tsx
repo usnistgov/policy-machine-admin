@@ -3,7 +3,7 @@ import {Tree, TreeApi} from "react-arborist";
 import {useElementSize, useMergedRef} from "@mantine/hooks";
 import {ActionIcon, Stack, Switch, Title, Group, Text, Box} from "@mantine/core";
 import classes from "@/components/tree/pmtree.module.css";
-import {useAtom, useAtomValue} from "jotai";
+import {useAtom, useAtomValue, useSetAtom} from "jotai";
 import {OpenMap} from "react-arborist/dist/main/state/open-slice";
 import {useTargetDynamicTree} from "@/hooks/dynamic-tree";
 import {TreeNode} from "@/utils/tree.utils";
@@ -12,7 +12,7 @@ import {QueryService, NodeType} from "@/api/pdp.api";
 import {transformNodesToTreeNodes} from "@/utils/tree.utils";
 import {PrimitiveAtom} from "jotai/index";
 import {IconEye, IconFlipVertical, IconRefresh, IconSettings, IconUser, IconUserSquare} from "@tabler/icons-react";
-import { hideUserNodesAtom, selectedUserNodeAtom, selectedTargetNodeAtom } from "./tree-atoms";
+import { hideUserNodesAtom, selectedUserNodeAtom, selectedTargetNodeAtom, onOpenDescendantsAtom, onOpenAssociationAtom } from "./tree-atoms";
 
 export const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O];
 export const USER_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.U];
@@ -64,6 +64,8 @@ export interface PMTreeProps {
 	treeApiAtom: PrimitiveAtom<TreeApi<TreeNode> | null>;
 	treeDataAtom: PrimitiveAtom<TreeNode[]>;
 	openTreeNodesAtom: PrimitiveAtom<OpenMap>;
+	onOpenDescendants?: (node: TreeNode, isUserTree: boolean) => void;
+	onOpenAssociation?: (node: TreeNode, selectedUserNode: TreeNode | null, selectedTargetNode: TreeNode | null, isUserTree: boolean) => void;
 }
 
 export function PMTree(props: PMTreeProps) {
@@ -76,7 +78,9 @@ export function PMTree(props: PMTreeProps) {
 	const [openTreeNodes, setOpenTreeNodes] = useAtom<OpenMap>(props.openTreeNodesAtom);
 	const [hideUserNodes, setHideUserNodes] = useAtom(hideUserNodesAtom);
 	const [originalTreeData, setOriginalTreeData] = useState<TreeNode[]>([]);
-	
+	const setOnOpenDescendants = useSetAtom(onOpenDescendantsAtom);
+	const setOnOpenAssociation = useSetAtom(onOpenAssociationAtom);
+
 	// Determine if this is a user tree based on the title
 	const isUserTree = props.title === "User";
 	
@@ -84,6 +88,12 @@ export function PMTree(props: PMTreeProps) {
 	const selectedUserNode = useAtomValue(selectedUserNodeAtom);
 	const selectedTargetNode = useAtomValue(selectedTargetNodeAtom);
 	const selectedNode = isUserTree ? selectedUserNode : selectedTargetNode;
+	
+	// Set callback atoms when props change
+	useEffect(() => {
+		setOnOpenDescendants(() => props.onOpenDescendants || null);
+		setOnOpenAssociation(() => props.onOpenAssociation || null);
+	}, [props.onOpenDescendants, props.onOpenAssociation, setOnOpenDescendants, setOnOpenAssociation]);
 
 	// Function to recursively filter tree nodes (remove UA/U except associations)
 	const filterTreeNodes = (nodes: TreeNode[]): TreeNode[] => {
@@ -99,7 +109,7 @@ export function PMTree(props: PMTreeProps) {
 				const isObjectNode = child.type === 'O' || child.type === 'OA';
 				const parentIsAssociation = node.properties?.isAssociation === 'true';
 				const shouldShowObjectInUserTree = isUserTree && isObjectNode && parentIsAssociation;
-				
+
 				return !isUserNode || isAssociation || shouldShowObjectInUserTree;
 			})) : undefined
 		})).filter(node => {
@@ -108,7 +118,7 @@ export function PMTree(props: PMTreeProps) {
 			const isAssociation = node.properties?.isAssociation === 'true';
 			const isObjectNode = node.type === 'O' || node.type === 'OA';
 			// Root level O/OA nodes are not shown in user tree (only children of associations)
-			
+
 			return !isUserNode || isAssociation;
 		});
 	};
@@ -183,12 +193,9 @@ export function PMTree(props: PMTreeProps) {
 
 
 	return (
-		<Stack style={{height: "100%", borderLeft: `2px solid ${props.borderColor}`, padding: "4px"}} gap="sm">
-			<Title order={3}>
-				{props.title}
-			</Title>
-			
-			<Group gap={6} align="center" className={classes.toolbar} style={{width: '100%', justifyContent: 'space-between'}}>
+		<div style={{height: "100%", display: 'flex', flexDirection: 'column'}}>
+			<div style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative', paddingTop: '8px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px', flexShrink: 0 }} className={classes.toolbar}>
+				{/* Left side - Action buttons */}
 				<Group gap={6} align="center">
 				<ActionIcon
 					variant="subtle"
@@ -270,13 +277,25 @@ export function PMTree(props: PMTreeProps) {
 				)}
 				</Group>
 				
-				{/* Selected Node Indicator on right side */}
-				<SelectedNodeIndicator selectedNode={selectedNode} isUserTree={isUserTree} />
-			</Group>
+				{/* Center - Selected Node Indicator */}
+				<div style={{ 
+					position: 'absolute', 
+					left: '50%', 
+					transform: 'translateX(-50%)', 
+					display: 'flex',
+					justifyContent: 'center',
+					alignItems: 'center'
+				}}>
+					<SelectedNodeIndicator selectedNode={selectedNode} isUserTree={isUserTree} />
+				</div>
+				
+				{/* Right side - Future content or empty space */}
+				<div style={{ flex: 1 }} />
+			</div>
 			
-			<div style={{borderRadius: "4px", borderBottom: `2px solid ${props.borderColor}`, marginTop: '-12px'}}/>
+			<div style={{borderBottom: `2px solid ${props.borderColor}`, marginTop: '0px', flexShrink: 0}}/>
 
-			<div ref={mergedRef} className={classes.treeContainer}>
+			<div ref={mergedRef} className={classes.treeContainer} style={{ flex: 1, overflow: 'hidden', minHeight: 'calc(100vh - 60px - 50px)', padding: '5px' }}>
 				<Tree
 					data={data}
 					{...controllers}
@@ -304,6 +323,6 @@ export function PMTree(props: PMTreeProps) {
 				</Tree>
 			</div>
 
-		</Stack>
+		</div>
 	);
 }

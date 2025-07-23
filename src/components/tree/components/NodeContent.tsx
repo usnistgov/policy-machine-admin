@@ -5,7 +5,6 @@ import {
 	IconArrowBigLeftLines,
 	IconCircleArrowRight,
 	IconCircleArrowLeft,
-	IconArrowBigLeftFilled,
 	IconArrowBigLeftLinesFilled, IconArrowBigRightLinesFilled
 } from "@tabler/icons-react";
 import { NodeIcon } from '@/components/tree/util';

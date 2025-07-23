@@ -24,7 +24,8 @@
     &[data-active] {
         &,
         &:hover {
-            background-color: var(--mantine-color-blue-2);
+            background-color: var(--mantine-color-blue-7);
+            color: white;
         }
     }
 }
