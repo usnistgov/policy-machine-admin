@@ -1,4 +1,4 @@
-import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip} from '@mantine/core';
+import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip, Button} from '@mantine/core';
 import { NavBar } from '@/components/navbar/NavBar';
 import { PPMTree, PPMTreeClickHandlers } from '@/components/ppmtree3';
 import classes from './navbar.module.css';
@@ -37,6 +37,9 @@ export function Graph() {
     const [isResizingFooter, setIsResizingFooter] = useState(false);
     const [showAsideResizer, setShowAsideResizer] = useState(false);
     const [showFooterResizer, setShowFooterResizer] = useState(false);
+
+    // Toolbar height
+    const toolbarHeight = 40;
 
     // Mouse event handlers for aside resizer
     React.useEffect(() => {
@@ -197,8 +200,9 @@ export function Graph() {
                 height: footerHeight,
                 collapsed: !footerOpened,
             }}
+            transitionDuration={0}
         >
-            <AppShell.Header>
+            <AppShell.Header style={{backgroundColor: '#f8f9fa' }}>
                 <Group h="100%" px="md" justify="space-between">
                     <Group>
                         <PMIcon style={{width: '36px', height: '36px'}}/>
@@ -245,28 +249,39 @@ export function Graph() {
                 <NavBar activePageIndex={0} />
             </AppShell.Navbar>
             <AppShell.Main style={{ height: '100%', position: 'relative' }}>
-                <PPMTree
-                    treeApiAtom={ppmTreeApiAtom}
-                    treeDataAtom={ppmTreeDataAtom}
-                    direction="ascendants"
-                    headerHeight={60}
-                    footerHeight={footerHeight}
-                    footerOpened={footerOpened}
-                    clickHandlers={{
-                        onLeftClick: (node: TreeNode) => {
-                            console.log('Left clicked node:', node);
-                            // You can add selection logic here if needed
-                        },
-                        onRightClick: (node: TreeNode) => {
-                            console.log('Right clicked node:', node);
-                            // Open descendants tab for right-clicked node
-                            handleOpenDescendantsTab(node, false);
-                        }
-                    }}
-                    style={{
-                        backgroundColor: 'white'
-                    }}
-                />
+                <Stack gap={0} style={{ height: '100%' }}>
+                    {/* Empty Toolbar */}
+                    <Box style={{ 
+                        height: toolbarHeight, 
+                        backgroundColor: '#f8f9fa', 
+                        borderBottom: '1px solid #dee2e6',
+                        flexShrink: 0
+                    }} />
+                    
+                    {/* Tree */}
+                    <PPMTree
+                        treeApiAtom={ppmTreeApiAtom}
+                        treeDataAtom={ppmTreeDataAtom}
+                        direction="ascendants"
+                        headerHeight={60 + toolbarHeight}
+                        footerHeight={footerHeight}
+                        footerOpened={footerOpened}
+                        clickHandlers={{
+                            onLeftClick: (node: TreeNode) => {
+                                console.log('Left clicked node:', node);
+                                // You can add selection logic here if needed
+                            },
+                            onRightClick: (node: TreeNode) => {
+                                console.log('Right clicked node:', node);
+                                // Open descendants tab for right-clicked node
+                                handleOpenDescendantsTab(node, false);
+                            }
+                        }}
+                        style={{
+                            backgroundColor: 'white'
+                        }}
+                    />
+                </Stack>
                 {/* Aside resizer */}
                 {asideOpened && (
                     <Box

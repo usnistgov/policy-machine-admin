@@ -13,30 +13,21 @@ export function usePPMTreeOperations(
 	const [treeData, setTreeData] = useAtom(treeDataAtom);
 
 	const fetchAndUpdateChildren = async (node: NodeApi<TreeNode>) => {
-		console.log('Fetching children for node:', node.data.name, 'Direction:', direction);
-		
 		// Fetch children based on direction
 		const response = direction === 'descendants'
 			? await QueryService.selfComputeAdjacentDescendantPrivileges(node.data.pmId)
 			: await QueryService.selfComputeAdjacentAscendantPrivileges(node.data.pmId);
-
-		console.log('API response:', response);
 
 		// Extract nodes
 		const nodes = response
 			.map(nodePriv => nodePriv.node)
 			.filter((node): node is NonNullable<typeof node> => node !== undefined);
 		
-		console.log('Extracted nodes:', nodes);
-		
 		const childrenTree = transformNodesToTreeNodes(nodes, node.data.id);
 		const sorted = sortTreeNodes(childrenTree);
 
-		console.log('Transformed children:', sorted);
-
 		// Update tree data
 		const updatedTreeData = updateNodeChildren(treeData, node.data.id, sorted);
-		console.log('Updated tree data:', updatedTreeData);
 		setTreeData(updatedTreeData);
 
 		return sorted;
