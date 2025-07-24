@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import {Graph} from "@/pages/admin/graph";
+import {Graph3} from "@/pages/admin/graph3";
 import {Prohibition} from "@/pages/admin/prohibition";
 import { Login } from "@/pages/Login";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
       {
         path: 'graph',
         element: <Graph />,
+      },
+      {
+        path: 'graph3',
+        element: <Graph3 />,
       },
       {
         path: 'dag',

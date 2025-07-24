@@ -9,7 +9,7 @@ import { NodeType, AdjudicationService } from "@/api/pdp.api";
 import { TreeNode } from "@/utils/tree.utils";
 import classes from "@/components/tree/pmtree.module.css";
 import { TARGET_ALLOWED_TYPES, USER_ALLOWED_TYPES } from "@/components/tree/PMTree";
-import { targetTreeDataAtom, userTreeDataAtom, targetTreeFilterAtom, TargetTreeFilter, selectedUserNodeAtom, selectedTargetNodeAtom, activeDescendantsNodeAtom, descendantNodesAtom, onOpenDescendantsAtom, onOpenAssociationAtom } from "@/components/tree/tree-atoms";
+import { targetTreeDataAtom, userTreeDataAtom, targetTreeFilterAtom, TargetTreeFilter, selectedUserNodeAtom, selectedTargetNodeAtom, activeDescendantsNodeAtom, descendantNodesAtom, onOpenDescendantsAtom, onOpenAssociationAtom, onLeftClickAtom, onRightClickAtom } from "@/components/tree/tree-atoms";
 import { INDENT_NUM, getTypeColor, NodeIcon, isValidAssignment, shouldShowExpansionIcon } from "@/components/tree/util";
 import { DescendantsIcon } from "@/components/icons/DescendantsIcon";
 import { useTreeOperations } from "./hooks/useTreeOperations";
@@ -56,7 +56,7 @@ function PMNode(
 	const setDescendantNodes = useSetAtom(descendantNodesAtom);
 	const activeDescendantsNode = useAtomValue(activeDescendantsNodeAtom);
 	const [loadingNodes, setLoadingNodes] = useAtom(loadingNodesAtom);
-	
+
 	const [contextMenuOpened, setContextMenuOpened] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 	const [isHovered, setIsHovered] = useState(false);
@@ -65,16 +65,18 @@ function PMNode(
 	const selectedTargetNode = useAtomValue(selectedTargetNodeAtom);
 	const onOpenDescendants = useAtomValue(onOpenDescendantsAtom);
 	const onOpenAssociation = useAtomValue(onOpenAssociationAtom);
+	const onLeftClick = useAtomValue(onLeftClickAtom);
+	const onRightClick = useAtomValue(onRightClickAtom);
 
 	// Check if this node is a descendant node
 	const isDescendantNode = descendantNodes.has(node.data.id);
 	const isLoading = loadingNodes.has(node.data.id);
-	
+
 	// Check if this node has descendant children currently showing
-	const hasDescendantChildren = node.data.children?.some((child: TreeNode) => 
+	const hasDescendantChildren = node.data.children?.some((child: TreeNode) =>
 		descendantNodes.has(child.id)
 	) || false;
-	
+
 	// NodeMenu logic
 	const color = getTypeColor(node.data.type);
 	const isAssociation = node.data.properties?.isAssociation === 'true';
@@ -89,15 +91,15 @@ function PMNode(
 
 	// Assignment logic - show assign option if there's a selected node from the same tree
 	const selectedNodeForTree = isUserTree ? selectedUserNode : selectedTargetNode;
-	const showAssignOption = selectedNodeForTree && 
-		selectedNodeForTree.id !== node.data.id && 
+	const showAssignOption = selectedNodeForTree &&
+		selectedNodeForTree.id !== node.data.id &&
 		!isAssociation &&
 		selectedNodeForTree.properties?.isAssociation !== 'true' && // Don't show assign for association nodes
 		isValidAssignment(selectedNodeForTree.type, node.data.type) &&
 		!node.data.children?.some((child: TreeNode) => child.id === selectedNodeForTree.id);
 
 	// Deassignment logic - show deassign option if the right-clicked node has the selected node as a child
-	const showDeassignOption = selectedNodeForTree && 
+	const showDeassignOption = selectedNodeForTree &&
 		selectedNodeForTree.id !== node.data.id &&
 		node.data.children?.some((child: TreeNode) => child.id === selectedNodeForTree.id) &&
 		!isAssociation &&
@@ -107,7 +109,7 @@ function PMNode(
 	const nodeType = node.data.type;
 	let allowedNodeTypes: NodeType[] = [];
 	const canCreateChildren = nodeType !== "O" && nodeType !== "U";
-	
+
 	if (canCreateChildren) {
 		switch (nodeType) {
 			case "PC": {
@@ -123,7 +125,7 @@ function PMNode(
 				break;
 			}
 		}
-		
+
 		// Filter out O and OA for user tree
 		if (isUserTree) {
 			allowedNodeTypes = allowedNodeTypes.filter(type => type !== NodeType.O && type !== NodeType.OA);
@@ -140,19 +142,18 @@ function PMNode(
 			}
 		}
 	}, [node.isSelected, isUserTree, node.data, setSelectedUserNode, setSelectedTargetNode]);
-	
+
 	async function handleClick(e: React.MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 
+		// Call the left click callback if provided
+		if (onLeftClick) {
+			onLeftClick(node.data);
+		}
+
 		// Don't allow click if already loading
 		if (isLoading) return;
-
-		// Check if this is an association node
-		const isAssociation = node.data.properties?.isAssociation === 'true';
-
-		// Check if we're in descendant mode (any descendants are active)
-		const inDescendantMode = activeDescendantsNode !== null;
 
 		// Check if the node is currently open (about to be closed)
 		const isClosing = node.isOpen;
@@ -161,7 +162,7 @@ function PMNode(
 		if (isClosing) {
 			// Clear all children from the tree data to prevent showing old nested children
 			clearNodeChildren(node.data.id);
-			
+
 			// If this node has active descendants, reset the descendants state
 			if (activeDescendantsNode === node.data.id) {
 				// Clear all descendant nodes
@@ -175,49 +176,52 @@ function PMNode(
 		node.toggle();
 
 		console.log(node.data)
-		
-		// Only fetch data if we're expanding the node AND it's not an association in descendant mode
-		if (!isClosing && !(isAssociation && inDescendantMode)) {
-			// Set loading state
-			setLoadingNodes(prev => new Set(prev).add(node.data.id));
-			
-			try {
-				await fetchAndUpdateChildren(node, isDescendantNode);
-			} finally {
-				// Clear loading state
-				setLoadingNodes(prev => {
-					const next = new Set(prev);
-					next.delete(node.data.id);
-					return next;
-				});
-			}
+
+
+		// Set loading state
+		setLoadingNodes(prev => new Set(prev).add(node.data.id));
+
+		try {
+			await fetchAndUpdateChildren(node, isDescendantNode);
+		} finally {
+			// Clear loading state
+			setLoadingNodes(prev => {
+				const next = new Set(prev);
+				next.delete(node.data.id);
+				return next;
+			});
 		}
 	}
 
 	function handleContextMenu(e: React.MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
-		
+
+		// Call the right click callback if provided
+		if (onRightClick) {
+			onRightClick(node.data);
+		}
+
 		// Estimate menu height based on number of visible menu items
 		const estimatedMenuHeight = 300; // Conservative estimate for menu height
 		const margin = 10; // Safety margin from screen edges
-		
+
 		let x = e.pageX;
 		let y = e.pageY;
-		
+
 		// Check if menu would go off-screen vertically
 		if (y + estimatedMenuHeight > window.innerHeight - margin) {
 			// Position menu above the click point
 			y = Math.max(margin, y - estimatedMenuHeight);
 		}
-		
+
 		// Check if menu would go off-screen horizontally
 		const estimatedMenuWidth = 250; // Conservative estimate for menu width
 		if (x + estimatedMenuWidth > window.innerWidth - margin) {
 			// Position menu to the left of the click point
 			x = Math.max(margin, x - estimatedMenuWidth);
 		}
-		
+
 		setContextMenuPosition({ x, y });
 		setContextMenuOpened(true);
 	}
@@ -238,8 +242,8 @@ function PMNode(
 			// Create a new input node in the tree at the correct sorted position
 			// Use a longer delay to ensure the DOM is fully updated and the Input component can auto-focus
 			setTimeout(() => {
-				tree?.create({ 
-					type: type as any, 
+				tree?.create({
+					type: type as any,
 					parentId: node.id
 				});
 
@@ -372,10 +376,10 @@ function PMNode(
 		}
 		setContextMenuOpened(false);
 		if (!selectedNodeForTree) return;
-		
+
 		try {
 			await AdjudicationService.assign(selectedNodeForTree.pmId, [node.data.pmId]);
-			
+
 			notifications.show({
 				title: 'Assignment Successful',
 				message: `Successfully assigned ${selectedNodeForTree.name} to ${node.data.name}`,
@@ -400,10 +404,10 @@ function PMNode(
 		}
 		setContextMenuOpened(false);
 		if (!selectedNodeForTree) return;
-		
+
 		try {
 			await AdjudicationService.deassign(selectedNodeForTree.pmId, [node.data.pmId]);
-			
+
 			notifications.show({
 				title: 'Deassignment Successful',
 				message: `Successfully deassigned ${selectedNodeForTree.name} from ${node.data.name}`,
@@ -425,7 +429,7 @@ function PMNode(
 			e.stopPropagation();
 		}
 		setContextMenuOpened(false);
-		
+
 		// Use the callback to open the descendants tab in the side panel
 		if (onOpenDescendants) {
 			onOpenDescendants(node.data, isUserTree);
@@ -445,26 +449,26 @@ function PMNode(
 	const renderGuideLines = () => {
 		const lines = [];
 		let depth = node.level;
-		
+
 		if (depth > 0) {
 			// Add vertical lines for each level except the current node
 			for (let i = 0; i < depth; i++) {
 				// Position the line to align with parent nodes (adjust position to match parent's icon)
 				const left = i * INDENT_NUM + 12; // Align with parent node icon center
-				
+
 				lines.push(
-					<div 
+					<div
 						key={`guideline-${node.data.id}-${i}`}
-						className={classes.guideLine} 
-						style={{ 
+						className={classes.guideLine}
+						style={{
 							left: `${left}px`,
 							top: 0,
 							height: '100%'
-						}} 
+						}}
 					/>
 				);
 			}
-			
+
 			// Add the horizontal connector line from the vertical line to the current node
 			// Only if this is not a root node
 			lines.push(
@@ -479,16 +483,16 @@ function PMNode(
 				/>
 			);
 		}
-		
+
 		return lines;
 	};
 
 	return (
-		<div 
-			style={style} 
+		<div
+			style={style}
 			className={clsx(
-				classes.node, 
-				node.state, 
+				classes.node,
+				node.state,
 				isDescendantNode ? (isUserTree ? classes.descendantNodeUserTree : classes.descendantNode) : '',
 				node.isSelected && isUserTree ? 'userTreeSelected' : '',
 				node.isSelected && !isUserTree ? 'targetTreeSelected' : ''
@@ -499,7 +503,7 @@ function PMNode(
 			onClick={handleClick}
 		>
 			{renderGuideLines()}
-			
+
 			<ActionIcon
 				size={25}
 				variant="transparent"
@@ -524,17 +528,17 @@ function PMNode(
 				<Input node={node} tree={tree}/>
 			) : (
 				<>
-					<NodeContent 
-						node={node} 
-						isUserTree={isUserTree} 
+					<NodeContent
+						node={node}
+						isUserTree={isUserTree}
 						isDescendantNode={isDescendantNode}
 					/>
 
 				</>
 			)}
 
-			<Menu 
-				opened={contextMenuOpened} 
+			<Menu
+				opened={contextMenuOpened}
 				onClose={() => setContextMenuOpened(false)}
 				position="bottom-start"
 				shadow="md"
@@ -552,7 +556,7 @@ function PMNode(
 					<div style={{ display: 'none' }} />
 				</Menu.Target>
 				<Menu.Dropdown>
-					<Menu.Item 
+					<Menu.Item
 						leftSection={<IconHandFinger size={16} />}
 						onClick={(e) => handleSelectNode(e)}
 					>
@@ -586,56 +590,56 @@ function PMNode(
 									<Menu.Label>Relations</Menu.Label>
 
 									{(node.data.type !== "PC" && !isDescendantNode && !isAssociation) && (
-																			<Menu.Item 
-										leftSection={<DescendantsIcon size={16} />}
-										onClick={(e) => handleShowDescendants(e)}
-									>
-										Show Descendants
-									</Menu.Item>
+										<Menu.Item
+											leftSection={<DescendantsIcon size={16} />}
+											onClick={(e) => handleShowDescendants(e)}
+										>
+											Show Descendants
+										</Menu.Item>
 									)}
-									
+
 									{showAssociateOption && (
-																			<Menu.Item
-										leftSection={<IconArrowBigRightLines size={16} style={{ color: 'var(--mantine-color-green-9)' }} />}
-										onClick={(e) => handleCreateAssociation(e)}
-									>
+										<Menu.Item
+											leftSection={<IconArrowBigRightLines size={16} style={{ color: 'var(--mantine-color-green-9)' }} />}
+											onClick={(e) => handleCreateAssociation(e)}
+										>
 										<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 											Associate <NodeIcon type={selectedUserNode?.type || ''} /> {selectedUserNode?.name} with
 										</span>
-									</Menu.Item>
+										</Menu.Item>
 									)}
 
 									{showAssignOption && (
-																			<Menu.Item 
-										leftSection={<IconArrowBigRight size={16} />}
-										onClick={(e) => handleAssign(e)}
-									>
+										<Menu.Item
+											leftSection={<IconArrowBigRight size={16} />}
+											onClick={(e) => handleAssign(e)}
+										>
 										<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 											Assign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} to
 										</span>
-									</Menu.Item>
+										</Menu.Item>
 									)}
 
 									{showDeassignOption && (
-																			<Menu.Item 
-										leftSection={<IconCircleX size={16} style={{ color: 'var(--mantine-color-red-6)' }} />}
-										onClick={(e) => handleDeassign(e)}
-										color="red"
-									>
+										<Menu.Item
+											leftSection={<IconCircleX size={16} style={{ color: 'var(--mantine-color-red-6)' }} />}
+											onClick={(e) => handleDeassign(e)}
+											color="red"
+										>
 										<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 											Deassign <NodeIcon type={selectedNodeForTree?.type || ''} /> {selectedNodeForTree?.name} from
 										</span>
-									</Menu.Item>
+										</Menu.Item>
 									)}
 								</>
 							)}
-							
+
 							{canCreateChildren && allowedNodeTypes.length > 0 && (
 								<>
 									<Menu.Divider />
 									<Menu.Label>Create</Menu.Label>
 									{allowedNodeTypes.map((nodeType) => (
-										<Menu.Item 
+										<Menu.Item
 											key={nodeType}
 											leftSection={<NodeIcon size="20px" fontSize="16px" type={nodeType} />}
 											onClick={async () => {
@@ -648,13 +652,13 @@ function PMNode(
 							)}
 							<Menu.Divider />
 							<Menu.Label>Update</Menu.Label>
-							<Menu.Item 
+							<Menu.Item
 								leftSection={<IconPencil size={16} />}
 								onClick={(e) => handleSetProperties(e)}
 							>
 								Set Properties
 							</Menu.Item>
-							<Menu.Item 
+							<Menu.Item
 								leftSection={<IconTrash size={16} />}
 								onClick={(e) => handleDelete(e)}
 								color="red"

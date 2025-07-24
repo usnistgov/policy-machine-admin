@@ -507,15 +507,6 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
         <Group justify="flex-end">
           <Button 
             variant="outline" 
-            leftSection={<IconDatabase size={16} />}
-            onClick={handleLoadObligations}
-            loading={isLoadingObligations}
-            disabled={isExecuting}
-          >
-            Load Obligations
-          </Button>
-          <Button 
-            variant="outline" 
             leftSection={<IconFileUpload size={16} />}
             onClick={handleOpenFile}
             disabled={isExecuting}

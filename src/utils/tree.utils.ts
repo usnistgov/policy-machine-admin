@@ -33,27 +33,6 @@ const NODE_TYPE_ORDER = new Map([
  */
 export function sortTreeNodes<T extends { type: string; name: string; properties?: Record<string, string> }>(nodes: T[]): T[] {
   return [...nodes].sort((a, b) => {
-    // Check if nodes are associations
-    const aIsAssociation = a.properties?.isAssociation === 'true';
-    const bIsAssociation = b.properties?.isAssociation === 'true';
-    
-    // Associations always come first
-    if (aIsAssociation && !bIsAssociation) return -1;
-    if (!aIsAssociation && bIsAssociation) return 1;
-    
-    // If both are associations, sort by underlying type then name
-    if (aIsAssociation && bIsAssociation) {
-      const typeOrderA = NODE_TYPE_ORDER.get(a.type)!;
-      const typeOrderB = NODE_TYPE_ORDER.get(b.type)!;
-      
-      if (typeOrderA !== typeOrderB) {
-        return typeOrderA - typeOrderB;
-      }
-      
-      return a.name.localeCompare(b.name);
-    }
-    
-    // For non-associations, use regular type hierarchy
     const typeOrderA = NODE_TYPE_ORDER.get(a.type)!;
     const typeOrderB = NODE_TYPE_ORDER.get(b.type)!;
     

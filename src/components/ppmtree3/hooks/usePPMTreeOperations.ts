@@ -1,39 +1,42 @@
-import { useAtom, useAtomValue, PrimitiveAtom } from 'jotai';
+import { useAtom, PrimitiveAtom } from 'jotai';
 import { NodeApi } from 'react-arborist';
 import { QueryService } from '@/api/pdp.api';
 import { TreeNode, transformNodesToTreeNodes, sortTreeNodes } from '@/utils/tree.utils';
 import { updateNodeChildren } from '@/components/tree/util';
-import {
-	descendantNodesAtom,
-	visibleNodeTypesAtom
-} from '@/components/tree/tree-atoms';
 
-export function useTreeOperations(
+export type TreeDirection = 'descendants' | 'ascendants';
+
+export function usePPMTreeOperations(
 	treeDataAtom: PrimitiveAtom<TreeNode[]>,
+	direction: TreeDirection = 'descendants'
 ) {
 	const [treeData, setTreeData] = useAtom(treeDataAtom);
-	const descendantNodes = useAtomValue(descendantNodesAtom);
-	const visibleNodeTypes = useAtomValue(visibleNodeTypesAtom);
 
-	const fetchAndUpdateChildren = async (node: NodeApi<TreeNode>, isDescendantNode: boolean) => {
-		// Fetch children based on whether this is a descendant node
-		const response = isDescendantNode
+	const fetchAndUpdateChildren = async (node: NodeApi<TreeNode>) => {
+		console.log('Fetching children for node:', node.data.name, 'Direction:', direction);
+		
+		// Fetch children based on direction
+		const response = direction === 'descendants'
 			? await QueryService.selfComputeAdjacentDescendantPrivileges(node.data.pmId)
 			: await QueryService.selfComputeAdjacentAscendantPrivileges(node.data.pmId);
 
-		// Extract and filter nodes
+		console.log('API response:', response);
+
+		// Extract nodes
 		const nodes = response
 			.map(nodePriv => nodePriv.node)
-			.filter((node): node is NonNullable<typeof node> => node !== undefined)
-			.filter(node => {
-				return visibleNodeTypes.has(node.type)
-			});
+			.filter((node): node is NonNullable<typeof node> => node !== undefined);
+		
+		console.log('Extracted nodes:', nodes);
 		
 		const childrenTree = transformNodesToTreeNodes(nodes, node.data.id);
 		const sorted = sortTreeNodes(childrenTree);
 
+		console.log('Transformed children:', sorted);
+
 		// Update tree data
 		const updatedTreeData = updateNodeChildren(treeData, node.data.id, sorted);
+		console.log('Updated tree data:', updatedTreeData);
 		setTreeData(updatedTreeData);
 
 		return sorted;
@@ -48,7 +51,6 @@ export function useTreeOperations(
 		fetchAndUpdateChildren,
 		clearNodeChildren,
 		treeData,
-		setTreeData,
-		descendantNodes
+		setTreeData
 	};
-} 
+}

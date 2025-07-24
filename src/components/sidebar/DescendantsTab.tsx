@@ -10,6 +10,10 @@ import { PopupNode } from '@/components/tree/components';
 import {INDENT_NUM, NodeIcon} from '@/components/tree/util';
 import classes from '@/components/tree/pmtree.module.css';
 import {PMIcon} from "@/components/icons/PMIcon";
+import {PMTree, TARGET_ALLOWED_TYPES} from "@/components/tree/PMTree";
+import {TargetTreeNode} from "@/components/tree/PMNode";
+import {useTargetDynamicTree} from "@/hooks/dynamic-tree";
+import {targetOpenTreeNodesAtom, targetTreeApiAtom, targetTreeDataAtom} from "@/components/tree/tree-atom";
 
 interface DescendantsTabProps {
   rootNode: TreeNode;
@@ -92,23 +96,14 @@ export function DescendantsTab({ rootNode, isUserTree, allowedTypes }: Descendan
         }}
       >
         {width && height && (
-          <Tree
-            data={treeData}
-            disableDrag
-            disableDrop
-            disableEdit
-            openByDefault={false}
-            width={width}
-            height={height}
-            indent={INDENT_NUM}
-            ref={treeApiRef}
-            className={classes.tree}
-            rowHeight={28}
-            disableMultiSelection={false}
-            overscanCount={20}
-          >
-            {renderNode}
-          </Tree>
+            <PMTree
+                allowedTypes={TARGET_ALLOWED_TYPES}
+                nodeFunc={TargetTreeNode}
+                borderColor="var(--mantine-color-blue-7)"
+                hook={useTargetDynamicTree}
+                treeApiAtom={targetTreeApiAtom}
+                treeDataAtom={targetTreeDataAtom}
+            />
         )}
       </div>
     </Stack>

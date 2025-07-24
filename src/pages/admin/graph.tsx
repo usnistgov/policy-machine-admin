@@ -1,14 +1,7 @@
 import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip} from '@mantine/core';
 import { NavBar } from '@/components/navbar/NavBar';
-import {PMTree, TARGET_ALLOWED_TYPES} from '@/components/tree/PMTree';
+import { PPMTree, PPMTreeClickHandlers } from '@/components/ppmtree3';
 import classes from './navbar.module.css';
-import {
-    targetOpenTreeNodesAtom,
-    targetTreeApiAtom,
-    targetTreeDataAtom
-} from "@/components/tree/tree-atom";
-import {TargetTreeNode} from "@/components/tree/PMNode";
-import {useTargetDynamicTree} from "@/hooks/dynamic-tree";
 import { UserMenu } from '@/components/UserMenu';
 import { RightSidePanel, SidePanelTab } from '@/components/sidebar';
 import { PMLEditor } from '@/components/PMLEditor';
@@ -17,6 +10,16 @@ import {useDisclosure} from "@mantine/hooks";
 import {PMIcon} from "@/components/icons/PMIcon";
 import { IconLayoutSidebar, IconLayoutSidebarRight, IconLayoutBottombar } from '@tabler/icons-react';
 import { useMantineTheme } from '@mantine/core';
+import { atom } from 'jotai';
+import { TreeApi } from 'react-arborist';
+import { TreeNode } from '@/utils/tree.utils';
+import { NodeType } from '@/api/pdp.api';
+
+// Create atoms for the PPMTree3 component
+const ppmTreeApiAtom = atom<TreeApi<TreeNode> | null>(null);
+const ppmTreeDataAtom = atom<TreeNode[]>([]);
+
+const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O];
 
 export function Graph() {
     const theme = useMantineTheme();
@@ -242,20 +245,28 @@ export function Graph() {
                 <NavBar activePageIndex={0} />
             </AppShell.Navbar>
             <AppShell.Main style={{ height: '100%', position: 'relative' }}>
-                <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <PMTree
-                        title="Policy Graph"
-                        allowedTypes={TARGET_ALLOWED_TYPES}
-                        nodeFunc={TargetTreeNode}
-                        borderColor="var(--mantine-color-blue-7)"
-                        hook={useTargetDynamicTree}
-                        treeApiAtom={targetTreeApiAtom}
-                        treeDataAtom={targetTreeDataAtom}
-                        openTreeNodesAtom={targetOpenTreeNodesAtom}
-                        onOpenDescendants={handleOpenDescendantsTab}
-                        onOpenAssociation={handleOpenAssociationTab}
-                    />
-                </Box>
+                <PPMTree
+                    treeApiAtom={ppmTreeApiAtom}
+                    treeDataAtom={ppmTreeDataAtom}
+                    direction="ascendants"
+                    headerHeight={60}
+                    footerHeight={footerHeight}
+                    footerOpened={footerOpened}
+                    clickHandlers={{
+                        onLeftClick: (node: TreeNode) => {
+                            console.log('Left clicked node:', node);
+                            // You can add selection logic here if needed
+                        },
+                        onRightClick: (node: TreeNode) => {
+                            console.log('Right clicked node:', node);
+                            // Open descendants tab for right-clicked node
+                            handleOpenDescendantsTab(node, false);
+                        }
+                    }}
+                    style={{
+                        backgroundColor: 'white'
+                    }}
+                />
                 {/* Aside resizer */}
                 {asideOpened && (
                     <Box
