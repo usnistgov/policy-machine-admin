@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Stack, Text, Group, SimpleGrid, Button, Checkbox, Divider, Title } from '@mantine/core';
+import { Stack, Text, Group, SimpleGrid, Button, Checkbox, Divider, Title, ActionIcon } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconArrowBigRightLines } from '@tabler/icons-react';
+import { IconArrowBigRightLines, IconX } from '@tabler/icons-react';
 import { TreeNode } from '@/utils/tree.utils';
 import { NodeIcon } from '@/components/tree/util';
 import { QueryService, AdjudicationService } from '@/api/pdp.api';
@@ -248,14 +248,33 @@ export function AssociationTab({
   }
 
   return (
-    <Stack gap="sm" style={{ height: '100%', padding: '8px' }}>
+    <Stack gap="sm" style={{ height: '100%' }}>
       {/* Header */}
-      <Stack gap={4}>
-        <Text size="sm" fw={600} c="dimmed">
-          {mode === 'create' ? 'Associate' : 'Association'}
-        </Text>
-        {getTitle()}
-      </Stack>
+      <Group justify="space-between" align="center" style={{ padding: '16px 16px 0 16px' }}>
+        <Group gap="sm" align="center">
+          <IconArrowBigRightLines size={20} />
+          <Text fw={500} truncate style={{ maxWidth: '250px' }}>
+            {mode === 'create' ? 'Associate with' : 'Association'} {node.name}
+          </Text>
+        </Group>
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          onClick={onClose}
+        >
+          <IconX size={16} />
+        </ActionIcon>
+      </Group>
+
+      <div style={{ padding: '0 16px', flex: 1, overflow: 'hidden' }}>
+        <Stack gap="sm" style={{ height: '100%' }}>
+          {/* Title */}
+          <Stack gap={4}>
+            <Text size="sm" fw={600} c="dimmed">
+              {mode === 'create' ? 'Associate' : 'Association'}
+            </Text>
+            {getTitle()}
+          </Stack>
       
       {/* Rights Selection */}
       <div style={{ flex: 1, overflow: 'auto' }}>
@@ -332,6 +351,8 @@ export function AssociationTab({
             </div>
           </div>
         </SimpleGrid>
+      </div>
+        </Stack>
       </div>
 
       {/* Footer */}

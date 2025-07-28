@@ -1,19 +1,21 @@
-import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip, Button} from '@mantine/core';
+import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip, Button, Text} from '@mantine/core';
 import { NavBar } from '@/components/navbar/NavBar';
 import { PPMTree, PPMTreeClickHandlers } from '@/components/ppmtree3';
 import classes from './navbar.module.css';
 import { UserMenu } from '@/components/UserMenu';
-import { RightSidePanel, SidePanelTab } from '@/components/sidebar';
+import { RightSidePanel, SidePanel } from '@/components/sidebar';
 import { PMLEditor } from '@/components/PMLEditor';
 import React, { useState } from 'react';
 import {useDisclosure} from "@mantine/hooks";
 import {PMIcon} from "@/components/icons/PMIcon";
-import { IconLayoutSidebar, IconLayoutSidebarRight, IconLayoutBottombar } from '@tabler/icons-react';
+import {IconLayoutSidebar, IconLayoutSidebarRight, IconLayoutBottombar, IconPlus, IconSun, IconMoon} from '@tabler/icons-react';
 import { useMantineTheme } from '@mantine/core';
 import { atom } from 'jotai';
 import { TreeApi } from 'react-arborist';
 import { TreeNode } from '@/utils/tree.utils';
-import { NodeType } from '@/api/pdp.api';
+import { NodeType, AdjudicationService } from '@/api/pdp.api';
+import { NodeIcon } from '@/components/tree/util';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Create atoms for the PPMTree3 component
 const ppmTreeApiAtom = atom<TreeApi<TreeNode> | null>(null);
@@ -22,24 +24,70 @@ const ppmTreeDataAtom = atom<TreeNode[]>([]);
 const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O];
 
 export function Graph() {
-    const theme = useMantineTheme();
+    const mantineTheme = useMantineTheme();
+    const { themeMode, toggleTheme } = useTheme();
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
-    const [sidePanelTabs, setSidePanelTabs] = useState<SidePanelTab[]>([]);
-    const [activeTabId, setActiveTabId] = useState<string | null>(null);
+    const [activePanel, setActivePanel] = useState<SidePanel | null>(null);
     const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
     const [asideOpened, { toggle: toggleAside }] = useDisclosure(false);
     const [footerOpened, { toggle: toggleFooter }] = useDisclosure(false);
 
+    // Node creation state
+    const [selectedNodes, setSelectedNodes] = useState<TreeNode[]>([]);
+
+    // Assignment state
+    const [isAssignmentMode, setIsAssignmentMode] = useState(false);
+    const [assignmentSourceNode, setAssignmentSourceNode] = useState<TreeNode | null>(null);
+    const [assignmentTargetNodes, setAssignmentTargetNodes] = useState<TreeNode[]>([]);
+    const [isAssigning, setIsAssigning] = useState(false);
+
     // Resizable state
-    const [asideWidth, setAsideWidth] = useState(400);
+    const [navbarWidth, setNavbarWidth] = useState(200);
+    const [asideWidth, setAsideWidth] = useState(800);
     const [footerHeight, setFooterHeight] = useState(300);
+    const [isResizingNavbar, setIsResizingNavbar] = useState(false);
     const [isResizingAside, setIsResizingAside] = useState(false);
     const [isResizingFooter, setIsResizingFooter] = useState(false);
+    const [showNavbarResizer, setShowNavbarResizer] = useState(false);
     const [showAsideResizer, setShowAsideResizer] = useState(false);
     const [showFooterResizer, setShowFooterResizer] = useState(false);
 
     // Toolbar height
-    const toolbarHeight = 40;
+    const toolbarHeight = 60;
+
+    // Mouse event handlers for navbar resizer
+    React.useEffect(() => {
+        if (!isResizingNavbar) return;
+
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'ew-resize';
+
+        const onMouseMove = (e: MouseEvent) => {
+            e.preventDefault();
+            const newWidth = Math.min(400, Math.max(150, e.clientX));
+            setNavbarWidth(newWidth);
+        };
+
+        const onMouseUp = () => {
+            setIsResizingNavbar(false);
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+        window.addEventListener('dragstart', (e) => e.preventDefault());
+        window.addEventListener('selectstart', (e) => e.preventDefault());
+
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            window.removeEventListener('dragstart', (e) => e.preventDefault());
+            window.removeEventListener('selectstart', (e) => e.preventDefault());
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        };
+    }, [isResizingNavbar]);
 
     // Mouse event handlers for aside resizer
     React.useEffect(() => {
@@ -86,7 +134,7 @@ export function Graph() {
         const onMouseMove = (e: MouseEvent) => {
             e.preventDefault();
             const vh = window.innerHeight;
-            const newHeight = Math.min(800, Math.max(40, vh - e.clientY));
+            const newHeight = Math.min(800, Math.max(200, vh - e.clientY));
             setFooterHeight(newHeight);
         };
 
@@ -111,36 +159,26 @@ export function Graph() {
         };
     }, [isResizingFooter]);
 
-    const handleOpenDescendantsTab = (node: any, isUserTree: boolean) => {
-        const tabId = `descendants-${node.id}`;
-        const existingTab = sidePanelTabs.find(tab => tab.id === tabId);
+    const handleOpenDescendantsPanel = (node: any, isUserTree: boolean) => {
+        const newPanel: SidePanel = {
+            type: 'descendants',
+            title: `Descendants of ${node.name}`,
+            node: node,
+            isUserTree: isUserTree,
+            allowedTypes: TARGET_ALLOWED_TYPES
+        };
 
-        if (!existingTab) {
-            const newTab: SidePanelTab = {
-                id: tabId,
-                type: 'descendants',
-                title: `Descendants of ${node.name}`,
-                node: node,
-                isUserTree: isUserTree,
-                allowedTypes: TARGET_ALLOWED_TYPES
-            };
-
-            setSidePanelTabs(prev => [...prev, newTab]);
-        }
-
-        setActiveTabId(tabId);
+        setActivePanel(newPanel);
         setSidePanelOpen(true);
-        
+
         // Automatically open the aside panel if it's closed
         if (!asideOpened) {
             toggleAside();
         }
     };
 
-    const handleOpenAssociationTab = (node: any, selectedUserNode: any, selectedTargetNode: any, isUserTree: boolean) => {
-        const tabId = `association-${node.id}-${Date.now()}`;
-        const newTab: SidePanelTab = {
-            id: tabId,
+    const handleOpenAssociationPanel = (node: any, selectedUserNode: any, selectedTargetNode: any, isUserTree: boolean) => {
+        const newPanel: SidePanel = {
             type: 'association',
             title: `Associate with ${node.name}`,
             node: node,
@@ -149,8 +187,7 @@ export function Graph() {
             selectedTargetNode: selectedTargetNode
         };
 
-        setSidePanelTabs(prev => [...prev, newTab]);
-        setActiveTabId(tabId);
+        setActivePanel(newPanel);
         setSidePanelOpen(true);
 
         // Automatically open the aside panel if it's closed
@@ -159,35 +196,188 @@ export function Graph() {
         }
     };
 
-    const handleCloseTab = (tabId: string) => {
-        setSidePanelTabs(prev => {
-            const newTabs = prev.filter(tab => tab.id !== tabId);
-
-            // If the closed tab was active, select the next available tab or null
-            if (activeTabId === tabId) {
-                const tabIndex = prev.findIndex(tab => tab.id === tabId);
-                if (newTabs.length > 0) {
-                    // Select the next tab, or the previous one if we closed the last tab
-                    const nextIndex = tabIndex < newTabs.length ? tabIndex : newTabs.length - 1;
-                    setActiveTabId(newTabs[nextIndex]?.id || null);
-                } else {
-                    setActiveTabId(null);
-                }
-            }
-
-            return newTabs;
-        });
+    const handleClosePanel = () => {
+        setActivePanel(null);
+        setSidePanelOpen(false);
     };
 
     const handleToggleSidePanel = () => {
         setSidePanelOpen(!sidePanelOpen);
     };
 
+    const handleOpenNodeCreationPanel = (nodeType: NodeType) => {
+        const newPanel: SidePanel = {
+            type: 'create-node',
+            nodeType: nodeType,
+            selectedNodes: selectedNodes
+        };
+
+        setActivePanel(newPanel);
+        setSidePanelOpen(true);
+
+        // Automatically open the aside panel if it's closed
+        if (!asideOpened) {
+            toggleAside();
+        }
+    };
+
+    const handleAddAsAscendant = (node: TreeNode) => {
+        // Add node to selected nodes if not already present
+        setSelectedNodes(prev => {
+            const exists = prev.some(n => n.id === node.id);
+            if (!exists) {
+                return [...prev, node];
+            }
+            return prev;
+        });
+
+        // Update the active create-node panel with the new selected nodes
+        if (activePanel?.type === 'create-node') {
+            const updatedSelectedNodes = activePanel.selectedNodes || [];
+            const exists = updatedSelectedNodes.some(n => n.id === node.id);
+            if (!exists) {
+                setActivePanel({
+                    ...activePanel,
+                    selectedNodes: [...updatedSelectedNodes, node]
+                });
+            }
+        }
+
+        // Show notification to user
+        console.log(`Added ${node.name} as ascendant for node creation`);
+    };
+
+    const handleUpdateSelectedNodes = (nodes: TreeNode[]) => {
+        if (activePanel?.type === 'create-node') {
+            setActivePanel({
+                ...activePanel,
+                selectedNodes: nodes
+            });
+        }
+    };
+
+    const handleAssignTo = (node: TreeNode) => {
+        setIsAssignmentMode(true);
+        setAssignmentSourceNode(node);
+        setAssignmentTargetNodes([]);
+        
+        const newPanel: SidePanel = {
+            type: 'assignment',
+            sourceNode: node,
+            targetNodes: []
+        };
+
+        setActivePanel(newPanel);
+        setSidePanelOpen(true);
+
+        // Automatically open the aside panel if it's closed
+        if (!asideOpened) {
+            toggleAside();
+        }
+    };
+
+    const handleAssignNodeTo = (sourceNode: TreeNode, targetNode: TreeNode) => {
+        // Add target node to the list if not already present
+        setAssignmentTargetNodes(prev => {
+            const exists = prev.some(n => n.id === targetNode.id);
+            if (!exists) {
+                const newTargets = [...prev, targetNode];
+                
+                // Update the active assignment panel
+                if (activePanel?.type === 'assignment') {
+                    setActivePanel({
+                        ...activePanel,
+                        targetNodes: newTargets
+                    });
+                }
+                
+                return newTargets;
+            }
+            return prev;
+        });
+    };
+
+    const handleRemoveAssignmentTarget = (nodeId: string) => {
+        setAssignmentTargetNodes(prev => {
+            const newTargets = prev.filter(n => n.id !== nodeId);
+            
+            // Update the active assignment panel
+            if (activePanel?.type === 'assignment') {
+                setActivePanel({
+                    ...activePanel,
+                    targetNodes: newTargets
+                });
+            }
+            
+            return newTargets;
+        });
+    };
+
+    const handleAssignNodes = async () => {
+        if (!assignmentSourceNode || assignmentTargetNodes.length === 0) return;
+
+        setIsAssigning(true);
+        
+        // Update panel to show loading state
+        if (activePanel?.type === 'assignment') {
+            setActivePanel({
+                ...activePanel,
+                isAssigning: true
+            });
+        }
+        
+        try {
+            // Make API calls for each assignment
+            // assign(ascendantId: string, descendantIds: string[])
+            // We're assigning the source node TO the target nodes, so targets are ascendants
+            for (const targetNode of assignmentTargetNodes) {
+                await AdjudicationService.assign(targetNode.pmId!, [assignmentSourceNode.pmId!]);
+            }
+
+            // Clear assignment state
+            setIsAssignmentMode(false);
+            setAssignmentSourceNode(null);
+            setAssignmentTargetNodes([]);
+            setActivePanel(null);
+            setSidePanelOpen(false);
+
+            // TODO: Update tree children for assigned nodes
+            console.log('Assignment completed successfully');
+        } catch (error) {
+            console.error('Assignment failed:', error);
+        } finally {
+            setIsAssigning(false);
+        }
+    };
+
+    const handleCancelAssignment = () => {
+        setIsAssignmentMode(false);
+        setAssignmentSourceNode(null);
+        setAssignmentTargetNodes([]);
+        setActivePanel(null);
+        setSidePanelOpen(false);
+    };
+
+    const handleViewAssociations = (node: TreeNode) => {
+        const newPanel: SidePanel = {
+            type: 'associations',
+            node: node
+        };
+
+        setActivePanel(newPanel);
+        setSidePanelOpen(true);
+
+        // Automatically open the aside panel if it's closed
+        if (!asideOpened) {
+            toggleAside();
+        }
+    };
+
     return (
         <AppShell
             header={{ height: 60 }}
             navbar={{
-                width: 75,
+                width: navbarWidth,
                 breakpoint: 'sm',
                 collapsed: { desktop: !desktopOpened },
             }}
@@ -202,12 +392,14 @@ export function Graph() {
             }}
             transitionDuration={0}
         >
-            <AppShell.Header style={{backgroundColor: '#f8f9fa' }}>
+            <AppShell.Header>
                 <Group h="100%" px="md" justify="space-between">
                     <Group>
                         <PMIcon style={{width: '36px', height: '36px'}}/>
                         <Title order={2}>Policy Machine</Title>
                     </Group>
+
+                    <NavBar activePageIndex={0} />
 
                     <Group>
                         <Tooltip label={desktopOpened ? "Hide Sidebar" : "Show Sidebar"}>
@@ -215,7 +407,6 @@ export function Graph() {
                                 variant={desktopOpened ? "filled" : "subtle"}
                                 size="md"
                                 onClick={toggleDesktop}
-                                color={theme.colors.blue[7]}
                             >
                                 <IconLayoutSidebar size={24} />
                             </ActionIcon>
@@ -241,23 +432,57 @@ export function Graph() {
                             </ActionIcon>
                         </Tooltip>
 
+                        <Tooltip label={themeMode === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}>
+                            <ActionIcon
+                                variant="subtle"
+                                size="md"
+                                onClick={toggleTheme}
+                            >
+                                {themeMode === 'light' ? <IconMoon size={24} /> : <IconSun size={24} />}
+                            </ActionIcon>
+                        </Tooltip>
+
                         <UserMenu />
                     </Group>
                 </Group>
             </AppShell.Header>
-            <AppShell.Navbar p="sm" style={{ height: '100vh', backgroundColor: '#f8f9fa' }} className={classes.navbar}>
-                <NavBar activePageIndex={0} />
+            <AppShell.Navbar p="md">
+                {/* Left panel - currently empty */}
             </AppShell.Navbar>
             <AppShell.Main style={{ height: '100%', position: 'relative' }}>
                 <Stack gap={0} style={{ height: '100%' }}>
-                    {/* Empty Toolbar */}
-                    <Box style={{ 
-                        height: toolbarHeight, 
-                        backgroundColor: '#f8f9fa', 
-                        borderBottom: '1px solid #dee2e6',
-                        flexShrink: 0
-                    }} />
-                    
+                    {/* Node Creation Toolbar */}
+                    <Box style={{
+                        height: toolbarHeight,
+                        borderBottom: '1px solid var(--mantine-primary-color-filled)',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '16px',
+                        paddingRight: '16px'
+                    }}>
+                        <Group gap="md" align="center">
+                            <Stack gap={2} align="left">
+                                <Text size="xs" c="dimmed" fw={500}>
+                                    Create Node
+                                </Text>
+                                <Group gap="xs">
+                                    {[NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O].map((nodeType) => (
+                                        <ActionIcon
+                                            key={nodeType}
+                                            variant="default"
+                                            size="md"
+                                            onClick={() => handleOpenNodeCreationPanel(nodeType)}
+                                        >
+                                            <NodeIcon type={nodeType} size="20px" fontSize="12px" />
+                                        </ActionIcon>
+                                    ))}
+                                </Group>
+                            </Stack>
+                            <Divider orientation="vertical" />
+                        </Group>
+                    </Box>
+
                     {/* Tree */}
                     <PPMTree
                         treeApiAtom={ppmTreeApiAtom}
@@ -273,15 +498,48 @@ export function Graph() {
                             },
                             onRightClick: (node: TreeNode) => {
                                 console.log('Right clicked node:', node);
-                                // Open descendants tab for right-clicked node
-                                handleOpenDescendantsTab(node, false);
-                            }
+                                // Context menu is handled by PPMNode component
+                            },
+                            onAddAsAscendant: handleAddAsAscendant,
+                            hasNodeCreationTabs: activePanel?.type === 'create-node',
+                            onAssignTo: handleAssignTo,
+                            onAssignNodeTo: handleAssignNodeTo,
+                            isAssignmentMode: isAssignmentMode,
+                            assignmentSourceNode: assignmentSourceNode,
+                            onViewAssociations: handleViewAssociations
                         }}
-                        style={{
-                            backgroundColor: 'white'
-                        }}
+                        style={{}}
                     />
                 </Stack>
+                {/* Navbar resizer */}
+                {desktopOpened && (
+                    <Box
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsResizingNavbar(true);
+                        }}
+                        onMouseEnter={() => setShowNavbarResizer(true)}
+                        onMouseLeave={() => setShowNavbarResizer(false)}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{
+                            position: 'fixed',
+                            top: 60,
+                            left: navbarWidth - 4,
+                            width: 8,
+                            height: `calc(100vh - ${footerOpened ? footerHeight : 0}px - 60px)`,
+                            cursor: 'ew-resize',
+                            zIndex: 2000,
+                            background: showNavbarResizer || isResizingNavbar ? 'var(--mantine-primary-color-filled)' : 'transparent',
+                            borderRadius: 4,
+                            transition: 'background 0.2s',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            MozUserSelect: 'none',
+                            msUserSelect: 'none',
+                        }}
+                    />
+                )}
                 {/* Aside resizer */}
                 {asideOpened && (
                     <Box
@@ -293,7 +551,6 @@ export function Graph() {
                         onMouseEnter={() => setShowAsideResizer(true)}
                         onMouseLeave={() => setShowAsideResizer(false)}
                         onDragStart={(e) => e.preventDefault()}
-                        onSelectStart={(e) => e.preventDefault()}
                         style={{
                             position: 'fixed',
                             top: 60,
@@ -302,7 +559,7 @@ export function Graph() {
                             height: `calc(100vh - ${footerOpened ? footerHeight : 0}px - 60px)`,
                             cursor: 'ew-resize',
                             zIndex: 2000,
-                            background: showAsideResizer || isResizingAside ? theme.colors.blue[7] : 'transparent',
+                            background: showAsideResizer || isResizingAside ? 'var(--mantine-primary-color-filled)' : 'transparent',
                             borderRadius: 4,
                             transition: 'background 0.2s',
                             userSelect: 'none',
@@ -323,16 +580,15 @@ export function Graph() {
                         onMouseEnter={() => setShowFooterResizer(true)}
                         onMouseLeave={() => setShowFooterResizer(false)}
                         onDragStart={(e) => e.preventDefault()}
-                        onSelectStart={(e) => e.preventDefault()}
                         style={{
                             position: 'fixed',
-                            left: 75,
+                            left: 0,
                             bottom: footerHeight - 4,
                             width: '100vw',
                             height: 8,
                             cursor: 'ns-resize',
                             zIndex: 2000,
-                            background: showFooterResizer || isResizingFooter ? theme.colors.blue[4] : 'transparent',
+                            background: showFooterResizer || isResizingFooter ? 'var(--mantine-primary-color-filled)' : 'transparent',
                             borderRadius: 4,
                             transition: 'background 0.2s',
                             userSelect: 'none',
@@ -344,24 +600,33 @@ export function Graph() {
                 )}
             </AppShell.Main>
 
-            <AppShell.Aside p="md" style={{ backgroundColor: '#f8f9fa' }}>
+            <AppShell.Aside p="md">
                 <RightSidePanel
                     isOpen={true}
                     onToggle={handleToggleSidePanel}
-                    tabs={sidePanelTabs}
-                    activeTabId={activeTabId}
-                    onTabChange={setActiveTabId}
-                    onCloseTab={handleCloseTab}
+                    panel={activePanel}
+                    onClose={handleClosePanel}
+                    onUpdateSelectedNodes={handleUpdateSelectedNodes}
+                    onRemoveAssignmentTarget={handleRemoveAssignmentTarget}
+                    onAssignNodes={handleAssignNodes}
                     embedded={true}
                 />
 
             </AppShell.Aside>
 
-            <AppShell.Footer style={{padding: '10px 10px 10px 80px', backgroundColor: '#f8f9fa'}}>
-                <PMLEditor
-                    title="PML Editor"
-                    hideButtons={false}
-                />
+            <AppShell.Footer style={{
+                padding: '10px',
+                height: footerHeight,
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <PMLEditor
+                        title="PML Editor"
+                        hideButtons={false}
+                        containerHeight={footerHeight}
+                    />
+                </div>
             </AppShell.Footer>
         </AppShell>
     );

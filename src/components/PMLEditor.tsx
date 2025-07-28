@@ -4,6 +4,7 @@ import { Button, Group, Stack, Text, Alert, LoadingOverlay, Box } from '@mantine
 import { IconPlayerPlay, IconTrash, IconInfoCircle, IconFileUpload, IconDatabase } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { AdjudicationService, QueryService } from '@/api/pdp.api';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface PMLEditorProps {
   title: string;
@@ -12,20 +13,65 @@ interface PMLEditorProps {
   onChange?: (value: string) => void;
   readOnly?: boolean;
   hideButtons?: boolean;
+  containerHeight?: number;
 }
 
-export function PMLEditor({ title, placeholder, initialValue = '', onChange, readOnly = false, hideButtons = false }: PMLEditorProps) {
+export function PMLEditor({ title, placeholder, initialValue = '', onChange, readOnly = false, hideButtons = false, containerHeight }: PMLEditorProps) {
+  const { themeMode } = useTheme();
   const [code, setCode] = useState(initialValue);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isLoadingObligations, setIsLoadingObligations] = useState(false);
   const [fileName, setFileName] = useState<string>('');
   const editorRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Monaco Editor configuration for PML syntax highlighting
   useEffect(() => {
     // Configuration will be handled when Monaco mounts
   }, []);
+
+  // Update Monaco theme when theme mode changes
+  useEffect(() => {
+    if (editorRef.current) {
+      const monaco = (window as any).monaco;
+      if (monaco?.editor) {
+        monaco.editor.setTheme(themeMode === 'dark' ? 'vs-dark' : 'light');
+      }
+    }
+  }, [themeMode]);
+
+  // Force Monaco to resize when container height changes
+  useEffect(() => {
+    if (editorRef.current && containerHeight) {
+      // Small delay to ensure DOM has updated
+      const timeoutId = setTimeout(() => {
+        editorRef.current.layout();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [containerHeight]);
+
+  // Use ResizeObserver to detect container size changes
+  useEffect(() => {
+    if (!editorRef.current || !containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (editorRef.current) {
+        // Force layout recalculation with a small delay
+        setTimeout(() => {
+          editorRef.current.layout();
+        }, 50);
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [editorRef.current]);
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
@@ -301,8 +347,8 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
 
     configurePMLLanguage(monaco);
     
-    // Set the theme after language configuration
-    monaco.editor.setTheme('pml-theme');
+    // Set the theme based on current theme mode
+    monaco.editor.setTheme(themeMode === 'dark' ? 'vs-dark' : 'light');
   };
 
   const handleSubmit = async () => {
@@ -454,15 +500,19 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
         style={{ display: 'none' }}
       />
       
-      <div style={{ 
-        flex: 1, 
-        border: '1px solid #e9ecef', 
-        borderRadius: '8px',
-        position: 'relative'
-      }}>
+      <div 
+        ref={containerRef}
+        data-editor-container
+        style={{ 
+          flex: 1, 
+          border: `1px solid var(--mantine-color-gray-${themeMode === 'dark' ? '7' : '3'})`, 
+          borderRadius: '8px',
+          position: 'relative'
+        }}
+      >
         <LoadingOverlay visible={isExecuting} />
         <Editor
-          height="100%"
+          height={containerHeight ? `${containerHeight - 120}px` : "100%"}
           language="pml"
           value={code}
           onChange={(value) => {
@@ -479,7 +529,7 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
             lineNumbersMinChars: 3,
             roundedSelection: false,
             scrollBeyondLastLine: false,
-            automaticLayout: true,
+            automaticLayout: false,
             wordWrap: 'on',
             suggest: {
               snippetsPreventQuickSuggestions: false,

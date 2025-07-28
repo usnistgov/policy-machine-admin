@@ -2,14 +2,15 @@ import { Node } from '@/api/pdp.api';
 
 export interface TreeNode {
   id: string; // UUID v4
-  pmId: string; // Original Node ID from PDP (int64 as string)
+  pmId?: string; // Original Node ID from PDP (int64 as string) - optional for temp nodes
   name: string;
   type: string;
-  properties: Record<string, string>;
+  properties?: Record<string, string>; // Optional for temp nodes
   children?: TreeNode[];
   parent?: string; // Parent tree node ID (UUID)
   expanded?: boolean;
   selected?: boolean;
+  isTemporary?: boolean; // Flag for temporary nodes being created
 }
 
 /**

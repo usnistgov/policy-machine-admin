@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import {Stack, Text, Loader, Title} from '@mantine/core';
+import {Stack, Text, Loader, Title, Group, ActionIcon} from '@mantine/core';
+import {IconX} from '@tabler/icons-react';
 import { Tree, TreeApi, NodeRendererProps } from 'react-arborist';
 import { useElementSize, useMergedRef } from '@mantine/hooks';
 import { PrimitiveAtom, atom, useAtom } from 'jotai';
@@ -19,21 +20,22 @@ interface DescendantsTabProps {
   rootNode: TreeNode;
   isUserTree: boolean;
   allowedTypes: NodeType[];
+  onClose: () => void;
 }
 
-// Create local atoms for this tab's tree data
-const createTabTreeAtom = (rootNode: TreeNode) => atom<TreeNode[]>([{
-  ...rootNode,
-  children: []
-}]);
-
-export function DescendantsTab({ rootNode, isUserTree, allowedTypes }: DescendantsTabProps) {
-  const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
+export function DescendantsTab({ rootNode, isUserTree, allowedTypes, onClose }: DescendantsTabProps) {
+  /*const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
   
-  // Create tab-specific tree data atom
-  const [treeDataAtom] = useState(() => createTabTreeAtom(rootNode));
-  const [treeData] = useAtom(treeDataAtom);
-  const { fetchAndUpdateChildren } = useTreeOperations(treeDataAtom, allowedTypes, isUserTree);
+  // Create tab-specific tree data atom using useRef to maintain stable reference
+  const treeDataAtomRef = useRef<PrimitiveAtom<TreeNode[]>>();
+  if (!treeDataAtomRef.current) {
+    treeDataAtomRef.current = atom<TreeNode[]>([{
+      ...rootNode,
+      children: []
+    }]);
+  }
+  const [treeData] = useAtom(treeDataAtomRef.current);
+  const { fetchAndUpdateChildren } = useTreeOperations(treeDataAtomRef.current, allowedTypes, isUserTree);
   
   const treeContainerRef = useRef<HTMLDivElement>(null);
   const treeApiRef = useRef<TreeApi<TreeNode> | null>(null);
@@ -46,8 +48,8 @@ export function DescendantsTab({ rootNode, isUserTree, allowedTypes }: Descendan
   
   // Node renderer function for this tab
   const renderNode = useCallback((props: NodeRendererProps<any>) => {
-    return PopupNode(props, allowedTypes, treeDataAtom, isUserTree, loadingNodes, setLoadingNodes);
-  }, [allowedTypes, treeDataAtom, isUserTree, loadingNodes]);
+    return PopupNode(props, allowedTypes, treeDataAtomRef.current!, isUserTree, loadingNodes, setLoadingNodes);
+  }, [allowedTypes, isUserTree, loadingNodes]);
   
   // Automatically expand the root node and fetch its descendants
   useEffect(() => {
@@ -84,13 +86,13 @@ export function DescendantsTab({ rootNode, isUserTree, allowedTypes }: Descendan
 
   return (
     <Stack gap="sm" style={{ height: '100%', padding: '8px' }}>
-      {/* Tree Container */}
+      {/!* Tree Container *!/}
       <div 
         ref={mergedRef} 
         style={{ 
           flex: 1, 
           overflow: 'hidden',
-          backgroundColor: '#f8f9fa',
+          backgroundColor: 'var(--mantine-color-gray-0)',
           border: '1px solid var(--mantine-color-gray-3)',
           borderRadius: '4px'
         }}
@@ -103,9 +105,37 @@ export function DescendantsTab({ rootNode, isUserTree, allowedTypes }: Descendan
                 hook={useTargetDynamicTree}
                 treeApiAtom={targetTreeApiAtom}
                 treeDataAtom={targetTreeDataAtom}
+                openTreeNodesAtom={targetOpenTreeNodesAtom}
             />
         )}
       </div>
     </Stack>
-  );
+  );*/
+  return (
+    <Stack gap="md" style={{ height: '100%' }}>
+      {/* Header */}
+      <Group justify="space-between" align="center" style={{ padding: '16px 16px 0 16px' }}>
+        <Group gap="sm" align="center">
+          <PMIcon style={{ width: '20px', height: '20px' }} />
+          <Text fw={500} truncate style={{ maxWidth: '250px' }}>
+            Descendants of {rootNode.name}
+          </Text>
+        </Group>
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          onClick={onClose}
+        >
+          <IconX size={16} />
+        </ActionIcon>
+      </Group>
+
+      {/* Content placeholder */}
+      <Stack align="center" justify="center" style={{ flex: 1 }} gap="md">
+        <Text c="dimmed" ta="center">
+          Descendants functionality coming soon
+        </Text>
+      </Stack>
+    </Stack>
+  )
 }

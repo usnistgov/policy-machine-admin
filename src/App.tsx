@@ -1,20 +1,31 @@
 import '@mantine/core/styles.css';
+import '@mantine/core/styles/global.css';
 
 import { MantineProvider } from '@mantine/core';
 import { Router } from './Router';
-import { theme } from './theme';
 import {Notifications} from "@mantine/notifications";
 import '@mantine/notifications/styles.css';
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
-export default function App() {
+function AppContent() {
+    const { theme, themeMode } = useTheme();
+    
     return (
-        <MantineProvider theme={theme}>
+        <MantineProvider theme={theme} defaultColorScheme={themeMode} forceColorScheme={themeMode}>
             <QueryClientProvider client={queryClient}>
                 <Notifications position="top-right" />
                 <Router />
             </QueryClientProvider>
         </MantineProvider>
+    );
+}
+
+export default function App() {
+    return (
+        <ThemeProvider>
+            <AppContent />
+        </ThemeProvider>
     );
 }
 

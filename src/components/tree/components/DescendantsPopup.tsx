@@ -255,7 +255,7 @@ export function DescendantsPopup({ rootNode, isUserTree, allowedTypes, initialPo
 					style={{ 
 						flex: 1, 
 						overflow: 'hidden',
-						backgroundColor: '#f8f9fa', // gray[0] from theme
+						backgroundColor: 'var(--mantine-color-gray-0)',
 					}}
 				>
 					{width && height && (

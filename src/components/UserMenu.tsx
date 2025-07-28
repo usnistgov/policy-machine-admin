@@ -20,8 +20,7 @@ export function UserMenu() {
             <Menu.Target>
                 <Button 
                     variant="light" 
-                    color={theme.colors.blue[7]}
-                    style={{ 
+                    style={{
                         borderRadius: '20px' 
                     }}
                     rightSection={<IconChevronDown size={14} />}

@@ -9,6 +9,10 @@ import { INDENT_NUM, NodeIcon, shouldShowExpansionIcon } from "@/components/tree
 import { PPMTreeClickHandlers } from "./PPMTree";
 import { TreeDirection, usePPMTreeOperations } from "./hooks/usePPMTreeOperations";
 import { PrimitiveAtom } from "jotai/index";
+import { NodeContextMenu } from "./NodeContextMenu";
+import { NodeType, AdjudicationService } from "@/api/pdp.api";
+import { useAtom } from "jotai";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export interface PPMNodeProps extends NodeRendererProps<TreeNode> {
 	clickHandlers?: PPMTreeClickHandlers;
@@ -18,9 +22,12 @@ export interface PPMNodeProps extends NodeRendererProps<TreeNode> {
 }
 
 export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataAtom, className }: PPMNodeProps) {
+	const { themeMode } = useTheme();
 	const [isHovered, setIsHovered] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 	const { fetchAndUpdateChildren, clearNodeChildren } = usePPMTreeOperations(treeDataAtom, direction);
+	const [treeData, setTreeData] = useAtom(treeDataAtom);
 
 	const handleClick = async (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -60,6 +67,9 @@ export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataA
 	const handleContextMenu = (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
+
+		// Show context menu at cursor position
+		setContextMenu({ x: e.clientX, y: e.clientY });
 
 		// Call the right click callback if provided
 		if (clickHandlers?.onRightClick) {
@@ -110,58 +120,117 @@ export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataA
 	const renderNodeContent = () => {
 		return (
 			<div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-				<NodeIcon 
-					type={node.data.type} 
+				<NodeIcon
+					type={node.data.type}
 					size="20px"
 					fontSize="14px"
 				/>
-				<span style={{ 
-					fontSize: '14px',
-					fontWeight: 500,
-					color: 'var(--mantine-color-text)',
-					userSelect: 'none'
-				}}>
-					{node.data.name}
-				</span>
+				{node.isEditing ? (
+					<input
+						type="text"
+						defaultValue={node.data.name}
+						onFocus={(e) => e.target.select()}
+						onBlur={() => node.reset()}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter') {
+								e.preventDefault();
+								e.stopPropagation();
+								const value = e.currentTarget.value.trim();
+								node.submit(value);
+							}
+
+							if (e.key === 'Escape') {
+								node.reset();
+							}
+						}}
+						autoFocus
+						style={{
+							fontSize: '14px',
+							fontWeight: 500,
+							border: '1px solid #ccc',
+							borderRadius: '2px',
+							padding: '2px 4px',
+							outline: 'none',
+							flex: 1
+						}}
+					/>
+				) : (
+					<span style={{
+						fontSize: '14px',
+						fontWeight: 500,
+						color: 'var(--mantine-color-text)',
+						userSelect: 'none'
+					}}>
+						{node.data.name}
+					</span>
+				)}
 			</div>
 		);
 	};
 
 	return (
-		<div
-			style={style}
-			className={clsx(
-				classes.node,
-				node.state,
-				className
-			)}
-			onContextMenu={handleContextMenu}
-			onMouseEnter={() => setIsHovered(true)}
-			onMouseLeave={() => setIsHovered(false)}
-			onClick={handleClick}
-		>
-			{renderGuideLines()}
-
-			<ActionIcon
-				size={25}
-				variant="transparent"
-				style={{ marginRight: '0' }}
-				c="black"
-			>
-				{isLoading ? (
-					<Loader size={16} color="black" />
-				) : shouldShowExpansionIcon(node.data) ? (
-					node.isOpen ? (
-						<IconChevronDown stroke={2} size={16} />
-					) : (
-						<IconChevronRight stroke={2} size={16} />
-					)
-				) : (
-					<IconPoint stroke={2} size={16} />
+		<>
+			<div
+				style={style}
+				className={clsx(
+					classes.node,
+					node.state,
+					className
 				)}
-			</ActionIcon>
+				onContextMenu={handleContextMenu}
+				onMouseEnter={() => setIsHovered(true)}
+				onMouseLeave={() => setIsHovered(false)}
+				onClick={handleClick}
+			>
+				{renderGuideLines()}
 
-			{renderNodeContent()}
-		</div>
+				<ActionIcon
+					size={25}
+					variant="transparent"
+					style={{ marginRight: '0' }}
+				>
+					{isLoading ? (
+						<Loader size={16} />
+					) : shouldShowExpansionIcon(node.data) ? (
+						node.isOpen ? (
+							<IconChevronDown 
+								stroke={2} 
+								size={16} 
+								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'} 
+							/>
+						) : (
+							<IconChevronRight 
+								stroke={2} 
+								size={16} 
+								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'} 
+							/>
+						)
+					) : (
+						<IconPoint 
+							stroke={2} 
+							size={16} 
+							color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'} 
+						/>
+					)}
+				</ActionIcon>
+
+				{renderNodeContent()}
+			</div>
+
+			{contextMenu && (
+				<NodeContextMenu
+					node={node.data}
+					position={contextMenu}
+					onClose={() => setContextMenu(null)}
+					onAddAsAscendant={clickHandlers?.onAddAsAscendant}
+					hasNodeCreationTabs={clickHandlers?.hasNodeCreationTabs}
+					onAssignTo={clickHandlers?.onAssignTo}
+					onAssignNodeTo={clickHandlers?.onAssignNodeTo}
+					isAssignmentMode={clickHandlers?.isAssignmentMode}
+					assignmentSourceNode={clickHandlers?.assignmentSourceNode}
+					onViewAssociations={clickHandlers?.onViewAssociations}
+				/>
+			)}
+		</>
 	);
 }

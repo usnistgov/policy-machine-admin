@@ -8,44 +8,33 @@ export const INDENT_NUM = 30;
 
 export type NodeIconProps = {
 	type: string,
-	isDescendant?: boolean,
 	size?: string,
 	fontSize?: string,
 	style?: React.CSSProperties,
 }
 
-export function NodeIcon({type, isDescendant = false, size = '16px', fontSize = '11px', style}: NodeIconProps) {
+export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIconProps) {
 	const color = getTypeColor(type);
-	const numericSize = parseInt(size);
 
 	return (
-		<>
-			{isDescendant ?
-				<>
-					<DescendantsIcon stroke={2} color={color} size={numericSize} style={{marginRight: "8px"}} />
-				</>
-				:
-				<></>
-			}
-			<div
-				style={{
-					borderRadius: '30%',
-					color,
-					fontSize,
-					fontWeight: 'bold',
-					width: size,
-					height: size,
-					display: 'flex',
-					textAlign: 'center',
-					justifyContent: 'center',
-					alignItems: 'center',
-					...style,
-				}}
-				
-			>
-				{type}
-			</div>
-		</>
+		<div
+			style={{
+				borderRadius: '30%',
+				color,
+				fontSize,
+				fontWeight: 'bold',
+				width: size,
+				height: size,
+				display: 'flex',
+				textAlign: 'center',
+				justifyContent: 'center',
+				alignItems: 'center',
+				...style,
+			}}
+
+		>
+			{type}
+		</div>
 	);
 }
 
@@ -56,22 +45,22 @@ export function getTypeColor(type: string) {
 		case NodeType.PC:
 			return theme.colors.green[9];
 		case NodeType.UA:
-			return theme.colors.red[9];
+			return theme.colors.red[6];
 		case NodeType.OA:
-			return theme.colors.blue[9];
+			return theme.colors.blue[6];
 		case NodeType.U:
-			return theme.colors.red[4];
+			return theme.colors.red[3];
 		case NodeType.O:
-			return theme.colors.blue[4];
+			return theme.colors.blue[3];
 		default:
 			return theme.colors.gray[5];
 	}
 }
 
-export function updateNodeChildren(treeData: TreeNode[], nodeId: string, children: TreeNode[]): TreeNode[] {	
+export function updateNodeChildren(treeData: TreeNode[], nodeId: string, children: TreeNode[]): TreeNode[] {
 	// Sort the children before updating
 	const sortedChildren = sortTreeNodes(children);
-	
+
 	return treeData.map((treeDataNode): TreeNode => {
 		if (treeDataNode.id === nodeId) {
 			return {

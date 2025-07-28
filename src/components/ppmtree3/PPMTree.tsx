@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Tree, TreeApi } from "react-arborist";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { useAtom } from "jotai";
-import { QueryService } from "@/api/pdp.api";
+import { QueryService, AdjudicationService, NodeType } from "@/api/pdp.api";
 import { transformNodesToTreeNodes, TreeNode } from "@/utils/tree.utils";
 import { PrimitiveAtom } from "jotai/index";
 import { INDENT_NUM } from "@/components/tree/util";
@@ -12,6 +12,13 @@ import { TreeDirection } from "./hooks/usePPMTreeOperations";
 export interface PPMTreeClickHandlers {
 	onLeftClick?: (node: TreeNode) => void;
 	onRightClick?: (node: TreeNode) => void;
+	onAddAsAscendant?: (node: TreeNode) => void;
+	hasNodeCreationTabs?: boolean;
+	onAssignTo?: (node: TreeNode) => void;
+	onAssignNodeTo?: (sourceNode: TreeNode, targetNode: TreeNode) => void;
+	isAssignmentMode?: boolean;
+	assignmentSourceNode?: TreeNode | null;
+	onViewAssociations?: (node: TreeNode) => void;
 }
 
 export interface PPMTreeProps {
@@ -126,7 +133,7 @@ export function PPMTree(props: PPMTreeProps) {
 						data={treeData}
 						disableDrag={props.disableDrag ?? true}
 						disableDrop={props.disableDrop ?? true}
-						disableEdit={props.disableEdit ?? true}
+						disableEdit={props.disableEdit ?? false}
 						disableMultiSelection={props.disableMultiSelection ?? true}
 						disableSelection={props.disableSelection ?? true}
 						openByDefault={false}
@@ -136,6 +143,112 @@ export function PPMTree(props: PPMTreeProps) {
 						ref={treeApiRef}
 						rowHeight={props.rowHeight ?? 28}
 						overscanCount={props.overscanCount ?? 20}
+						onCreate={({ parentId, index, type }) => {
+							console.log('onCreate called with:', { parentId, index, type });
+							
+							// Get the pending node type and parent info from the tree API
+							const nodeType = (treeApiRef.current as any)?._pendingNodeType;
+							const parentNode = (treeApiRef.current as any)?._pendingParentNode;
+							
+							console.log('Retrieved pending info:', { nodeType, parentNode });
+							
+							if (!nodeType || !parentNode) {
+								console.error('Missing pending node type or parent node');
+								return { id: `temp-${Date.now()}`, name: '', type: nodeType || 'UA' };
+							}
+							
+							// Create a temporary node with the correct type
+							const tempId = `temp-${Date.now()}`;
+							const tempNode: TreeNode = {
+								id: tempId,
+								name: '', // Empty name triggers edit mode
+								type: nodeType,
+								children: [],
+								parent: parentId,
+								isTemporary: true
+							};
+							
+							console.log('Created temporary node:', tempNode);
+							
+							// Clean up the pending info
+							delete (treeApiRef.current as any)._pendingNodeType;
+							delete (treeApiRef.current as any)._pendingParentNode;
+							
+							return tempNode;
+						}}
+						onEdit={async (args) => {
+							// Handle node editing completion
+							console.log('onEdit called with:', args);
+							const nodeBeingEdited = treeData.find(n => n.id === args.id);
+							console.log('Found node being edited:', nodeBeingEdited);
+							
+							if (nodeBeingEdited?.isTemporary) {
+								console.log('Processing temporary node creation');
+								if (args.name && args.name.trim()) {
+									// First, update the temporary node name immediately so it shows in the UI
+									setTreeData(prev => prev.map(node => 
+										node.id === args.id ? { ...node, name: args.name, isTemporary: false } : node
+									));
+									
+									try {
+										// Find parent node to get parent ID for API call
+										const parentNode = treeData.find(n => n.id === nodeBeingEdited.parent);
+										const parentId = parentNode?.pmId || parentNode?.id;
+										
+										if (!parentId) {
+											console.error('Parent node not found for temporary node');
+											setTreeData(prev => prev.filter(node => node.id !== args.id));
+											return;
+										}
+
+										console.log('Calling API to create node:', args.name, 'Type:', nodeBeingEdited.type);
+
+										// Call the appropriate API based on node type
+										let response;
+										switch (nodeBeingEdited.type as NodeType) {
+											case NodeType.UA:
+												response = await AdjudicationService.createUserAttribute(args.name, [parentId]);
+												break;
+											case NodeType.OA:
+												response = await AdjudicationService.createObjectAttribute(args.name, [parentId]);
+												break;
+											case NodeType.U:
+												response = await AdjudicationService.createUser(args.name, [parentId]);
+												break;
+											case NodeType.O:
+												response = await AdjudicationService.createObject(args.name, [parentId]);
+												break;
+											default:
+												console.error('Unsupported node type for creation:', nodeBeingEdited.type);
+												setTreeData(prev => prev.filter(node => node.id !== args.id));
+												return;
+										}
+
+										console.log('API response:', response);
+
+										// Keep the node with the name - don't remove it since it's now created
+										// Optionally refresh the tree to get the proper node ID from the server
+										// For now, just keep the temporary node as a real node
+										console.log('Node created successfully');
+										
+									} catch (error) {
+										console.error('Failed to create node via API:', error);
+										// Remove the temporary node on error
+										setTreeData(prev => prev.filter(node => node.id !== args.id));
+									}
+								} else {
+									// Remove temporary nodes with empty names
+									setTreeData(prev => prev.filter(node => node.id !== args.id));
+								}
+							} else {
+								// Handle regular node editing (existing nodes)
+								if (args.name && args.name.trim()) {
+									setTreeData(prev => prev.map(node => 
+										node.id === args.id ? { ...node, name: args.name } : node
+									));
+								}
+							}
+						}}
 					>
 						{nodeRenderer}
 					</Tree>

@@ -53,11 +53,26 @@ const red: MantineColorsTuple = [
 ]
 
 
-export const theme = createTheme({
+export const lightTheme = createTheme({
   colors: {
     violet,
     blue,
     green,
     red
   },
+  primaryColor: 'violet',  // Set primary color for light theme
+  primaryShade: 6,
 });
+
+export const darkTheme = createTheme({
+  colors: {
+    violet,
+    blue,
+    green,
+    red
+  },
+  primaryColor: 'violet',  // Changed from 'blue' to 'violet'
+  primaryShade: 6,
+});
+
+export const theme = lightTheme; // Default theme

@@ -7,6 +7,40 @@
 
 .navbarMain {
     flex: 1;
+    padding: var(--mantine-spacing-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbarLink {
+    height: rem(40px);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative;
+    transition: all 0.2s ease;
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    white-space: nowrap;
+    background-color: transparent;
+}
+
+.navbarLink:hover {
+    background-color: var(--hover-color, var(--mantine-color-gray-1));
+}
+
+.navbarLink[data-active="true"] {
+    border-bottom: 2px solid var(--mantine-primary-color-filled);
+    color: var(--mantine-primary-color-filled);
+    background-color: transparent;
+}
+
+.navbarLink[data-active="true"]:hover {
+    background-color: var(--hover-color, var(--mantine-color-gray-1));
 }
 
 .link {
@@ -16,16 +50,4 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 10px;
-
-    &:hover {
-        background-color: var(--mantine-color-blue-2);
-    }
-
-    &[data-active] {
-        &,
-        &:hover {
-            background-color: var(--mantine-color-blue-7);
-            color: white;
-        }
-    }
 }

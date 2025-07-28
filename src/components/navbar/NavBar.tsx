@@ -9,14 +9,16 @@ import {
     IconListTree,
     IconAutomation
 } from "@tabler/icons-react";
-import {Divider, Stack, Tooltip, UnstyledButton} from "@mantine/core";
+import {ActionIcon, Divider, Group, Stack, Tooltip, UnstyledButton} from "@mantine/core";
 import classes from "./navbar.module.css";
 import {PMIcon} from "@/components/icons/PMIcon";
 import {useState} from "react";
 import {useNavigate} from "react-router-dom";
 import { AuthService } from "@/lib/auth";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export function NavBar({activePageIndex}: {activePageIndex: number}) {
+    const { themeMode } = useTheme();
     const [, setActive] = useState(activePageIndex);
     const navigate = useNavigate();
 
@@ -30,6 +32,7 @@ export function NavBar({activePageIndex}: {activePageIndex: number}) {
             {...link}
             key={link.label}
             active={index === activePageIndex}
+            themeMode={themeMode}
             onClick={() => {
                 setActive(index);
                 routeChange(link.label);
@@ -38,13 +41,9 @@ export function NavBar({activePageIndex}: {activePageIndex: number}) {
     ));
 
     return (
-        <>
-            <div className={classes.navbarMain}>
-                <Stack justify="center" gap={0}>
-                    {links}
-                </Stack>
-            </div>
-        </>
+        <Group gap="xs">
+            {links}
+        </Group>
     )
 }
 
@@ -57,17 +56,30 @@ interface NavbarLinkProps {
   icon: typeof IconHome2;
   label: string;
   style?: React.CSSProperties;
-
+  themeMode: string;
   onClick?: () => void;
 }
 
-function NavbarLink({ icon: Icon, label, style, active, onClick }: NavbarLinkProps) {
+function NavbarLink({ icon: Icon, label, style, active, themeMode, onClick }: NavbarLinkProps) {
   return (
-    <Tooltip label={label} position="right" transitionProps={{ duration: 0 }}>
-      <UnstyledButton onClick={onClick} className={classes.link} data-active={active || undefined}>
-        <Icon stroke={2} style={style} />
-      </UnstyledButton>
-    </Tooltip>
+    <UnstyledButton 
+      onClick={onClick} 
+      className={classes.navbarLink}
+      data-active={active || undefined}
+      style={{
+        color: themeMode === 'dark' 
+          ? 'var(--mantine-color-gray-4)' 
+          : 'var(--mantine-color-gray-7)',
+        '--hover-color': themeMode === 'dark' 
+          ? 'var(--mantine-color-gray-8)' 
+          : 'var(--mantine-color-gray-1)'
+      } as React.CSSProperties}
+    >
+      <Group gap="xs" wrap="nowrap">
+        <Icon stroke={1.5} style={style} size={16} />
+        <span style={{ fontSize: '13px', fontWeight: 500 }}>{label}</span>
+      </Group>
+    </UnstyledButton>
   );
 }
 

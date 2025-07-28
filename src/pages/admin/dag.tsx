@@ -433,7 +433,7 @@ const getEdgeStyle = (edgeType: 'assignment' | 'association', isHighlighted: boo
 };
 
 const getEdgeType = (edgeType: 'assignment' | 'association') => {
-  return 'default'; // Use default edge type for both assignment and association edges
+  return edgeType == 'assignment' ? 'default' : 'smoothstep';
 };
 
 const getMarkerEnd = (edgeType: 'assignment' | 'association', isHighlighted: boolean, isObjectDag: boolean) => {
@@ -456,33 +456,210 @@ const getMarkerEnd = (edgeType: 'assignment' | 'association', isHighlighted: boo
 };
 
 const initialGraphJson = {
+  "resourceOperations": [
+    "update_mou",
+    "certify_vote",
+    "sign_mou",
+    "bootstrap",
+    "initiate_vote",
+    "write_ato",
+    "join",
+    "vote",
+    "submit_feedback",
+    "get_mou",
+    "read_ato"
+  ],
   "graph": {
     "pcs": [
-      { "id": 1749733028334, "name": "Emergency", "properties": [] },
-      { "id": 1749733033759, "name": "Wards", "properties": [] },
-      { "id": 1749733037102, "name": "RBAC", "properties": [] }
+      {
+        "id": 5683423359230992610,
+        "name": "ADMIN_MSP_PC"
+      },
+      {
+        "id": 8180311792792489910,
+        "name": "RBAC"
+      },
+      {
+        "id": 1688524507874129693,
+        "name": "Status"
+      },
+      {
+        "id": 635696425397371351,
+        "name": "Votes"
+      }
     ],
     "uas": [
-      { "id": 1749732983642, "name": "doctor", "assignments": [ 1749733019171, 1749732997042 ], "associations": [ { "target": 1749733043029, "arset": [] } ], "properties": [] },
-      { "id": 1749732997042, "name": "Intern", "assignments": [], "associations": [ { "target": 1749733043029, "arset": [] } ], "properties": [] },
-      { "id": 1749733003607, "name": "Ward1", "assignments": [], "associations": [ { "target": 1749733052466, "arset": [] } ], "properties": [] },
-      { "id": 1749733013979, "name": "Ward2", "assignments": [], "associations": [ { "target": 1749733048000, "arset": [] } ], "properties": [] },
-      { "id": 1749733019171, "name": "Emergency", "assignments": [], "associations": [ { "target": 1749733056543, "arset": [] } ], "properties": [] }
+      {
+        "id": 3731427219361936286,
+        "name": "Blossom Admin",
+        "assignments": [
+          6495807508047414294
+        ],
+        "associations": [
+          {
+            "target": 7274712272745180372,
+            "arset": [
+              "update_mou",
+              "bootstrap"
+            ]
+          },
+          {
+            "target": 1562631750571843571,
+            "arset": [
+              "certify_vote"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2023101373133930276,
+        "name": "unauthorized",
+        "assignments": [
+          1636251913418739322
+        ]
+      },
+      {
+        "id": 6495807508047414294,
+        "name": "Authorizing Official",
+        "associations": [
+          {
+            "target": 6145273145789591026,
+            "arset": [
+              "sign_mou",
+              "join",
+              "get_mou"
+            ]
+          },
+          {
+            "target": 1633654592656703179,
+            "arset": [
+              "certify_vote",
+              "initiate_vote",
+              "vote"
+            ]
+          },
+          {
+            "target": 5234939224085898212,
+            "arset": [
+              "initiate_vote",
+              "join",
+              "submit_feedback",
+              "read_ato"
+            ]
+          },
+          {
+            "target": 1562631750571843571,
+            "arset": [
+              "initiate_vote",
+              "vote"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 1636251913418739322,
+        "name": "pending",
+        "associations": [
+          {
+            "target": 709575241712064787,
+            "arset": [
+              "write_ato",
+              "submit_feedback",
+              "read_ato"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 495206662495926910,
+        "name": "authorized",
+        "associations": [
+          {
+            "target": 6223737498585317707,
+            "arset": [
+              "*r"
+            ]
+          },
+          {
+            "target": 709575241712064787,
+            "arset": [
+              "*r"
+            ]
+          },
+          {
+            "target": 7462799308113753601,
+            "arset": [
+              "*r"
+            ]
+          }
+        ]
+      }
     ],
     "oas": [
-      { "id": 1749733043029, "name": "Med Records", "assignments": [ 1749733037102 ], "properties": [] },
-      { "id": 1749733048000, "name": "Ward2", "assignments": [ 1749733033759 ], "properties": [] },
-      { "id": 1749733052466, "name": "Ward1", "assignments": [ 1749733033759 ], "properties": [] },
-      { "id": 1749733056543, "name": "Critical", "assignments": [ 1749733033759, 1749733028334 ], "properties": [] }
-    ],
-    "users": [
-      { "id": 1749732986909, "name": "u3", "assignments": [ 1749732983642, 1749733013979 ], "properties": [] },
-      { "id": 1749732993217, "name": "u4", "assignments": [ 1749732997042, 1749733003607 ], "properties": [] }
-    ],
-    "objects": [
-      { "id": 1749733072107, "name": "o5", "assignments": [ 1749733043029, 1749733048000 ], "properties": [] },
-      { "id": 1749733076157, "name": "o6", "assignments": [ 1749733043029, 1749733052466 ], "properties": [] },
-      { "id": 1749733079076, "name": "o7", "assignments": [ 1749733043029, 1749733056543 ], "properties": [] }
+      {
+        "id": 7649900373280649055,
+        "name": "<ADMINMSP>",
+        "assignments": [
+          5683423359230992610
+        ]
+      },
+      {
+        "id": 7274712272745180372,
+        "name": "RBAC/blossom_target",
+        "assignments": [
+          8180311792792489910
+        ]
+      },
+      {
+        "id": 709575241712064787,
+        "name": "Status/accounts",
+        "assignments": [
+          1688524507874129693
+        ]
+      },
+      {
+        "id": 6223737498585317707,
+        "name": "Status/blossom_target",
+        "assignments": [
+          1688524507874129693
+        ]
+      },
+      {
+        "id": 5234939224085898212,
+        "name": "RBAC/accounts",
+        "assignments": [
+          8180311792792489910
+        ]
+      },
+      {
+        "id": 7462799308113753601,
+        "name": "Status/votes",
+        "assignments": [
+          1688524507874129693
+        ]
+      },
+      {
+        "id": 1562631750571843571,
+        "name": "all votes",
+        "assignments": [
+          635696425397371351
+        ]
+      },
+      {
+        "id": 6145273145789591026,
+        "name": "blossom_target",
+        "assignments": [
+          7274712272745180372,
+          6223737498585317707
+        ]
+      },
+      {
+        "id": 1633654592656703179,
+        "name": "RBAC/votes",
+        "assignments": [
+          8180311792792489910
+        ]
+      }
     ]
   }
 };

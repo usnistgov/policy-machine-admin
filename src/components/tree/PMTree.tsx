@@ -3,7 +3,7 @@ import {Tree, TreeApi} from "react-arborist";
 import {useElementSize, useMergedRef} from "@mantine/hooks";
 import {ActionIcon, Group, Text, Box, Menu, Checkbox} from "@mantine/core";
 import classes from "@/components/tree/pmtree.module.css";
-import {useAtom, useAtomValue, useSetAtom} from "jotai";
+import {useAtom, useAtomValue, useSetAtom, atom} from "jotai";
 import {OpenMap} from "react-arborist/dist/main/state/open-slice";
 import {INDENT_NUM, NodeIcon} from "@/components/tree/util";
 import {QueryService, NodeType} from "@/api/pdp.api";
@@ -11,6 +11,9 @@ import {transformNodesToTreeNodes, TreeNode} from "@/utils/tree.utils";
 import {PrimitiveAtom} from "jotai/index";
 import {IconRefresh, IconSettings, IconFilter} from "@tabler/icons-react";
 import { selectedUserNodeAtom, selectedTargetNodeAtom, onOpenDescendantsAtom, onOpenAssociationAtom, treeDirectionAtom, onLeftClickAtom, onRightClickAtom, visibleNodeTypesAtom } from "./tree-atoms";
+
+// Fallback atom for openTreeNodesAtom
+const fallbackOpenTreeNodesAtom = atom<OpenMap>({});
 
 export const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O];
 export const USER_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.U];
@@ -77,7 +80,7 @@ export function PMTree(props: PMTreeProps) {
 	const rootElement = useRef<HTMLDivElement>();
 	const { ref: sizeRef, width, height } = useElementSize();
 	const mergedRef = useMergedRef(rootElement, sizeRef);
-	const [openTreeNodes, setOpenTreeNodes] = useAtom<OpenMap>(props.openTreeNodesAtom);
+	const [openTreeNodes, setOpenTreeNodes] = useAtom<OpenMap>(props.openTreeNodesAtom || fallbackOpenTreeNodesAtom);
 	const setOnOpenDescendants = useSetAtom(onOpenDescendantsAtom);
 	const setOnOpenAssociation = useSetAtom(onOpenAssociationAtom);
 	const setOnLeftClick = useSetAtom(onLeftClickAtom);
