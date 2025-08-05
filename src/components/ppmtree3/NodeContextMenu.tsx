@@ -1,9 +1,10 @@
 import React from 'react';
 import { Menu, Group, Text } from '@mantine/core';
-import { IconArrowUp, IconLink, IconEye } from '@tabler/icons-react';
+import { IconArrowUp, IconLink, IconEye, IconPlus } from '@tabler/icons-react';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
-import { NodeIcon } from '@/components/tree/util';
+import { NodeIcon, isValidAscendant, getValidationErrorMessage } from '@/components/tree/util';
+import { notifications } from '@mantine/notifications';
 
 export interface NodeContextMenuProps {
   node: TreeNode;
@@ -11,15 +12,42 @@ export interface NodeContextMenuProps {
   onClose: () => void;
   onAddAsAscendant?: (node: TreeNode) => void;
   hasNodeCreationTabs?: boolean;
+  nodeTypeBeingCreated?: NodeType;
   onAssignTo?: (node: TreeNode) => void;
-  onAssignNodeTo?: (sourceNode: TreeNode, targetNode: TreeNode) => void;
+  onAssignNodeTo?: (targetNode: TreeNode) => void;
   isAssignmentMode?: boolean;
   assignmentSourceNode?: TreeNode;
   onViewAssociations?: (node: TreeNode) => void;
+  // Association creation props
+  isCreatingAssociation?: boolean;
+  onSelectNodeForAssociation?: (node: TreeNode) => void;
+  onStartAssociationCreation?: (node: TreeNode) => void;
+  // Association mode props
+  isAssociationMode?: boolean;
+  associationCreationMode?: 'outgoing' | 'incoming' | null;
+  onAssociateWith?: (node: TreeNode) => void;
 }
 
-export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, hasNodeCreationTabs, onAssignTo, onAssignNodeTo, isAssignmentMode, assignmentSourceNode, onViewAssociations }: NodeContextMenuProps) {
+export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, hasNodeCreationTabs, nodeTypeBeingCreated, onAssignTo, onAssignNodeTo, isAssignmentMode, assignmentSourceNode, onViewAssociations, isCreatingAssociation, onSelectNodeForAssociation, isAssociationMode, associationCreationMode, onAssociateWith }: NodeContextMenuProps) {
   const handleAddAsAscendant = () => {
+    // Validate if this node can be selected as an ascendant
+    if (nodeTypeBeingCreated) {
+      const isValid = isValidAscendant(nodeTypeBeingCreated, node.type);
+      
+      if (!isValid) {
+        // Show error notification
+        const errorMessage = getValidationErrorMessage(nodeTypeBeingCreated, node.type);
+        notifications.show({
+          title: 'Invalid Selection',
+          message: errorMessage,
+          color: 'red'
+        });
+        onClose();
+        return;
+      }
+    }
+
+    // If valid, add as ascendant
     onAddAsAscendant?.(node);
     onClose();
   };
@@ -31,7 +59,7 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
 
   const handleAssignNodeTo = () => {
     if (assignmentSourceNode) {
-      onAssignNodeTo?.(assignmentSourceNode, node);
+      onAssignNodeTo?.(node);
       onClose();
     }
   };
@@ -41,9 +69,19 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
     onClose();
   };
 
+  const handleSelectForAssociation = () => {
+    onSelectNodeForAssociation?.(node);
+    onClose();
+  };
+
+  const handleAssociateWith = () => {
+    onAssociateWith?.(node);
+    onClose();
+  };
+
   // Helper function to check if assignment is valid
   const isValidAssignment = (sourceType: NodeType, targetType: NodeType): boolean => {
-    const validAssignments: Record<NodeType, NodeType[]> = {
+    const validAssignments: Partial<Record<NodeType, NodeType[]>> = {
       [NodeType.PC]: [], // PC cannot be assigned to anything
       [NodeType.UA]: [NodeType.PC, NodeType.UA],
       [NodeType.OA]: [NodeType.PC, NodeType.OA],
@@ -54,11 +92,28 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
     return validAssignments[sourceType]?.includes(targetType) || false;
   };
 
+  // Helper function to determine if a node can be associated with based on creation mode
+  const canAssociateWith = (): boolean => {
+    if (!isAssociationMode || !associationCreationMode) return false;
+    
+    if (associationCreationMode === 'outgoing') {
+      // For outgoing associations, only UA, OA, and O are valid targets
+      return [NodeType.UA as NodeType, NodeType.OA as NodeType, NodeType.O as NodeType].includes(node.type as NodeType);
+    } else if (associationCreationMode === 'incoming') {
+      // For incoming associations, only UA types are valid sources
+      return [NodeType.UA as NodeType].includes(node.type as NodeType);
+    }
+    
+    return false;
+  };
+
   const canAssignTo = node.type !== NodeType.PC; // PC cannot be assigned to anything
   const canBeAssignedTo = isAssignmentMode && assignmentSourceNode && 
-    isValidAssignment(assignmentSourceNode.type, node.type) &&
+    isValidAssignment(assignmentSourceNode.type as NodeType, node.type as NodeType) &&
     assignmentSourceNode.id !== node.id;
-  const canViewAssociations = [NodeType.OA, NodeType.O, NodeType.UA].includes(node.type) && !isAssignmentMode;
+  const canViewAssociations = [NodeType.OA as NodeType, NodeType.O as NodeType, NodeType.UA as NodeType].includes(node.type as NodeType) && !isAssignmentMode;
+  const canSelectForAssociation = isCreatingAssociation && [NodeType.OA as NodeType, NodeType.O as NodeType, NodeType.UA as NodeType].includes(node.type as NodeType);
+  const showAssociateWith = canAssociateWith();
 
   return (
       <Menu
@@ -76,7 +131,15 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
           }}
       >
         <Menu.Target>
-          <div style={{ position: 'absolute', left: position.x, top: position.y, width: 1, height: 1 }} />
+          <div style={{ 
+            position: 'fixed', 
+            left: position.x, 
+            top: position.y, 
+            width: 1, 
+            height: 1,
+            pointerEvents: 'none',
+            zIndex: -1
+          }} />
         </Menu.Target>
 
         <Menu.Dropdown>
@@ -89,21 +152,18 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
             </Group>
           </Menu.Label>
           
+          {/* MODE-SPECIFIC ITEMS (at top, highlighted) */}
           {hasNodeCreationTabs && (
             <Menu.Item
               leftSection={<IconArrowUp size={16} />}
               onClick={handleAddAsAscendant}
+              style={{
+                backgroundColor: 'var(--mantine-color-blue-0)',
+                borderLeft: '3px solid var(--mantine-color-blue-6)',
+                fontWeight: 500
+              }}
             >
-              Add as Ascendant
-            </Menu.Item>
-          )}
-
-          {canAssignTo && !isAssignmentMode && (
-            <Menu.Item
-              leftSection={<IconLink size={16} />}
-              onClick={handleAssignTo}
-            >
-              Assign to
+              Add as descendant
             </Menu.Item>
           )}
 
@@ -111,12 +171,60 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
             <Menu.Item
               leftSection={<IconLink size={16} />}
               onClick={handleAssignNodeTo}
+              style={{
+                backgroundColor: 'var(--mantine-color-green-0)',
+                borderLeft: '3px solid var(--mantine-color-green-6)',
+                fontWeight: 500
+              }}
             >
               <Group gap="xs" wrap="nowrap">
                 <span>Assign</span>
                 <NodeIcon type={assignmentSourceNode!.type} size="14px" fontSize="12px" />
                 <span>{assignmentSourceNode?.name} to</span>
               </Group>
+            </Menu.Item>
+          )}
+
+          {showAssociateWith && (
+            <Menu.Item
+              leftSection={<IconPlus size={16} />}
+              onClick={handleAssociateWith}
+              style={{
+                backgroundColor: 'var(--mantine-color-orange-0)',
+                borderLeft: '3px solid var(--mantine-color-orange-6)',
+                fontWeight: 500
+              }}
+            >
+              Associate with
+            </Menu.Item>
+          )}
+
+          {canSelectForAssociation && (
+            <Menu.Item
+              leftSection={<IconPlus size={16} />}
+              onClick={handleSelectForAssociation}
+              style={{
+                backgroundColor: 'var(--mantine-color-purple-0)',
+                borderLeft: '3px solid var(--mantine-color-purple-6)',
+                fontWeight: 500
+              }}
+            >
+              Select for Association
+            </Menu.Item>
+          )}
+
+          {/* SEPARATOR between mode-specific and always-available items */}
+          {(hasNodeCreationTabs || canBeAssignedTo || showAssociateWith || canSelectForAssociation) && (
+            <Menu.Divider />
+          )}
+
+          {/* ALWAYS-AVAILABLE ITEMS */}
+          {canAssignTo && !isAssignmentMode && (
+            <Menu.Item
+              leftSection={<IconLink size={16} />}
+              onClick={handleAssignTo}
+            >
+              Assign to
             </Menu.Item>
           )}
 

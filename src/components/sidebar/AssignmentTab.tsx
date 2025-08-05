@@ -1,6 +1,6 @@
 import React from 'react';
-import { Stack, Text, Group, Button, Alert, ScrollArea, ActionIcon, Divider } from '@mantine/core';
-import { IconX, IconLink, IconInfoCircle } from '@tabler/icons-react';
+import { Stack, Text, Group, Button, Alert, ScrollArea, ActionIcon, Divider, Card } from '@mantine/core';
+import { IconX, IconLink, IconInfoCircle, IconTrash } from '@tabler/icons-react';
 import { TreeNode } from '@/utils/tree.utils';
 import { NodeIcon } from '@/components/tree/util';
 import { NodeType } from '@/api/pdp.api';
@@ -39,27 +39,27 @@ export function AssignmentTab({ sourceNode, targetNodes, onRemoveTarget, onAssig
                     <ScrollArea style={{ flex: 1, maxHeight: '300px' }}>
                         <Stack gap="xs">
                             {targetNodes.map((node) => (
-                                <Group key={node.id} justify="space-between" align="center" style={{
-                                    padding: '8px 12px',
-                                    border: '1px solid var(--mantine-color-gray-3)',
-                                    borderRadius: 'var(--mantine-radius-md)',
-                                    backgroundColor: 'var(--mantine-color-white)'
-                                }}>
-                                    <Group gap="sm" align="center">
-                                        <NodeIcon type={node.type} size="18px" fontSize="10px" />
-                                        <Text size="sm">{node.name}</Text>
+                                <Card key={node.id} p="sm" withBorder>
+                                    <Group justify="space-between" align="center">
+                                        <Group gap="sm">
+                                            <NodeIcon type={node.type} size="16px" fontSize="16px" />
+                                            <Text size="md">{node.name}</Text>
+                                        </Group>
+                                        <ActionIcon
+                                            size="sm"
+                                            variant="subtle"
+                                            color="red"
+                                            onClick={() => onRemoveTarget(node.id)}
+                                            disabled={isAssigning}
+                                        >
+                                            <IconTrash size={14} />
+                                        </ActionIcon>
                                     </Group>
-                                    <ActionIcon
-                                        variant="subtle"
-                                        color="red"
-                                        size="sm"
-                                        onClick={() => onRemoveTarget(node.id)}
-                                        disabled={isAssigning}
-                                    >
-                                        <IconX size={14} />
-                                    </ActionIcon>
-                                </Group>
+                                </Card>
                             ))}
+                            <Text size="xs" c="dimmed">
+                                {targetNodes.length} target{targetNodes.length !== 1 ? 's' : ''} selected
+                            </Text>
                         </Stack>
                     </ScrollArea>
                 )}

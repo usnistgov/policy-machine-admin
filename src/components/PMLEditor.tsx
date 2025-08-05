@@ -487,10 +487,12 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <Text size="lg" fw={600}>
-        {fileName ? `${title} - ${fileName}` : title}
-      </Text>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: hideButtons ? '0px' : '12px' }}>
+      {!hideButtons && title && (
+        <Text size="lg" fw={600}>
+          {fileName ? `${title} - ${fileName}` : title}
+        </Text>
+      )}
       
       <input
         type="file"
@@ -512,7 +514,7 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
       >
         <LoadingOverlay visible={isExecuting} />
         <Editor
-          height={containerHeight ? `${containerHeight - 120}px` : "100%"}
+          height={containerHeight && hideButtons ? `${containerHeight}px` : (containerHeight ? `${containerHeight - 120}px` : "100%")}
           language="pml"
           value={code}
           onChange={(value) => {
@@ -529,7 +531,7 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, rea
             lineNumbersMinChars: 3,
             roundedSelection: false,
             scrollBeyondLastLine: false,
-            automaticLayout: false,
+            automaticLayout: true,
             wordWrap: 'on',
             suggest: {
               snippetsPreventQuickSuggestions: false,

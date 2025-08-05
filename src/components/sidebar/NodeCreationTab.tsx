@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Stack,
     TextInput,
@@ -41,6 +41,14 @@ export function NodeCreationTab({
     const [name, setName] = useState('');
     const [properties, setProperties] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+
+    // Reset fields only when component first mounts/becomes visible
+    useEffect(() => {
+        setName('');
+        setProperties('');
+        setIsCreating(false);
+        onUpdateSelectedNodes?.([]);
+    }, []); // Empty dependency array = only run on mount
 
     const handleRemoveNode = (nodeId: string) => {
         const updatedNodes = selectedNodes.filter(node => node.id !== nodeId);

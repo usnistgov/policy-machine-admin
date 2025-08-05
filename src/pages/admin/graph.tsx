@@ -28,7 +28,7 @@ export function Graph() {
     const { themeMode, toggleTheme } = useTheme();
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
     const [activePanel, setActivePanel] = useState<SidePanel | null>(null);
-    const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
+    const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(false);
     const [asideOpened, { toggle: toggleAside }] = useDisclosure(false);
     const [footerOpened, { toggle: toggleFooter }] = useDisclosure(false);
 
@@ -40,6 +40,17 @@ export function Graph() {
     const [assignmentSourceNode, setAssignmentSourceNode] = useState<TreeNode | null>(null);
     const [assignmentTargetNodes, setAssignmentTargetNodes] = useState<TreeNode[]>([]);
     const [isAssigning, setIsAssigning] = useState(false);
+
+    // Selected node state for associations
+    const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+    
+    // Association creation state
+    const [isCreatingAssociation, setIsCreatingAssociation] = useState(false);
+    const [associationCreationNode, setAssociationCreationNode] = useState<TreeNode | null>(null);
+    
+    // Association mode state (for context menu-driven association creation)
+    const [isAssociationMode, setIsAssociationMode] = useState(false);
+    const [associationCreationMode, setAssociationCreationMode] = useState<'outgoing' | 'incoming' | null>(null);
 
     // Resizable state
     const [navbarWidth, setNavbarWidth] = useState(200);
@@ -57,7 +68,7 @@ export function Graph() {
 
     // Mouse event handlers for navbar resizer
     React.useEffect(() => {
-        if (!isResizingNavbar) return;
+        if (!isResizingNavbar) {return;}
 
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'ew-resize';
@@ -91,7 +102,7 @@ export function Graph() {
 
     // Mouse event handlers for aside resizer
     React.useEffect(() => {
-        if (!isResizingAside) return;
+        if (!isResizingAside) {return;}
 
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'ew-resize';
@@ -99,7 +110,7 @@ export function Graph() {
         const onMouseMove = (e: MouseEvent) => {
             e.preventDefault();
             const vw = window.innerWidth;
-            const newWidth = Math.min(800, Math.max(200, vw - e.clientX));
+            const newWidth = Math.min(1000, Math.max(200, vw - e.clientX));
             setAsideWidth(newWidth);
         };
 
@@ -126,7 +137,7 @@ export function Graph() {
 
     // Mouse event handlers for footer resizer
     React.useEffect(() => {
-        if (!isResizingFooter) return;
+        if (!isResizingFooter) {return;}
 
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'ns-resize';
@@ -163,8 +174,8 @@ export function Graph() {
         const newPanel: SidePanel = {
             type: 'descendants',
             title: `Descendants of ${node.name}`,
-            node: node,
-            isUserTree: isUserTree,
+            node,
+            isUserTree,
             allowedTypes: TARGET_ALLOWED_TYPES
         };
 
@@ -177,28 +188,27 @@ export function Graph() {
         }
     };
 
-    const handleOpenAssociationPanel = (node: any, selectedUserNode: any, selectedTargetNode: any, isUserTree: boolean) => {
-        const newPanel: SidePanel = {
-            type: 'association',
-            title: `Associate with ${node.name}`,
-            node: node,
-            isUserTree: isUserTree,
-            selectedUserNode: selectedUserNode,
-            selectedTargetNode: selectedTargetNode
-        };
-
-        setActivePanel(newPanel);
-        setSidePanelOpen(true);
-
-        // Automatically open the aside panel if it's closed
-        if (!asideOpened) {
-            toggleAside();
-        }
+    const resetAllModes = () => {
+        // Reset assignment mode
+        setIsAssignmentMode(false);
+        setAssignmentSourceNode(null);
+        setAssignmentTargetNodes([]);
+        
+        // Reset association mode
+        setIsAssociationMode(false);
+        setAssociationCreationMode(null);
+        setSelectedNode(null);
+        
+        // Reset association creation state
+        setIsCreatingAssociation(false);
+        setAssociationCreationNode(null);
     };
 
     const handleClosePanel = () => {
+        // Reset all modes when panel closes
         setActivePanel(null);
         setSidePanelOpen(false);
+        resetAllModes();
     };
 
     const handleToggleSidePanel = () => {
@@ -206,10 +216,13 @@ export function Graph() {
     };
 
     const handleOpenNodeCreationPanel = (nodeType: NodeType) => {
+        // Reset all other modes before starting node creation
+        resetAllModes();
+        
         const newPanel: SidePanel = {
             type: 'create-node',
-            nodeType: nodeType,
-            selectedNodes: selectedNodes
+            nodeType,
+            selectedNodes
         };
 
         setActivePanel(newPanel);
@@ -257,6 +270,9 @@ export function Graph() {
     };
 
     const handleAssignTo = (node: TreeNode) => {
+        // Reset all other modes before starting assignment
+        resetAllModes();
+        
         setIsAssignmentMode(true);
         setAssignmentSourceNode(node);
         setAssignmentTargetNodes([]);
@@ -276,7 +292,7 @@ export function Graph() {
         }
     };
 
-    const handleAssignNodeTo = (sourceNode: TreeNode, targetNode: TreeNode) => {
+    const handleAssignNodeTo = (targetNode: TreeNode) => {
         // Add target node to the list if not already present
         setAssignmentTargetNodes(prev => {
             const exists = prev.some(n => n.id === targetNode.id);
@@ -314,7 +330,7 @@ export function Graph() {
     };
 
     const handleAssignNodes = async () => {
-        if (!assignmentSourceNode || assignmentTargetNodes.length === 0) return;
+        if (!assignmentSourceNode || assignmentTargetNodes.length === 0) {return;}
 
         setIsAssigning(true);
         
@@ -329,10 +345,9 @@ export function Graph() {
         try {
             // Make API calls for each assignment
             // assign(ascendantId: string, descendantIds: string[])
-            // We're assigning the source node TO the target nodes, so targets are ascendants
-            for (const targetNode of assignmentTargetNodes) {
-                await AdjudicationService.assign(targetNode.pmId!, [assignmentSourceNode.pmId!]);
-            }
+            // We're assigning the source node TO the target nodes, so source is ascendant
+            const targetNodeIds = assignmentTargetNodes.map(node => node.pmId!);
+            await AdjudicationService.assign(assignmentSourceNode.pmId!, targetNodeIds);
 
             // Clear assignment state
             setIsAssignmentMode(false);
@@ -350,18 +365,13 @@ export function Graph() {
         }
     };
 
-    const handleCancelAssignment = () => {
-        setIsAssignmentMode(false);
-        setAssignmentSourceNode(null);
-        setAssignmentTargetNodes([]);
-        setActivePanel(null);
-        setSidePanelOpen(false);
-    };
-
     const handleViewAssociations = (node: TreeNode) => {
+        // Reset all other modes before opening associations
+        resetAllModes();
+        
         const newPanel: SidePanel = {
             type: 'associations',
-            node: node
+            node
         };
 
         setActivePanel(newPanel);
@@ -371,6 +381,60 @@ export function Graph() {
         if (!asideOpened) {
             toggleAside();
         }
+    };
+
+    const handleStartAssociationCreation = (sourceNode: TreeNode) => {
+        setIsCreatingAssociation(true);
+        setAssociationCreationNode(sourceNode);
+        console.log(`Started association creation mode for node: ${sourceNode.name}`);
+    };
+
+    const handleSelectNodeForAssociation = (targetNode: TreeNode) => {
+        if (isCreatingAssociation && associationCreationNode) {
+            // Open associations tab with both nodes
+            const newPanel: SidePanel = {
+                type: 'associations',
+                node: associationCreationNode
+            };
+
+            setActivePanel(newPanel);
+            setSidePanelOpen(true);
+            setSelectedNode(targetNode); // This will be passed to AssociationsTab
+
+            // Automatically open the aside panel if it's closed
+            if (!asideOpened) {
+                toggleAside();
+            }
+
+            // Reset creation state
+            setIsCreatingAssociation(false);
+            setAssociationCreationNode(null);
+            
+            console.log(`Selected ${targetNode.name} for association with ${associationCreationNode.name}`);
+        }
+    };
+
+    const handleAssociateWith = (targetNode: TreeNode) => {
+        if (isAssociationMode && associationCreationMode && activePanel?.type === 'associations') {
+            // Set the selected node for the associations tab
+            setSelectedNode(targetNode);
+            
+            // Reset association mode
+            setIsAssociationMode(false);
+            setAssociationCreationMode(null);
+            
+            console.log(`Selected ${targetNode.name} for ${associationCreationMode} association with ${activePanel.node?.name}`);
+        }
+    };
+
+    const handleStartAssociationMode = (mode: 'outgoing' | 'incoming') => {
+        // Reset all other modes before starting association mode
+        resetAllModes();
+        
+        setIsAssociationMode(true);
+        setAssociationCreationMode(mode);
+        setSelectedNode(null); // Clear selected node to start blank
+        console.log(`Started ${mode} association mode`);
     };
 
     return (
@@ -492,21 +556,21 @@ export function Graph() {
                         footerHeight={footerHeight}
                         footerOpened={footerOpened}
                         clickHandlers={{
-                            onLeftClick: (node: TreeNode) => {
-                                console.log('Left clicked node:', node);
-                                // You can add selection logic here if needed
-                            },
-                            onRightClick: (node: TreeNode) => {
-                                console.log('Right clicked node:', node);
-                                // Context menu is handled by PPMNode component
-                            },
                             onAddAsAscendant: handleAddAsAscendant,
                             hasNodeCreationTabs: activePanel?.type === 'create-node',
+                            nodeTypeBeingCreated: activePanel?.type === 'create-node' ? activePanel.nodeType : undefined,
                             onAssignTo: handleAssignTo,
                             onAssignNodeTo: handleAssignNodeTo,
-                            isAssignmentMode: isAssignmentMode,
-                            assignmentSourceNode: assignmentSourceNode,
-                            onViewAssociations: handleViewAssociations
+                            isAssignmentMode,
+                            assignmentSourceNode,
+                            onViewAssociations: handleViewAssociations,
+                            onStartAssociationCreation: handleStartAssociationCreation,
+                            onSelectNodeForAssociation: handleSelectNodeForAssociation,
+                            isCreatingAssociation,
+                            associationCreationNode,
+                            isAssociationMode,
+                            associationCreationMode,
+                            onAssociateWith: handleAssociateWith
                         }}
                         style={{}}
                     />
@@ -602,14 +666,16 @@ export function Graph() {
 
             <AppShell.Aside p="md">
                 <RightSidePanel
-                    isOpen={true}
+                    isOpen
                     onToggle={handleToggleSidePanel}
                     panel={activePanel}
                     onClose={handleClosePanel}
                     onUpdateSelectedNodes={handleUpdateSelectedNodes}
                     onRemoveAssignmentTarget={handleRemoveAssignmentTarget}
                     onAssignNodes={handleAssignNodes}
-                    embedded={true}
+                    embedded
+                    selectedNodeFromMainTree={selectedNode}
+                    onStartAssociationMode={handleStartAssociationMode}
                 />
 
             </AppShell.Aside>

@@ -14,11 +14,20 @@ export interface PPMTreeClickHandlers {
 	onRightClick?: (node: TreeNode) => void;
 	onAddAsAscendant?: (node: TreeNode) => void;
 	hasNodeCreationTabs?: boolean;
+	nodeTypeBeingCreated?: NodeType;
 	onAssignTo?: (node: TreeNode) => void;
-	onAssignNodeTo?: (sourceNode: TreeNode, targetNode: TreeNode) => void;
+	onAssignNodeTo?: (targetNode: TreeNode) => void;
 	isAssignmentMode?: boolean;
 	assignmentSourceNode?: TreeNode | null;
 	onViewAssociations?: (node: TreeNode) => void;
+	onStartAssociationCreation?: (node: TreeNode) => void;
+	onSelectNodeForAssociation?: (node: TreeNode) => void;
+	isCreatingAssociation?: boolean;
+	associationCreationNode?: TreeNode | null;
+	// Association mode props
+	isAssociationMode?: boolean;
+	associationCreationMode?: 'outgoing' | 'incoming' | null;
+	onAssociateWith?: (node: TreeNode) => void;
 }
 
 export interface PPMTreeProps {
@@ -43,7 +52,6 @@ export interface PPMTreeProps {
 	disableDrop?: boolean;
 	disableEdit?: boolean;
 	disableMultiSelection?: boolean;
-	disableSelection?: boolean;
 	rowHeight?: number;
 	overscanCount?: number;
 }
@@ -135,7 +143,6 @@ export function PPMTree(props: PPMTreeProps) {
 						disableDrop={props.disableDrop ?? true}
 						disableEdit={props.disableEdit ?? false}
 						disableMultiSelection={props.disableMultiSelection ?? true}
-						disableSelection={props.disableSelection ?? true}
 						openByDefault={false}
 						width={width}
 						height={height}

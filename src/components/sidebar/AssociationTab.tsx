@@ -119,6 +119,14 @@ export function AssociationTab({
   // Flatten all admin rights for filtering
   const adminAccessRights = Object.values(adminAccessRightsSections).flat();
 
+  // Reset form fields only when component first mounts/becomes visible
+  useEffect(() => {
+    setResourceRights([]);
+    setAdminRights([]);
+    setAvailableResourceRights([]);
+    setLoading(false);
+  }, []); // Empty dependency array = only run on mount
+
   // Fetch available resource operations and load existing association data
   useEffect(() => {
     loadData();

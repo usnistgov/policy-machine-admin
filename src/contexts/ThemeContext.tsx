@@ -17,13 +17,23 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
+  // Initialize theme from localStorage or default to light
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme') as ThemeMode;
+      return savedTheme || 'light';
+    }
+    return 'light';
+  });
   
   const theme = themeMode === 'light' ? lightTheme : darkTheme;
 
   const toggleTheme = () => {
     const newMode = themeMode === 'light' ? 'dark' : 'light';
     setThemeMode(newMode);
+    
+    // Save to localStorage
+    localStorage.setItem('theme', newMode);
     
     // Update the document's data attribute for proper CSS variable switching
     document.documentElement.setAttribute('data-mantine-color-scheme', newMode);

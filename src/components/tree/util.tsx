@@ -17,7 +17,7 @@ export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIc
 	const color = getTypeColor(type);
 
 	return (
-		<div
+		<span
 			style={{
 				borderRadius: '30%',
 				color,
@@ -25,7 +25,7 @@ export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIc
 				fontWeight: 'bold',
 				width: size,
 				height: size,
-				display: 'flex',
+				display: 'inline-flex',
 				textAlign: 'center',
 				justifyContent: 'center',
 				alignItems: 'center',
@@ -34,7 +34,7 @@ export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIc
 
 		>
 			{type}
-		</div>
+		</span>
 	);
 }
 
@@ -85,6 +85,49 @@ export const isValidAssignment = (selectedType: string, targetType: string): boo
 		case 'O': return targetType === 'OA' || targetType === 'PC';
 		case 'U': return targetType === 'UA';
 		default: return false;
+	}
+};
+
+export const isValidAscendant = (nodeTypeToCreate: string, ascendantType: string): boolean => {
+	// Define which node types can serve as ascendants for each node type being created
+	const validAscendants: Record<string, string[]> = {
+		[NodeType.PC]: [], // PC has no ascendants
+		[NodeType.UA]: [NodeType.PC, NodeType.UA],
+		[NodeType.OA]: [NodeType.PC, NodeType.OA],
+		[NodeType.O]: [NodeType.PC, NodeType.OA],
+		[NodeType.U]: [NodeType.UA]
+	};
+	
+	return validAscendants[nodeTypeToCreate]?.includes(ascendantType) || false;
+};
+
+export const getValidationErrorMessage = (nodeTypeToCreate: string, ascendantType: string): string => {
+	const nodeTypeNames: Record<string, string> = {
+		[NodeType.PC]: 'Policy Class',
+		[NodeType.UA]: 'User Attribute',
+		[NodeType.OA]: 'Object Attribute',
+		[NodeType.U]: 'User',
+		[NodeType.O]: 'Object'
+	};
+
+	const createTypeName = nodeTypeNames[nodeTypeToCreate] || nodeTypeToCreate;
+	const ascendantTypeName = nodeTypeNames[ascendantType] || ascendantType;
+
+	if (nodeTypeToCreate === NodeType.PC) {
+		return `${createTypeName} nodes cannot have ascendants - they are root nodes in the policy hierarchy.`;
+	}
+
+	switch (nodeTypeToCreate) {
+		case NodeType.UA:
+			return `${createTypeName} nodes can only be assigned to Policy Class or other User Attribute nodes, not ${ascendantTypeName} nodes.`;
+		case NodeType.OA:
+			return `${createTypeName} nodes can only be assigned to Policy Class or other Object Attribute nodes, not ${ascendantTypeName} nodes.`;
+		case NodeType.U:
+			return `${createTypeName} nodes can only be assigned to User Attribute nodes, not ${ascendantTypeName} nodes.`;
+		case NodeType.O:
+			return `${createTypeName} nodes can only be assigned to Policy Class or Object Attribute nodes, not ${ascendantTypeName} nodes.`;
+		default:
+			return `Invalid node type combination: ${createTypeName} cannot be assigned to ${ascendantTypeName}.`;
 	}
 };
 

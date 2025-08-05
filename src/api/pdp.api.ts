@@ -198,6 +198,7 @@ export namespace QueryService {
     });
     
     const response = await queryClient.SelfComputeAdjacentAscendantPrivileges(request);
+    console.log(response)
     return response.privileges.map((priv: PdpQuery.NodePrivilege) => ({
       node: priv.node ? transformNode(priv.node) : undefined,
       accessRights: priv.arset

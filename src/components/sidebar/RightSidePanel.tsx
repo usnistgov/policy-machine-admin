@@ -35,6 +35,8 @@ interface RightSidePanelProps {
     onRemoveAssignmentTarget?: (nodeId: string) => void;
     onAssignNodes?: () => void;
     embedded?: boolean; // New prop to indicate if it's embedded in AppShell
+    selectedNodeFromMainTree?: TreeNode | null; // Node selected from main tree
+    onStartAssociationMode?: (mode: 'outgoing' | 'incoming') => void; // Callback to start association mode
 }
 
 export function RightSidePanel({
@@ -45,6 +47,8 @@ export function RightSidePanel({
                                    onUpdateSelectedNodes,
                                    onRemoveAssignmentTarget,
                                    onAssignNodes,
+                                   selectedNodeFromMainTree,
+                                   onStartAssociationMode,
                                }: RightSidePanelProps) {
     return (
         <div style={{ height: '100%' }}>
@@ -86,6 +90,8 @@ export function RightSidePanel({
                         <AssociationsTab
                             node={panel.node!}
                             onClose={onClose}
+                            selectedNodeFromMainTree={selectedNodeFromMainTree}
+                            onStartAssociationMode={onStartAssociationMode}
                         />
                     ) : (
                         <AssociationTab

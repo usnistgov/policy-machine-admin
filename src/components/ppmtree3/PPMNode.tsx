@@ -224,11 +224,17 @@ export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataA
 					onClose={() => setContextMenu(null)}
 					onAddAsAscendant={clickHandlers?.onAddAsAscendant}
 					hasNodeCreationTabs={clickHandlers?.hasNodeCreationTabs}
+					nodeTypeBeingCreated={clickHandlers?.nodeTypeBeingCreated}
 					onAssignTo={clickHandlers?.onAssignTo}
 					onAssignNodeTo={clickHandlers?.onAssignNodeTo}
 					isAssignmentMode={clickHandlers?.isAssignmentMode}
-					assignmentSourceNode={clickHandlers?.assignmentSourceNode}
+					assignmentSourceNode={clickHandlers?.assignmentSourceNode || undefined}
 					onViewAssociations={clickHandlers?.onViewAssociations}
+					isCreatingAssociation={clickHandlers?.isCreatingAssociation}
+					onSelectNodeForAssociation={clickHandlers?.onSelectNodeForAssociation}
+					isAssociationMode={clickHandlers?.isAssociationMode}
+					associationCreationMode={clickHandlers?.associationCreationMode}
+					onAssociateWith={clickHandlers?.onAssociateWith}
 				/>
 			)}
 		</>

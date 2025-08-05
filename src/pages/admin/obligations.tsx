@@ -1,6 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { AppShell, Card, Text, Button, Group, Stack, Alert, LoadingOverlay } from '@mantine/core';
-import { IconPlus, IconTrash, IconAutomation, IconAlertCircle, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
+import {
+  AppShell,
+  Card,
+  Text,
+  Button,
+  Group,
+  Stack,
+  Alert,
+  LoadingOverlay,
+  Title,
+  Tooltip,
+  ActionIcon
+} from '@mantine/core';
+import {
+  IconPlus,
+  IconTrash,
+  IconAutomation,
+  IconAlertCircle,
+  IconChevronDown,
+  IconChevronUp,
+  IconLayoutSidebar, IconLayoutBottombar, IconLayoutSidebarRight, IconMoon, IconSun
+} from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import classes from './navbar.module.css';
 import { NavBar } from '@/components/navbar/NavBar';
@@ -8,6 +28,8 @@ import { UserMenu } from '@/components/UserMenu';
 import { PMLEditor } from '@/components/PMLEditor';
 import { QueryService, AdjudicationService, Obligation } from '@/api/pdp.api';
 import { AuthService } from '@/lib/auth';
+import {PMIcon} from "@/components/icons/PMIcon";
+import {useTheme} from "@/contexts/ThemeContext";
 
 interface ObligationCardProps {
   obligation: Obligation;
@@ -19,13 +41,13 @@ interface ObligationCardProps {
 }
 
 const ObligationCard: React.FC<ObligationCardProps> = ({
-  obligation,
-  isExpanded,
-  onToggleExpand,
-  onUpdate,
-  onDelete,
-  isUpdating
-}) => {
+                                                         obligation,
+                                                         isExpanded,
+                                                         onToggleExpand,
+                                                         onUpdate,
+                                                         onDelete,
+                                                         isUpdating
+                                                       }) => {
   const [editedPML, setEditedPML] = useState(obligation.pml);
 
   const handleUpdate = () => {
@@ -37,70 +59,75 @@ const ObligationCard: React.FC<ObligationCardProps> = ({
   };
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Group 
-        justify="space-between" 
-        align="center" 
-        style={{ cursor: 'pointer' }} 
-        onClick={onToggleExpand}
-      >
-        <div>
-          <Text fw={500} size="lg">
-            {obligation.name}
-          </Text>
-          {obligation.author && (
-            <Text size="sm" c="dimmed">
-              Author: {obligation.author.name}
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Group
+            justify="space-between"
+            align="center"
+            style={{ cursor: 'pointer' }}
+            onClick={onToggleExpand}
+        >
+          <div>
+            <Text fw={500} size="lg">
+              {obligation.name}
             </Text>
-          )}
-        </div>
-        {isExpanded ? 
-          <IconChevronUp size={16} /> : 
-          <IconChevronDown size={16} />
-        }
-      </Group>
-
-      {isExpanded && (
-        <Stack gap="md" mt="md">
-          <div style={{ border: '1px solid #e9ecef', borderRadius: '8px', overflow: 'hidden' }}>
-            <div style={{ height: '400px' }}>
-              <PMLEditor
-                title=""
-                initialValue={obligation.pml}
-                placeholder=""
-                onChange={setEditedPML}
-                readOnly={false}
-                hideButtons={true}
-              />
-            </div>
+            {obligation.author && (
+                <Text size="sm" c="dimmed">
+                  Author: {obligation.author.name}
+                </Text>
+            )}
           </div>
-          <Group justify="flex-end">
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdate();
-              }}
-              loading={isUpdating}
-              disabled={editedPML === obligation.pml}
-            >
-              Update
-            </Button>
-            <Button
-              variant="outline"
-              color="red"
-              leftSection={<IconTrash size={16} />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-              disabled={isUpdating}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      )}
-    </Card>
+          {isExpanded ?
+              <IconChevronUp size={16} /> :
+              <IconChevronDown size={16} />
+          }
+        </Group>
+
+        {isExpanded && (
+            <Stack gap="md" mt="md">
+              <div style={{ 
+                border: '1px solid #e9ecef', 
+                borderRadius: '8px', 
+                overflow: 'hidden',
+                position: 'relative',
+                zIndex: 1,
+                backgroundColor: 'white'
+              }}>
+                <PMLEditor
+                    title=""
+                    initialValue={obligation.pml}
+                    placeholder=""
+                    onChange={setEditedPML}
+                    readOnly={false}
+                    hideButtons={true}
+                    containerHeight={400}
+                />
+              </div>
+              <Group justify="flex-end">
+                <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUpdate();
+                    }}
+                    disabled={editedPML === obligation.pml}
+                >
+                  Update
+                </Button>
+                <Button
+                    variant="outline"
+                    color="red"
+                    leftSection={<IconTrash size={16} />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    disabled={isUpdating}
+                >
+                  Delete
+                </Button>
+              </Group>
+            </Stack>
+        )}
+      </Card>
   );
 };
 
@@ -118,61 +145,66 @@ const CreateObligationCard: React.FC<CreateObligationCardProps> = ({ onCancel, o
   };
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Text fw={500} size="lg" mb="md">
-        Create New Obligation
-      </Text>
-      <Stack gap="md">
-        <div style={{ border: '1px solid #e9ecef', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ height: '400px' }}>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Text fw={500} size="lg" mb="md">
+          Create New Obligation
+        </Text>
+        <Stack gap="md">
+          <div style={{ 
+            border: '1px solid #e9ecef', 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            position: 'relative',
+            zIndex: 1,
+            backgroundColor: 'white'
+          }}>
             <PMLEditor
-              title=""
-              initialValue={pmlContent}
-              placeholder="Enter PML code for the new obligation..."
-              onChange={setPMLContent}
-              readOnly={false}
-              hideButtons={true}
+                title=""
+                initialValue={pmlContent}
+                placeholder="Enter PML code for the new obligation..."
+                onChange={setPMLContent}
+                readOnly={false}
+                hideButtons={true}
+                containerHeight={400}
             />
           </div>
-        </div>
-        <Group justify="flex-end">
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            disabled={isCreating}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCreate}
-            loading={isCreating}
-            disabled={!pmlContent.trim()}
-          >
-            Create
-          </Button>
-        </Group>
-      </Stack>
-    </Card>
+          <Group justify="flex-end">
+            <Button
+                variant="outline"
+                onClick={onCancel}
+                disabled={isCreating}
+            >
+              Cancel
+            </Button>
+            <Button
+                onClick={handleCreate}
+                loading={isCreating}
+                disabled={!pmlContent.trim()}
+            >
+              Create
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
   );
 };
 
 export default function ObligationsPage() {
   const [obligations, setObligations] = useState<Obligation[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [expandedObligationId, setExpandedObligationId] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const { themeMode, toggleTheme } = useTheme();
 
   useEffect(() => {
     loadObligations();
   }, []);
 
   const loadObligations = async () => {
-    setLoading(true);
     setError('');
-    
+
     try {
       const obligationsData = await QueryService.getObligations();
       setObligations(obligationsData);
@@ -180,8 +212,6 @@ export default function ObligationsPage() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(`Failed to load obligations: ${errorMessage}`);
       console.error('Error loading obligations:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -190,19 +220,19 @@ export default function ObligationsPage() {
     try {
       const deletePML = `delete obligation "${obligationName}"`;
       await AdjudicationService.executePML(deletePML);
-      
+
       notifications.show({
         title: 'Success',
         message: `Obligation "${obligationName}" deleted successfully`,
         color: 'green',
       });
-      
+
       // Remove from local state and collapse if expanded
       setObligations(prev => prev.filter(o => o.name !== obligationName));
       if (expandedObligationId === obligationName) {
         setExpandedObligationId(null);
       }
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       notifications.show({
@@ -220,11 +250,11 @@ export default function ObligationsPage() {
     setIsUpdating(true);
     let deleteFailed = false;
     let deleteError = '';
-    
+
     // Parse the new obligation name from the PML
     const match = updatedPML.match(/create obligation\s+"([^"]+)"/);
     const newObligationName = match && match[1] ? match[1] : obligationName;
-    
+
     try {
       // Try to delete the old obligation
       const deletePML = `delete obligation "${obligationName}"`;
@@ -233,32 +263,32 @@ export default function ObligationsPage() {
       deleteFailed = true;
       deleteError = error instanceof Error ? error.message : 'Unknown error occurred';
     }
-    
+
     try {
       // Try to create the new obligation with the updated PML
       await AdjudicationService.executePML(updatedPML);
-      
+
       notifications.show({
         title: deleteFailed ? 'Partial Success' : 'Success',
         message: deleteFailed
-          ? `Delete failed (${deleteError}), but create succeeded. Obligation "${newObligationName}" updated.`
-          : `Obligation "${newObligationName}" updated successfully`,
+            ? `Delete failed (${deleteError}), but create succeeded. Obligation "${newObligationName}" updated.`
+            : `Obligation "${newObligationName}" updated successfully`,
         color: deleteFailed ? 'yellow' : 'green',
       });
-      
+
       // Update local state with the new obligation data
-      setObligations(prev => 
-        prev.map(o => o.name === obligationName 
-          ? { ...o, name: newObligationName, pml: updatedPML }
-          : o
-        )
+      setObligations(prev =>
+          prev.map(o => o.name === obligationName
+              ? { ...o, name: newObligationName, pml: updatedPML }
+              : o
+          )
       );
-      
+
       // Update expanded obligation ID if it changed
       if (newObligationName !== obligationName) {
         setExpandedObligationId(newObligationName);
       }
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       notifications.show({
@@ -292,20 +322,20 @@ export default function ObligationsPage() {
       });
       return;
     }
-    
+
     const obligationName = match[1];
     const currentUsername = AuthService.getUsername();
 
     setIsCreating(true);
     try {
       await AdjudicationService.executePML(pmlContent);
-      
+
       notifications.show({
         title: 'Success',
         message: 'Obligation created successfully',
         color: 'green',
       });
-      
+
       // Create new obligation object and add to local state
       const newObligation: Obligation = {
         name: obligationName,
@@ -316,14 +346,14 @@ export default function ObligationsPage() {
         } : undefined,
         pml: pmlContent,
       };
-      
+
       // Add to obligations list (remove any existing with same name to avoid duplicates)
       setObligations(prev => [newObligation, ...prev.filter(o => o.name !== obligationName)]);
-      
+
       // Hide create form and expand the new obligation
       setShowCreateForm(false);
       setExpandedObligationId(obligationName);
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       notifications.show({
@@ -347,82 +377,95 @@ export default function ObligationsPage() {
   };
 
   const toggleExpanded = (obligationName: string) => {
-    setExpandedObligationId(current => 
-      current === obligationName ? null : obligationName
+    setExpandedObligationId(current =>
+        current === obligationName ? null : obligationName
     );
   };
 
   return (
-    <AppShell
-      header={{ height: 0 }}
-      navbar={{
-        width: 75,
-        breakpoint: 'sm',
-      }}
-      padding="md"
-    >
-      <AppShell.Navbar p="sm" style={{height: "100vh"}} className={classes.navbar}>
-        <NavBar activePageIndex={3} />
-      </AppShell.Navbar>
+      <AppShell
+          header={{ height: 60 }}
+          transitionDuration={0}
+      >
+        <AppShell.Header>
+          <Group h="100%" px="md" justify="space-between">
+            <Group>
+              <PMIcon style={{width: '36px', height: '36px'}}/>
+              <Title order={2}>Policy Machine</Title>
+            </Group>
 
-      <AppShell.Main style={{height: "100vh", overflow: "auto"}}>
-        <UserMenu />
-        <Stack gap="md" p="md" style={{ marginTop: '60px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <IconAutomation size={24} />
-              <Text size="xl" fw={600}>Obligations</Text>
+            <NavBar activePageIndex={3} />
+
+            <Group>
+              <Tooltip label={themeMode === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}>
+                <ActionIcon
+                    variant="subtle"
+                    size="md"
+                    onClick={toggleTheme}
+                >
+                  {themeMode === 'light' ? <IconMoon size={24} /> : <IconSun size={24} />}
+                </ActionIcon>
+              </Tooltip>
+
+              <UserMenu />
+            </Group>
+          </Group>
+        </AppShell.Header>
+
+        <AppShell.Main style={{height: "100vh", overflow: "auto"}}>
+          <Stack gap="md" style={{padding: "50px 200px", minHeight: "calc(100vh - 60px)"}}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <IconAutomation size={24} />
+                <Text size="xl" fw={600}>Obligations</Text>
+              </div>
+              <Button
+                  leftSection={<IconPlus size={16} />}
+                  onClick={handleShowCreateForm}
+                  disabled={showCreateForm || isCreating}
+              >
+                Create Obligation
+              </Button>
             </div>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={handleShowCreateForm}
-              disabled={showCreateForm || isCreating}
-            >
-              Create Obligation
-            </Button>
-          </div>
 
-          {error && (
-            <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
-              {error}
-            </Alert>
-          )}
+            {error && (
+                <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
+                  {error}
+                </Alert>
+            )}
 
-          <div style={{ position: 'relative', minHeight: '200px' }}>
-            <LoadingOverlay visible={loading} />
-            
-            {!loading && (
+            <div style={{ width: '100%' }}>
+
               <Stack gap="md">
                 {showCreateForm && (
-                  <CreateObligationCard
-                    onCancel={handleCancelCreate}
-                    onCreate={handleCreateObligation}
-                    isCreating={isCreating}
-                  />
+                    <CreateObligationCard
+                        onCancel={handleCancelCreate}
+                        onCreate={handleCreateObligation}
+                        isCreating={isCreating}
+                    />
                 )}
-                
+
                 {obligations.length === 0 && !showCreateForm && (
-                  <Text ta="center" c="dimmed" size="lg" py="xl">
-                    No obligations found. Create your first obligation using the button above.
-                  </Text>
+                    <Text ta="center" c="dimmed" size="lg" py="xl">
+                      No obligations found. Create your first obligation using the button above.
+                    </Text>
                 )}
-                
+
                 {obligations.map((obligation) => (
-                  <ObligationCard
-                    key={obligation.name}
-                    obligation={obligation}
-                    isExpanded={expandedObligationId === obligation.name}
-                    onToggleExpand={() => toggleExpanded(obligation.name)}
-                    onUpdate={handleUpdateObligation}
-                    onDelete={handleDeleteObligation}
-                    isUpdating={isUpdating}
-                  />
+                    <ObligationCard
+                        key={obligation.name}
+                        obligation={obligation}
+                        isExpanded={expandedObligationId === obligation.name}
+                        onToggleExpand={() => toggleExpanded(obligation.name)}
+                        onUpdate={handleUpdateObligation}
+                        onDelete={handleDeleteObligation}
+                        isUpdating={isUpdating}
+                    />
                 ))}
               </Stack>
-            )}
-          </div>
-        </Stack>
-      </AppShell.Main>
-    </AppShell>
+            </div>
+          </Stack>
+        </AppShell.Main>
+      </AppShell>
   );
 }
