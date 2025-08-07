@@ -7,18 +7,15 @@ import {
     Group,
     Text,
     Card,
-    Badge,
     ActionIcon,
-    Divider,
     ScrollArea,
-    Alert, Input
+    Alert, useMantineTheme
 } from '@mantine/core';
 import { NodeType, AdjudicationService } from '@/api/pdp.api';
-import { NodeIcon } from '@/components/tree/util';
 import { TreeNode } from '@/utils/tree.utils';
 import { IconTrash, IconInfoCircle, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { useMantineTheme } from '@mantine/core';
+import {NodeIcon} from "@/components/ppmtree3/tree-utils";
 
 interface NodeCreationTabProps {
     nodeType: NodeType;
@@ -32,7 +29,6 @@ interface NodeCreationTabProps {
 export function NodeCreationTab({ 
     nodeType, 
     selectedNodes, 
-    onAddNode, 
     onRemoveNode,
     onUpdateSelectedNodes,
     onClose 
@@ -82,22 +78,21 @@ export function NodeCreationTab({
         setIsCreating(true);
 
         try {
-            let response;
             switch (nodeType) {
                 case NodeType.UA:
-                    response = await AdjudicationService.createUserAttribute(name.trim(), descendants);
+                    await AdjudicationService.createUserAttribute(name.trim(), descendants);
                     break;
                 case NodeType.OA:
-                    response = await AdjudicationService.createObjectAttribute(name.trim(), descendants);
+                    await AdjudicationService.createObjectAttribute(name.trim(), descendants);
                     break;
                 case NodeType.U:
-                    response = await AdjudicationService.createUser(name.trim(), descendants);
+                    await AdjudicationService.createUser(name.trim(), descendants);
                     break;
                 case NodeType.O:
-                    response = await AdjudicationService.createObject(name.trim(), descendants);
+                    await AdjudicationService.createObject(name.trim(), descendants);
                     break;
                 case NodeType.PC:
-                    response = await AdjudicationService.createPolicyClass(name.trim());
+                    await AdjudicationService.createPolicyClass(name.trim());
                     break;
                 default:
                     throw new Error(`Unsupported node type: ${nodeType}`);

@@ -4,8 +4,13 @@ import {Node, NodeType} from "@/api/pdp.api";
 import {DescendantsIcon} from "@/components/icons/DescendantsIcon";
 import {px, useMantineTheme} from "@mantine/core";
 
+// Constants
 export const INDENT_NUM = 28;
 
+export const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O];
+export const USER_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.U];
+
+// Types
 export type NodeIconProps = {
 	type: string,
 	size?: string,
@@ -13,6 +18,7 @@ export type NodeIconProps = {
 	style?: React.CSSProperties,
 }
 
+// Components
 export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIconProps) {
 	const color = getTypeColor(type);
 
@@ -38,6 +44,7 @@ export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIc
 	);
 }
 
+// Utility functions
 export function getTypeColor(type: string) {
 	const theme = useMantineTheme();
 

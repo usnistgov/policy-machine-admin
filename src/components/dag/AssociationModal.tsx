@@ -23,7 +23,6 @@ export function AssociationModal({
 	node,
 	selectedUserNode,
 	selectedTargetNode,
-	isUserTree,
 	onCustomSubmit
 }: AssociationModalProps) {
 	const [resourceRights, setResourceRights] = useState<string[]>([]);

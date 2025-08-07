@@ -2,7 +2,6 @@ import React from 'react';
 import { Stack, Text } from '@mantine/core';
 import { TreeNode } from '@/utils/tree.utils';
 import { DescendantsTab } from './DescendantsTab';
-import { AssociationTab } from './AssociationTab';
 import { NodeCreationTab } from './NodeCreationTab';
 import { AssignmentTab } from './AssignmentTab';
 import { AssociationsTab } from './AssociationsTab';
@@ -93,15 +92,7 @@ export function RightSidePanel({
                             selectedNodeFromMainTree={selectedNodeFromMainTree}
                             onStartAssociationMode={onStartAssociationMode}
                         />
-                    ) : (
-                        <AssociationTab
-                            node={panel.node!}
-                            selectedUserNode={panel.selectedUserNode}
-                            selectedTargetNode={panel.selectedTargetNode}
-                            isUserTree={panel.isUserTree!}
-                            onClose={onClose}
-                        />
-                    )}
+                    ) : null }
                 </>
             )}
         </div>

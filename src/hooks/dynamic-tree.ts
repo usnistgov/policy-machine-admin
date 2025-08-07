@@ -1,7 +1,7 @@
 import {useMemo, useState} from "react";
 import {CreateHandler, DeleteHandler, MoveHandler, RenameHandler} from "react-arborist";
 import {PrimitiveAtom, useAtom} from "jotai";
-import {targetTreeDataAtom, userTreeDataAtom} from "@/components/tree/tree-atom";
+import {targetTreeDataAtom, userTreeDataAtom} from "@/components/ppmtree3/tree-atoms";
 import {TreeNode, addChildToTreeNode, removeTreeNodeById, updateTreeNodeById, findTreeNodeById} from "@/utils/tree.utils";
 import {v4 as uuidv4} from "uuid";
 

@@ -1,5 +1,5 @@
 import { queryClient } from '../App';
-import { userOpenTreeNodesAtom, targetOpenTreeNodesAtom } from '@/components/tree/tree-atom';
+import { userOpenTreeNodesAtom, targetOpenTreeNodesAtom } from '@/components/ppmtree3/tree-atoms';
 import { useSetAtom } from 'jotai';
 import { useCallback } from 'react';
 

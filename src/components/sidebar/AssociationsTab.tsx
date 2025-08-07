@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { IconX } from '@tabler/icons-react';
-import { ActionIcon, Box, Divider, Group, Stack, Text, Title } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
+import { ActionIcon, Group, Stack, Text, Title } from '@mantine/core';
 import { NodeType } from '@/api/pdp.api';
-import { NodeIcon } from '@/components/tree/util';
 import { TreeNode } from '@/utils/tree.utils';
 import { useAssociations, Association } from './hooks/useAssociations';
-import { AssociationTablePanel } from './components/AssociationTablePanel';
+import { AssociationTablePanel } from './AssociationTablePanel';
+import {NodeIcon} from "@/components/ppmtree3/tree-utils";
 
 interface AssociationsTabProps {
   node: TreeNode;

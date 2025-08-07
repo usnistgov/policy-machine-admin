@@ -4,15 +4,14 @@ import clsx from "clsx";
 import { NodeRendererProps } from "react-arborist";
 import { ActionIcon, Loader } from "@mantine/core";
 import { TreeNode } from "@/utils/tree.utils";
-import classes from "@/components/tree/pmtree.module.css";
-import { INDENT_NUM, NodeIcon, shouldShowExpansionIcon } from "@/components/tree/util";
+import classes from "@/components/ppmtree3/pmtree.module.css";
 import { PPMTreeClickHandlers } from "./PPMTree";
 import { TreeDirection, usePPMTreeOperations } from "./hooks/usePPMTreeOperations";
 import { PrimitiveAtom } from "jotai/index";
 import { NodeContextMenu } from "./NodeContextMenu";
-import { NodeType, AdjudicationService } from "@/api/pdp.api";
 import { useAtom } from "jotai";
 import { useTheme } from "@/contexts/ThemeContext";
+import {INDENT_NUM, NodeIcon, shouldShowExpansionIcon} from "@/components/ppmtree3/tree-utils";
 
 export interface PPMNodeProps extends NodeRendererProps<TreeNode> {
 	clickHandlers?: PPMTreeClickHandlers;

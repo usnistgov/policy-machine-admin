@@ -3,8 +3,8 @@ import { Menu, Group, Text, useMantineTheme } from '@mantine/core';
 import { IconArrowUp, IconLink, IconEye, IconPlus } from '@tabler/icons-react';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
-import { NodeIcon, isValidAscendant, getValidationErrorMessage } from '@/components/tree/util';
 import { notifications } from '@mantine/notifications';
+import {getValidationErrorMessage, isValidAscendant, NodeIcon} from "@/components/ppmtree3/tree-utils";
 
 export interface NodeContextMenuProps {
   node: TreeNode;

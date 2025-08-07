@@ -1,9 +1,8 @@
 import React from 'react';
 import { Stack, Text, Group, Button, Alert, ScrollArea, ActionIcon, Divider, Card } from '@mantine/core';
-import { IconX, IconLink, IconInfoCircle, IconTrash } from '@tabler/icons-react';
+import { IconLink, IconInfoCircle, IconTrash } from '@tabler/icons-react';
 import { TreeNode } from '@/utils/tree.utils';
-import { NodeIcon } from '@/components/tree/util';
-import { NodeType } from '@/api/pdp.api';
+import {NodeIcon} from "@/components/ppmtree3/tree-utils";
 
 interface AssignmentTabProps {
     sourceNode: TreeNode;

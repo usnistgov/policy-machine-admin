@@ -8,12 +8,12 @@ import {
 } from '@tabler/icons-react';
 import { Box, Button, Group, Table, Tabs, Text, Badge, Stack, ActionIcon, useMantineTheme, useMantineColorScheme } from '@mantine/core';
 import { TreeNode } from '@/utils/tree.utils';
-import { Association } from '../hooks/useAssociations';
-import { NodeIcon } from '@/components/tree/util';
+import { Association } from './hooks/useAssociations';
 import { AccessRightsPanel } from './AccessRightsPanel';
 import { PPMTree } from '@/components/ppmtree3';
 import { atom } from 'jotai';
 import { TreeApi } from 'react-arborist';
+import {NodeIcon} from "@/components/ppmtree3/tree-utils";
 
 interface AssociationTablePanelProps {
   sourceAssociations: Association[];
@@ -55,24 +55,37 @@ export function AssociationTablePanel({
   const { colorScheme } = useMantineColorScheme();
   const [activeTab, setActiveTab] = useState<string | null>('incoming');
   const [expandedAssociation, setExpandedAssociation] = useState<string | null>(null);
+  const [isCreationFormExpanded, setIsCreationFormExpanded] = useState(false);
+  
+  // Separate state for editing existing associations
   const [editingResourceRights, setEditingResourceRights] = useState<string[]>([]);
   const [editingAdminRights, setEditingAdminRights] = useState<string[]>([]);
+  
+  // Separate state for creating new associations
+  const [creationResourceRights, setCreationResourceRights] = useState<string[]>([]);
+  const [creationAdminRights, setCreationAdminRights] = useState<string[]>([]);
+  
   const [treeDirection, setTreeDirection] = useState<'descendants' | 'ascendants'>('ascendants');
   const [creating, setCreating] = useState(false);
 
 
-  // Effect to expand creation row when creation mode starts
+  // Effect to expand creation form when creation mode starts
   React.useEffect(() => {
     if (isCreatingAssociation && creationMode) {
-      const creationId = `creation-${creationMode}`;
-      setExpandedAssociation(creationId);
+      setIsCreationFormExpanded(true);
+      // Clear any expanded association when starting creation
+      setExpandedAssociation(null);
+      // Clear editing rights when another association might be open
       setEditingResourceRights([]);
       setEditingAdminRights([]);
+      // Always start creation with empty rights
+      setCreationResourceRights([]);
+      setCreationAdminRights([]);
     } else if (!isCreatingAssociation) {
-      // Clear creation expansion when not creating
-      if (expandedAssociation?.startsWith('creation-')) {
-        setExpandedAssociation(null);
-      }
+      setIsCreationFormExpanded(false);
+      // Clear creation rights when exiting creation mode
+      setCreationResourceRights([]);
+      setCreationAdminRights([]);
     }
   }, [isCreatingAssociation, creationMode]);
 
@@ -80,8 +93,11 @@ export function AssociationTablePanel({
     if (expandedAssociation === associationId) {
       // Collapse if already expanded
       setExpandedAssociation(null);
+      // Clear editing rights when collapsing
+      setEditingResourceRights([]);
+      setEditingAdminRights([]);
     } else {
-      // Expand and initialize editing rights
+      // Expand and initialize editing rights (only affects editing, not creation)
       setExpandedAssociation(associationId);
       const resourceRights = association.accessRights.filter(right =>
         availableResourceRights.includes(right)
@@ -94,6 +110,7 @@ export function AssociationTablePanel({
     }
   };
 
+  // Handlers for editing existing associations
   const handleResourceRightToggle = (right: string) => {
     setEditingResourceRights(prev =>
       prev.includes(right)
@@ -110,14 +127,37 @@ export function AssociationTablePanel({
     );
   };
 
+  // Handlers for creating new associations
+  const handleCreationResourceRightToggle = (right: string) => {
+    setCreationResourceRights(prev =>
+      prev.includes(right)
+        ? prev.filter(r => r !== right)
+        : [...prev, right]
+    );
+  };
+
+  const handleCreationAdminRightToggle = (right: string) => {
+    setCreationAdminRights(prev =>
+      prev.includes(right)
+        ? prev.filter(r => r !== right)
+        : [...prev, right]
+    );
+  };
+
   const handleUpdate = (association: Association) => {
     onUpdateAssociation(association, editingResourceRights, editingAdminRights);
     setExpandedAssociation(null);
+    // Clear editing rights after update
+    setEditingResourceRights([]);
+    setEditingAdminRights([]);
   };
 
   const handleDelete = (association: Association) => {
     onDeleteAssociation(association);
     setExpandedAssociation(null);
+    // Clear editing rights after delete
+    setEditingResourceRights([]);
+    setEditingAdminRights([]);
   };
 
   const handleCreate = async () => {
@@ -127,7 +167,7 @@ export function AssociationTablePanel({
     try {
       const isOutgoing = creationMode === 'outgoing';
       const targetNodeId = selectedNodeFromMainTree.pmId || selectedNodeFromMainTree.id;
-      await onCreateAssociation(isOutgoing, targetNodeId, editingResourceRights, editingAdminRights);
+      await onCreateAssociation(isOutgoing, targetNodeId, creationResourceRights, creationAdminRights);
     } finally {
       setCreating(false);
     }
@@ -135,7 +175,9 @@ export function AssociationTablePanel({
 
   const handleCancelCreation = () => {
     onCancelCreation?.();
-    setExpandedAssociation(null);
+    // Clear creation rights when canceling creation
+    setCreationResourceRights([]);
+    setCreationAdminRights([]);
   };
 
   const renderAccessRights = (accessRights: string[]) => {
@@ -162,7 +204,7 @@ export function AssociationTablePanel({
     );
   };
 
-  const renderCreationDetail = (creationId: string) => {
+  const renderCreationDetail = () => {
     // Create local atoms for this specific creation detail
     const treeApiAtom = atom<TreeApi<TreeNode> | null>(null);
     const treeDataAtom = atom<TreeNode[]>([]);
@@ -250,12 +292,12 @@ export function AssociationTablePanel({
               <AccessRightsPanel
                 availableResourceRights={availableResourceRights}
                 adminAccessRights={adminAccessRights}
-                selectedResourceRights={editingResourceRights}
-                selectedAdminRights={editingAdminRights}
-                onResourceRightToggle={handleResourceRightToggle}
-                onAdminRightToggle={handleAdminRightToggle}
-                onClearResourceRights={() => setEditingResourceRights([])}
-                onClearAdminRights={() => setEditingAdminRights([])}
+                selectedResourceRights={creationResourceRights}
+                selectedAdminRights={creationAdminRights}
+                onResourceRightToggle={handleCreationResourceRightToggle}
+                onAdminRightToggle={handleCreationAdminRightToggle}
+                onClearResourceRights={() => setCreationResourceRights([])}
+                onClearAdminRights={() => setCreationAdminRights([])}
               />
             </div>
             
@@ -284,7 +326,7 @@ export function AssociationTablePanel({
     );
   };
 
-  const renderInlineDetail = (association: Association, associationId: string) => {
+  const renderInlineDetail = (association: Association) => {
     // For outgoing associations, show target as root. For incoming, show source as root.
     const rootNode = activeTab === 'outgoing' ? association.targetNode : association.sourceNode;
     
@@ -384,10 +426,7 @@ export function AssociationTablePanel({
 
   const renderCreationRow = (mode: 'outgoing' | 'incoming') => {
     if (!isCreatingAssociation || creationMode !== mode) {return null;}
-    
-    const creationId = `creation-${mode}`;
-    const isExpanded = expandedAssociation === creationId;
-    
+
     const sourceNode = mode === 'outgoing' ? currentNode : selectedNodeFromMainTree;
     const targetNode = mode === 'outgoing' ? selectedNodeFromMainTree : currentNode;
     const displayNode = mode === 'outgoing' ? targetNode : sourceNode;
@@ -398,7 +437,7 @@ export function AssociationTablePanel({
           <Table.Td>
             <Group gap="xs" align="center">
               <ActionIcon size="xs" variant="transparent">
-                {isExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+                {isCreationFormExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
               </ActionIcon>
               {displayNode ? (
                 <>
@@ -414,7 +453,7 @@ export function AssociationTablePanel({
             <Text size="xs" c="dimmed">New association</Text>
           </Table.Td>
         </Table.Tr>
-        {isExpanded && renderCreationDetail(creationId)}
+        {isCreationFormExpanded && renderCreationDetail()}
       </React.Fragment>
     );
   };
@@ -459,7 +498,7 @@ export function AssociationTablePanel({
                     {renderAccessRights(association.accessRights)}
                   </Table.Td>
                 </Table.Tr>
-                {isExpanded && renderInlineDetail(association, associationId)}
+                {isExpanded && renderInlineDetail(association)}
               </React.Fragment>
             );
           })
@@ -508,7 +547,7 @@ export function AssociationTablePanel({
                     {renderAccessRights(association.accessRights)}
                   </Table.Td>
                 </Table.Tr>
-                {isExpanded && renderInlineDetail(association, associationId)}
+                {isExpanded && renderInlineDetail(association)}
               </React.Fragment>
             );
           })

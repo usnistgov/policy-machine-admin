@@ -1,21 +1,19 @@
-import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip, Button, Text} from '@mantine/core';
+import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip, Text, useMantineTheme} from '@mantine/core';
 import { NavBar } from '@/components/navbar/NavBar';
-import { PPMTree, PPMTreeClickHandlers } from '@/components/ppmtree3';
-import classes from './navbar.module.css';
+import { PPMTree } from '@/components/ppmtree3';
 import { UserMenu } from '@/components/UserMenu';
 import { RightSidePanel, SidePanel } from '@/components/sidebar';
 import { PMLEditor } from '@/components/PMLEditor';
 import React, { useState } from 'react';
 import {useDisclosure} from "@mantine/hooks";
 import {PMIcon} from "@/components/icons/PMIcon";
-import {IconLayoutSidebar, IconLayoutSidebarRight, IconLayoutBottombar, IconPlus, IconSun, IconMoon} from '@tabler/icons-react';
-import { useMantineTheme } from '@mantine/core';
+import {IconLayoutSidebar, IconLayoutSidebarRight, IconLayoutBottombar, IconSun, IconMoon} from '@tabler/icons-react';
 import { atom } from 'jotai';
 import { TreeApi } from 'react-arborist';
 import { TreeNode } from '@/utils/tree.utils';
 import { NodeType, AdjudicationService } from '@/api/pdp.api';
-import { NodeIcon } from '@/components/tree/util';
 import { useTheme } from '@/contexts/ThemeContext';
+import {NodeIcon} from "@/components/ppmtree3/tree-utils";
 
 // Create atoms for the PPMTree3 component
 const ppmTreeApiAtom = atom<TreeApi<TreeNode> | null>(null);
