@@ -1,5 +1,5 @@
 import React from 'react';
-import {ActionIcon, Checkbox, Group, SimpleGrid, Stack, Text, Title} from '@mantine/core';
+import {ActionIcon, Checkbox, Group, Stack, Text, Title} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-react';
 import { adminAccessRightsSections } from './hooks/useAssociations';
 

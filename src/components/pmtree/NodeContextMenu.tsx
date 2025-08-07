@@ -4,7 +4,7 @@ import { IconArrowUp, IconLink, IconEye, IconPlus } from '@tabler/icons-react';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
 import { notifications } from '@mantine/notifications';
-import {getValidationErrorMessage, isValidAscendant, NodeIcon} from "@/components/ppmtree3/tree-utils";
+import {getValidationErrorMessage, isValidAscendant, NodeIcon} from "@/components/pmtree/tree-utils";
 
 export interface NodeContextMenuProps {
   node: TreeNode;

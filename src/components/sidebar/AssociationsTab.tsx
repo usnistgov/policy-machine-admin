@@ -5,7 +5,7 @@ import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
 import { useAssociations, Association } from './hooks/useAssociations';
 import { AssociationTablePanel } from './AssociationTablePanel';
-import {NodeIcon} from "@/components/ppmtree3/tree-utils";
+import {NodeIcon} from "@/components/pmtree/tree-utils";
 
 interface AssociationsTabProps {
   node: TreeNode;

@@ -5,11 +5,11 @@ import { useAtom } from "jotai";
 import { QueryService, NodeType } from "@/api/pdp.api";
 import { transformNodesToTreeNodes, TreeNode } from "@/utils/tree.utils";
 import { PrimitiveAtom } from "jotai/index";
-import { PPMNode } from "./PPMNode";
-import { TreeDirection } from "./hooks/usePPMTreeOperations";
-import {INDENT_NUM} from "@/components/ppmtree3/tree-utils";
+import { PMNode } from "./PMNode";
+import { TreeDirection } from "./hooks/usePMTreeOperations";
+import {INDENT_NUM} from "@/components/pmtree/tree-utils";
 
-export interface PPMTreeClickHandlers {
+export interface PMTreeClickHandlers {
 	onLeftClick?: (node: TreeNode) => void;
 	onRightClick?: (node: TreeNode) => void;
 	onAddAsAscendant?: (node: TreeNode) => void;
@@ -30,7 +30,7 @@ export interface PPMTreeClickHandlers {
 	onAssociateWith?: (node: TreeNode) => void;
 }
 
-export interface PPMTreeProps {
+export interface PMTreeProps {
 	// Required props
 	treeApiAtom: PrimitiveAtom<TreeApi<TreeNode> | null>;
 	treeDataAtom: PrimitiveAtom<TreeNode[]>;
@@ -38,7 +38,7 @@ export interface PPMTreeProps {
 	// Optional props
 	rootNode?: TreeNode;
 	direction?: TreeDirection;
-	clickHandlers?: PPMTreeClickHandlers;
+	clickHandlers?: PMTreeClickHandlers;
 	className?: string;
 	style?: React.CSSProperties;
 	
@@ -56,7 +56,7 @@ export interface PPMTreeProps {
 	overscanCount?: number;
 }
 
-export function PPMTree(props: PPMTreeProps) {
+export function PMTree(props: PMTreeProps) {
 	const [treeData, setTreeData] = useAtom(props.treeDataAtom);
 	const [treeApi, setTreeApi] = useAtom(props.treeApiAtom);
 	const treeApiRef = useRef<TreeApi<TreeNode>>();
@@ -114,7 +114,7 @@ export function PPMTree(props: PPMTreeProps) {
 
 	// Node renderer function that passes click handlers and direction
 	const nodeRenderer = (nodeProps: any) => (
-		<PPMNode 
+		<PMNode
 			{...nodeProps} 
 			clickHandlers={props.clickHandlers}
 			direction={props.direction ?? 'descendants'}

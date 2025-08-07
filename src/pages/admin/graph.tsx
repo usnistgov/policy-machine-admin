@@ -1,6 +1,5 @@
 import {AppShell, Stack, Box, Group, Divider, Title, ActionIcon, Tooltip, Text, useMantineTheme} from '@mantine/core';
 import { NavBar } from '@/components/navbar/NavBar';
-import { PPMTree } from '@/components/ppmtree3';
 import { UserMenu } from '@/components/UserMenu';
 import { RightSidePanel, SidePanel } from '@/components/sidebar';
 import { PMLEditor } from '@/components/PMLEditor';
@@ -13,7 +12,8 @@ import { TreeApi } from 'react-arborist';
 import { TreeNode } from '@/utils/tree.utils';
 import { NodeType, AdjudicationService } from '@/api/pdp.api';
 import { useTheme } from '@/contexts/ThemeContext';
-import {NodeIcon} from "@/components/ppmtree3/tree-utils";
+import {NodeIcon} from "@/components/pmtree/tree-utils";
+import {PMTree} from "@/components/pmtree";
 
 // Create atoms for the PPMTree3 component
 const ppmTreeApiAtom = atom<TreeApi<TreeNode> | null>(null);
@@ -550,7 +550,7 @@ export function Graph() {
                     </Box>
 
                     {/* Tree */}
-                    <PPMTree
+                    <PMTree
                         treeApiAtom={ppmTreeApiAtom}
                         treeDataAtom={ppmTreeDataAtom}
                         direction="ascendants"

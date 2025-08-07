@@ -2,11 +2,11 @@ import { useAtom, PrimitiveAtom } from 'jotai';
 import { NodeApi } from 'react-arborist';
 import { QueryService } from '@/api/pdp.api';
 import { TreeNode, transformNodesToTreeNodes, sortTreeNodes } from '@/utils/tree.utils';
-import {updateNodeChildren} from "@/components/ppmtree3/tree-utils";
+import {updateNodeChildren} from "@/components/pmtree/tree-utils";
 
 export type TreeDirection = 'descendants' | 'ascendants';
 
-export function usePPMTreeOperations(
+export function usePMTreeOperations(
 	treeDataAtom: PrimitiveAtom<TreeNode[]>,
 	direction: TreeDirection = 'descendants'
 ) {

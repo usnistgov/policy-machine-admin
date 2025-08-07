@@ -15,7 +15,7 @@ import { NodeType, AdjudicationService } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
 import { IconTrash, IconInfoCircle, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import {NodeIcon} from "@/components/ppmtree3/tree-utils";
+import {NodeIcon} from "@/components/pmtree/tree-utils";
 
 interface NodeCreationTabProps {
     nodeType: NodeType;

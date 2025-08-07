@@ -44,8 +44,8 @@ import 'reactflow/dist/style.css';
 import { IconCamera, IconJson, IconSitemap } from '@tabler/icons-react';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
-import {isValidAssignment, NodeIcon} from "@/components/ppmtree3/tree-utils";
 import {AssociationModal} from "@/components/dag/AssociationModal";
+import {isValidAssignment, NodeIcon} from "@/components/pmtree/tree-utils";
 
 const getNodeTypeColorFromTheme = (type: string) => {
     switch (type) {

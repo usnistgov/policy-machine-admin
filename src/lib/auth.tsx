@@ -1,24 +1,7 @@
 import { queryClient } from '../App';
-import { userOpenTreeNodesAtom, targetOpenTreeNodesAtom } from '@/components/ppmtree3/tree-atoms';
-import { useSetAtom } from 'jotai';
-import { useCallback } from 'react';
 
 // Auth token key in localStorage
 const AUTH_TOKEN_KEY = 'auth_token';
-
-/**
- * Hook to reset application state (for components to use)
- */
-export const useResetAppState = () => {
-  const setUserOpenNodes = useSetAtom(userOpenTreeNodesAtom);
-  const setTargetOpenNodes = useSetAtom(targetOpenTreeNodesAtom);
-  
-  return useCallback(() => {
-    // Reset all tree open states
-    setUserOpenNodes({});
-    setTargetOpenNodes({});
-  }, [setUserOpenNodes, setTargetOpenNodes]);
-};
 
 /**
  * AuthService provides centralized methods for authentication

@@ -4,28 +4,28 @@ import clsx from "clsx";
 import { NodeRendererProps } from "react-arborist";
 import { ActionIcon, Loader } from "@mantine/core";
 import { TreeNode } from "@/utils/tree.utils";
-import classes from "@/components/ppmtree3/pmtree.module.css";
-import { PPMTreeClickHandlers } from "./PPMTree";
-import { TreeDirection, usePPMTreeOperations } from "./hooks/usePPMTreeOperations";
+import classes from "@/components/pmtree/pmtree.module.css";
+import { PMTreeClickHandlers } from "./PMTree";
+import { TreeDirection, usePMTreeOperations } from "./hooks/usePMTreeOperations";
 import { PrimitiveAtom } from "jotai/index";
 import { NodeContextMenu } from "./NodeContextMenu";
 import { useAtom } from "jotai";
 import { useTheme } from "@/contexts/ThemeContext";
-import {INDENT_NUM, NodeIcon, shouldShowExpansionIcon} from "@/components/ppmtree3/tree-utils";
+import {INDENT_NUM, NodeIcon, shouldShowExpansionIcon} from "@/components/pmtree/tree-utils";
 
-export interface PPMNodeProps extends NodeRendererProps<TreeNode> {
-	clickHandlers?: PPMTreeClickHandlers;
+export interface PMNodeProps extends NodeRendererProps<TreeNode> {
+	clickHandlers?: PMTreeClickHandlers;
 	direction: TreeDirection;
 	treeDataAtom: PrimitiveAtom<TreeNode[]>;
 	className?: string;
 }
 
-export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataAtom, className }: PPMNodeProps) {
+export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAtom, className }: PMNodeProps) {
 	const { themeMode } = useTheme();
 	const [isHovered, setIsHovered] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-	const { fetchAndUpdateChildren, clearNodeChildren } = usePPMTreeOperations(treeDataAtom, direction);
+	const { fetchAndUpdateChildren, clearNodeChildren } = usePMTreeOperations(treeDataAtom, direction);
 	const [treeData, setTreeData] = useAtom(treeDataAtom);
 
 	const handleClick = async (e: React.MouseEvent) => {

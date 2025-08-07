@@ -3,7 +3,7 @@ import { Stack, Text, Group, ActionIcon } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
-import {NodeIcon} from "@/components/ppmtree3/tree-utils";
+import {NodeIcon} from "@/components/pmtree/tree-utils";
 
 interface DescendantsTabProps {
   rootNode: TreeNode;

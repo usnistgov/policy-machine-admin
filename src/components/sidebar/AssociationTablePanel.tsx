@@ -10,10 +10,10 @@ import { Box, Button, Group, Table, Tabs, Text, Badge, Stack, ActionIcon, useMan
 import { TreeNode } from '@/utils/tree.utils';
 import { Association } from './hooks/useAssociations';
 import { AccessRightsPanel } from './AccessRightsPanel';
-import { PPMTree } from '@/components/ppmtree3';
 import { atom } from 'jotai';
 import { TreeApi } from 'react-arborist';
-import {NodeIcon} from "@/components/ppmtree3/tree-utils";
+import {NodeIcon} from "@/components/pmtree/tree-utils";
+import {PMTree} from "@/components/pmtree";
 
 interface AssociationTablePanelProps {
   sourceAssociations: Association[];
@@ -265,7 +265,7 @@ export function AssociationTablePanel({
                   borderRadius: '4px',
                   overflow: 'hidden'
                 }}>
-                  <PPMTree
+                  <PMTree
                     treeApiAtom={treeApiAtom}
                     treeDataAtom={treeDataAtom}
                     rootNode={selectedNodeFromMainTree}
@@ -366,7 +366,7 @@ export function AssociationTablePanel({
                 borderRadius: '4px',
                 overflow: 'hidden'
               }}>
-                <PPMTree
+                <PMTree
                   treeApiAtom={treeApiAtom}
                   treeDataAtom={treeDataAtom}
                   rootNode={rootNode}
