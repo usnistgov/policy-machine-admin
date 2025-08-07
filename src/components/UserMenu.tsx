@@ -19,7 +19,7 @@ export function UserMenu() {
         <Menu shadow="md" width={200} position="bottom-end">
             <Menu.Target>
                 <Button 
-                    variant="light" 
+                    variant="transparent"
                     style={{
                         borderRadius: '20px' 
                     }}

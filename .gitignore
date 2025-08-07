@@ -139,3 +139,4 @@ dist
 /.storybook
 /.yarn
 /.idea
+/.vscode

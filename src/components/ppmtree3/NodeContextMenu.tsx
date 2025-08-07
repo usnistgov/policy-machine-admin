@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Group, Text } from '@mantine/core';
+import { Menu, Group, Text, useMantineTheme } from '@mantine/core';
 import { IconArrowUp, IconLink, IconEye, IconPlus } from '@tabler/icons-react';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
@@ -29,6 +29,8 @@ export interface NodeContextMenuProps {
 }
 
 export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, hasNodeCreationTabs, nodeTypeBeingCreated, onAssignTo, onAssignNodeTo, isAssignmentMode, assignmentSourceNode, onViewAssociations, isCreatingAssociation, onSelectNodeForAssociation, isAssociationMode, associationCreationMode, onAssociateWith }: NodeContextMenuProps) {
+  const theme = useMantineTheme();
+
   const handleAddAsAscendant = () => {
     // Validate if this node can be selected as an ascendant
     if (nodeTypeBeingCreated) {
@@ -145,7 +147,7 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
         <Menu.Dropdown>
           <Menu.Label>
             <Group gap="xs" align="center">
-              <NodeIcon type={node.type} size="16px" fontSize="8px" />
+              <NodeIcon type={node.type} size="20px" fontSize="14px" />
               <Text size="sm" truncate style={{ maxWidth: '150px' }}>
                 {node.name}
               </Text>
@@ -158,9 +160,7 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
               leftSection={<IconArrowUp size={16} />}
               onClick={handleAddAsAscendant}
               style={{
-                backgroundColor: 'var(--mantine-color-blue-0)',
-                borderLeft: '3px solid var(--mantine-color-blue-6)',
-                fontWeight: 500
+                borderLeft: `3px solid ${theme.colors[theme.primaryColor][6]}`
               }}
             >
               Add as descendant

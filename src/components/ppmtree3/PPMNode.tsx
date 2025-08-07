@@ -85,7 +85,7 @@ export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataA
 			// Add vertical lines for each level except the current node
 			for (let i = 0; i < depth; i++) {
 				// Position the line to align with parent nodes
-				const left = i * INDENT_NUM + 12;
+				const left = i * INDENT_NUM + 10;
 
 				lines.push(
 					<div
@@ -106,8 +106,8 @@ export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataA
 					key={`horizontal-${node.data.id}`}
 					className={classes.horizontalLine}
 					style={{
-						left: `${(depth - 1) * INDENT_NUM + 12}px`,
-						width: `${22}px`,
+						left: `${(depth - 1) * INDENT_NUM + 10}px`,
+						width: `${18}px`,
 						top: 'calc(50% - 0.5px)'
 					}}
 				/>
@@ -122,48 +122,17 @@ export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataA
 			<div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
 				<NodeIcon
 					type={node.data.type}
-					size="20px"
+					size="16px"
 					fontSize="14px"
 				/>
-				{node.isEditing ? (
-					<input
-						type="text"
-						defaultValue={node.data.name}
-						onFocus={(e) => e.target.select()}
-						onBlur={() => node.reset()}
-						onKeyDown={(e) => {
-							if (e.key === 'Enter') {
-								e.preventDefault();
-								e.stopPropagation();
-								const value = e.currentTarget.value.trim();
-								node.submit(value);
-							}
-
-							if (e.key === 'Escape') {
-								node.reset();
-							}
-						}}
-						autoFocus
-						style={{
-							fontSize: '14px',
-							fontWeight: 500,
-							border: '1px solid #ccc',
-							borderRadius: '2px',
-							padding: '2px 4px',
-							outline: 'none',
-							flex: 1
-						}}
-					/>
-				) : (
-					<span style={{
-						fontSize: '14px',
-						fontWeight: 500,
-						color: 'var(--mantine-color-text)',
-						userSelect: 'none'
-					}}>
+				<span style={{
+					fontSize: '14px',
+					fontWeight: 500,
+					color: 'var(--mantine-color-text)',
+					userSelect: 'none'
+				}}>
 						{node.data.name}
-					</span>
-				)}
+				</span>
 			</div>
 		);
 	};
@@ -185,31 +154,31 @@ export function PPMNode({ node, style, tree, clickHandlers, direction, treeDataA
 				{renderGuideLines()}
 
 				<ActionIcon
-					size={25}
+					size={20}
 					variant="transparent"
-					style={{ marginRight: '0' }}
+					style={{ marginRight: '4px' }}
 				>
 					{isLoading ? (
 						<Loader size={16} />
 					) : shouldShowExpansionIcon(node.data) ? (
 						node.isOpen ? (
-							<IconChevronDown 
-								stroke={2} 
-								size={16} 
-								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'} 
+							<IconChevronDown
+								stroke={2}
+								size={16}
+								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 							/>
 						) : (
-							<IconChevronRight 
-								stroke={2} 
-								size={16} 
-								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'} 
+							<IconChevronRight
+								stroke={2}
+								size={16}
+								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 							/>
 						)
 					) : (
-						<IconPoint 
-							stroke={2} 
-							size={16} 
-							color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'} 
+						<IconPoint
+							stroke={2}
+							size={16}
+							color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 						/>
 					)}
 				</ActionIcon>

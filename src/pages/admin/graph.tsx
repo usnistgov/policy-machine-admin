@@ -409,7 +409,7 @@ export function Graph() {
             // Reset creation state
             setIsCreatingAssociation(false);
             setAssociationCreationNode(null);
-            
+
             console.log(`Selected ${targetNode.name} for association with ${associationCreationNode.name}`);
         }
     };
@@ -456,7 +456,7 @@ export function Graph() {
             }}
             transitionDuration={0}
         >
-            <AppShell.Header>
+            <AppShell.Header style={{ backgroundColor: mantineTheme.other.intellijPanelBg }}>
                 <Group h="100%" px="md" justify="space-between">
                     <Group>
                         <PMIcon style={{width: '36px', height: '36px'}}/>
@@ -510,10 +510,14 @@ export function Graph() {
                     </Group>
                 </Group>
             </AppShell.Header>
-            <AppShell.Navbar p="md">
+            <AppShell.Navbar p="md" style={{ backgroundColor: mantineTheme.other.intellijPanelBg }}>
                 {/* Left panel - currently empty */}
             </AppShell.Navbar>
-            <AppShell.Main style={{ height: '100%', position: 'relative' }}>
+            <AppShell.Main style={{ 
+                height: '100%', 
+                position: 'relative',
+                backgroundColor: mantineTheme.other.intellijContentBg
+            }}>
                 <Stack gap={0} style={{ height: '100%' }}>
                     {/* Node Creation Toolbar */}
                     <Box style={{
@@ -534,11 +538,11 @@ export function Graph() {
                                     {[NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O].map((nodeType) => (
                                         <ActionIcon
                                             key={nodeType}
-                                            variant="default"
+                                            variant="subtle"
                                             size="md"
                                             onClick={() => handleOpenNodeCreationPanel(nodeType)}
                                         >
-                                            <NodeIcon type={nodeType} size="20px" fontSize="12px" />
+                                            <NodeIcon type={nodeType} size="20px" fontSize="14px" />
                                         </ActionIcon>
                                     ))}
                                 </Group>
@@ -664,7 +668,7 @@ export function Graph() {
                 )}
             </AppShell.Main>
 
-            <AppShell.Aside p="md">
+            <AppShell.Aside p="md" style={{ backgroundColor: mantineTheme.other.intellijPanelBg }}>
                 <RightSidePanel
                     isOpen
                     onToggle={handleToggleSidePanel}
@@ -684,7 +688,8 @@ export function Graph() {
                 padding: '10px',
                 height: footerHeight,
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                backgroundColor: mantineTheme.other.intellijPanelBg
             }}>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                     <PMLEditor

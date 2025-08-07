@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   IconPlus,
   IconChevronDown,
-  IconChevronUp,
-  IconTree,
   IconArrowUp,
   IconArrowDown,
   IconChevronRight
 } from '@tabler/icons-react';
-import { Box, Button, Group, Table, Tabs, Text, Badge, Stack, ActionIcon, Divider, useMantineTheme, useMantineColorScheme } from '@mantine/core';
+import { Box, Button, Group, Table, Tabs, Text, Badge, Stack, ActionIcon, useMantineTheme, useMantineColorScheme } from '@mantine/core';
 import { TreeNode } from '@/utils/tree.utils';
 import { Association } from '../hooks/useAssociations';
 import { NodeIcon } from '@/components/tree/util';
@@ -62,9 +60,6 @@ export function AssociationTablePanel({
   const [treeDirection, setTreeDirection] = useState<'descendants' | 'ascendants'>('ascendants');
   const [creating, setCreating] = useState(false);
 
-  // Create atoms for the tree view of the expanded association
-  const [detailTreeApiAtom] = useState(() => atom<TreeApi<TreeNode> | null>(null));
-  const [detailTreeDataAtom] = useState(() => atom<TreeNode[]>([]));
 
   // Effect to expand creation row when creation mode starts
   React.useEffect(() => {
@@ -126,7 +121,7 @@ export function AssociationTablePanel({
   };
 
   const handleCreate = async () => {
-    if (!onCreateAssociation || !creationMode || !selectedNodeFromMainTree || !currentNode) return;
+    if (!onCreateAssociation || !creationMode || !selectedNodeFromMainTree || !currentNode) {return;}
     
     setCreating(true);
     try {
@@ -167,7 +162,12 @@ export function AssociationTablePanel({
     );
   };
 
-  const renderCreationDetail = () => (
+  const renderCreationDetail = (creationId: string) => {
+    // Create local atoms for this specific creation detail
+    const treeApiAtom = atom<TreeApi<TreeNode> | null>(null);
+    const treeDataAtom = atom<TreeNode[]>([]);
+
+    return (
     <Table.Tr>
       <Table.Td colSpan={2} style={{ padding: 0 }}>
         <Box style={{ 
@@ -224,25 +224,19 @@ export function AssociationTablePanel({
                   overflow: 'hidden'
                 }}>
                   <PPMTree
-                    treeApiAtom={detailTreeApiAtom}
-                    treeDataAtom={detailTreeDataAtom}
+                    treeApiAtom={treeApiAtom}
+                    treeDataAtom={treeDataAtom}
                     rootNode={selectedNodeFromMainTree}
                     direction={treeDirection}
                     headerHeight={0}
                     footerHeight={0}
                     footerOpened={false}
-                    disableDrag={true}
-                    disableDrop={true}
-                    disableEdit={true}
-                    disableMultiSelection={true}
+                    disableDrag
+                    disableDrop
+                    disableEdit
+                    disableMultiSelection
                     rowHeight={24}
                     overscanCount={5}
-                    clickHandlers={{
-                      onLeftClick: (node: TreeNode) => {
-                        console.log('Tree node clicked:', node);
-                      },
-                      onRightClick: undefined,
-                    }}
                     style={{ height: '100%', width: '100%' }}
                   />
                 </Box>
@@ -287,68 +281,71 @@ export function AssociationTablePanel({
         </Box>
       </Table.Td>
     </Table.Tr>
-  );
+    );
+  };
 
-  const renderInlineDetail = (association: Association) => (
-    <Table.Tr>
-      <Table.Td colSpan={2} style={{ padding: 0, backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0] }}>
-        <Box style={{ height: '400px', overflow: 'hidden', display: 'flex' }}>
-          {/* Left side - Tree view */}
-          <Box style={{ flex: '1', padding: '16px', borderRight: `1px solid ${colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <Group mb="md" justify="space-between" align="center">
-              <Group gap="xs">
-                <ActionIcon
-                  size="sm"
-                  variant={treeDirection === 'ascendants' ? 'filled' : 'subtle'}
-                  onClick={() => setTreeDirection('ascendants')}
-                  title="Show Ascendants"
-                >
-                  <IconArrowUp size={12} />
-                </ActionIcon>
-                <ActionIcon
-                  size="sm"
-                  variant={treeDirection === 'descendants' ? 'filled' : 'subtle'}
-                  onClick={() => setTreeDirection('descendants')}
-                  title="Show Descendants"
-                >
-                  <IconArrowDown size={12} />
-                </ActionIcon>
+  const renderInlineDetail = (association: Association, associationId: string) => {
+    // For outgoing associations, show target as root. For incoming, show source as root.
+    const rootNode = activeTab === 'outgoing' ? association.targetNode : association.sourceNode;
+    
+    // Create local atoms for this specific association detail
+    const treeApiAtom = atom<TreeApi<TreeNode> | null>(null);
+    const treeDataAtom = atom<TreeNode[]>([]);
+    
+    return (
+      <Table.Tr>
+        <Table.Td colSpan={2} style={{ padding: 0, backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0] }}>
+          <Box style={{ height: '400px', overflow: 'hidden', display: 'flex' }}>
+            {/* Left side - Tree view */}
+            <Box style={{ flex: '1', padding: '16px', borderRight: `1px solid ${colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <Group mb="md" justify="space-between" align="center">
+                <Group gap="xs">
+                  <ActionIcon
+                    size="sm"
+                    variant={treeDirection === 'ascendants' ? 'filled' : 'subtle'}
+                    onClick={() => setTreeDirection('ascendants')}
+                    title="Show Ascendants"
+                  >
+                    <IconArrowUp size={12} />
+                  </ActionIcon>
+                  <ActionIcon
+                    size="sm"
+                    variant={treeDirection === 'descendants' ? 'filled' : 'subtle'}
+                    onClick={() => setTreeDirection('descendants')}
+                    title="Show Descendants"
+                  >
+                    <IconArrowDown size={12} />
+                  </ActionIcon>
+                </Group>
               </Group>
-            </Group>
-            <Box style={{ 
-              flex: 1,
-              border: `1px solid ${colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]}`,
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <PPMTree
-                treeApiAtom={detailTreeApiAtom}
-                treeDataAtom={detailTreeDataAtom}
-                rootNode={association.targetNode} // Start from the target node
-                direction={treeDirection}
-                headerHeight={0}
-                footerHeight={0}
-                footerOpened={false}
-                disableDrag={true}
-                disableDrop={true}
-                disableEdit={true}
-                disableMultiSelection={true}
-                rowHeight={24}
-                overscanCount={5}
-                clickHandlers={{
-                  onLeftClick: (node: TreeNode) => {
-                    console.log('Tree node clicked:', node);
-                  },
-                  onRightClick: undefined, // Disable right-click
-                }}
-                style={{ height: '100%', width: '100%' }}
-              />
+              <Box style={{ 
+                flex: 1,
+                border: `1px solid ${colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]}`,
+                borderRadius: '4px',
+                overflow: 'hidden'
+              }}>
+                <PPMTree
+                  treeApiAtom={treeApiAtom}
+                  treeDataAtom={treeDataAtom}
+                  rootNode={rootNode}
+                  direction={treeDirection}
+                  headerHeight={0}
+                  footerHeight={0}
+                  footerOpened={false}
+                  disableDrag
+                  disableDrop
+                  disableEdit
+                  disableMultiSelection
+                  rowHeight={24}
+                  overscanCount={5}
+                  style={{ height: '100%', width: '100%' }}
+                />
+              </Box>
             </Box>
-          </Box>
-          
-          {/* Right side - Access Rights */}
-          <Box style={{ flex: '1', padding: '16px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, overflow: 'auto' }}>
+            
+            {/* Right side - Access Rights */}
+            <Box style={{ flex: '1', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, overflow: 'auto' }}>
               <AccessRightsPanel
                 availableResourceRights={availableResourceRights}
                 adminAccessRights={adminAccessRights}
@@ -382,10 +379,11 @@ export function AssociationTablePanel({
         </Box>
       </Table.Td>
     </Table.Tr>
-  );
+    );
+  };
 
   const renderCreationRow = (mode: 'outgoing' | 'incoming') => {
-    if (!isCreatingAssociation || creationMode !== mode) return null;
+    if (!isCreatingAssociation || creationMode !== mode) {return null;}
     
     const creationId = `creation-${mode}`;
     const isExpanded = expandedAssociation === creationId;
@@ -416,7 +414,7 @@ export function AssociationTablePanel({
             <Text size="xs" c="dimmed">New association</Text>
           </Table.Td>
         </Table.Tr>
-        {isExpanded && renderCreationDetail()}
+        {isExpanded && renderCreationDetail(creationId)}
       </React.Fragment>
     );
   };
@@ -461,7 +459,7 @@ export function AssociationTablePanel({
                     {renderAccessRights(association.accessRights)}
                   </Table.Td>
                 </Table.Tr>
-                {isExpanded && renderInlineDetail(association)}
+                {isExpanded && renderInlineDetail(association, associationId)}
               </React.Fragment>
             );
           })
@@ -510,7 +508,7 @@ export function AssociationTablePanel({
                     {renderAccessRights(association.accessRights)}
                   </Table.Td>
                 </Table.Tr>
-                {isExpanded && renderInlineDetail(association)}
+                {isExpanded && renderInlineDetail(association, associationId)}
               </React.Fragment>
             );
           })

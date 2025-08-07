@@ -62,6 +62,10 @@ export const lightTheme = createTheme({
   },
   primaryColor: 'violet',  // Set primary color for light theme
   primaryShade: 6,
+  other: {
+    intellijContentBg: '#ffffff',
+    intellijPanelBg: '#fcfcfc',
+  },
 });
 
 export const darkTheme = createTheme({
@@ -73,6 +77,10 @@ export const darkTheme = createTheme({
   },
   primaryColor: 'violet',  // Changed from 'blue' to 'violet'
   primaryShade: 6,
+  other: {
+    intellijContentBg: '#1e1e1e',  // VS Code Dark+ editor background
+    intellijPanelBg: '#252526',    // VS Code Dark+ sidebar/panel background
+  },
 });
 
 export const theme = lightTheme; // Default theme

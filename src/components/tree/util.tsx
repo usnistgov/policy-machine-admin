@@ -4,7 +4,7 @@ import {Node, NodeType} from "@/api/pdp.api";
 import {DescendantsIcon} from "@/components/icons/DescendantsIcon";
 import {px, useMantineTheme} from "@mantine/core";
 
-export const INDENT_NUM = 30;
+export const INDENT_NUM = 28;
 
 export type NodeIconProps = {
 	type: string,

@@ -148,7 +148,7 @@ export function PPMTree(props: PPMTreeProps) {
 						height={height}
 						indent={INDENT_NUM}
 						ref={treeApiRef}
-						rowHeight={props.rowHeight ?? 28}
+						rowHeight={props.rowHeight ?? 22}
 						overscanCount={props.overscanCount ?? 20}
 						onCreate={({ parentId, index, type }) => {
 							console.log('onCreate called with:', { parentId, index, type });
