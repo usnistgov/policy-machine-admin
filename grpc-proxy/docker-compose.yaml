@@ -3,7 +3,7 @@ services:
     image: envoyproxy/envoy:v1.31-latest
     platform: linux/arm64
     ports:
-      - "8080:8080"
+      - "8888:8888"
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
     command: >

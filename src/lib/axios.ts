@@ -2,7 +2,7 @@ import axios, {AxiosInstance} from "axios";
 import Cookies from "js-cookie";
 
 export const pdp: AxiosInstance = axios.create({
-    baseURL: "http://localhost:8080/",
+    baseURL: "http://localhost:8888/",
     withCredentials: true,
 });
 

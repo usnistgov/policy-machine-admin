@@ -1,6 +1,6 @@
 import React from 'react';
 import { Menu, Group, Text, useMantineTheme } from '@mantine/core';
-import { IconArrowUp, IconLink, IconEye, IconPlus } from '@tabler/icons-react';
+import { IconArrowUp, IconLink, IconEye, IconPlus, IconCopy } from '@tabler/icons-react';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
 import { notifications } from '@mantine/notifications';
@@ -78,6 +78,16 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
 
   const handleAssociateWith = () => {
     onAssociateWith?.(node);
+    onClose();
+  };
+
+  const handleCopyNodeName = () => {
+    navigator.clipboard.writeText(node.name);
+    notifications.show({
+      title: 'Copied',
+      message: `Node name "${node.name}" copied to clipboard`,
+      color: 'green'
+    });
     onClose();
   };
 
@@ -236,6 +246,15 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
               View Associations
             </Menu.Item>
           )}
+
+          <Menu.Divider />
+          
+          <Menu.Item
+            leftSection={<IconCopy size={16} />}
+            onClick={handleCopyNodeName}
+          >
+            Copy node name
+          </Menu.Item>
         </Menu.Dropdown>
       </Menu>
   );

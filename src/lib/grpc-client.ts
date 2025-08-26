@@ -4,7 +4,7 @@ import { AuthService } from './auth';
 // Environment variables for gRPC proxy configuration
 // The proxy will handle the translation from gRPC-Web to native gRPC
 const GRPC_PROXY_HOST = import.meta.env.PM_ADMIN_GRPC_PROXY_HOST || 'localhost';
-const GRPC_PROXY_PORT = import.meta.env.PM_ADMIN_GRPC_PROXY_PORT || '8080';
+const GRPC_PROXY_PORT = import.meta.env.PM_ADMIN_GRPC_PROXY_PORT || '8888';
 
 // gRPC client configuration pointing to Envoy proxy
 export const grpcConfig = {

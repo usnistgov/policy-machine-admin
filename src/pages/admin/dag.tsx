@@ -34,6 +34,11 @@ import {
     Text,
     Textarea,
     TextInput,
+    Title,
+    ActionIcon,
+    Tooltip,
+    Box,
+    Divider
 } from '@mantine/core';
 import { NavBar } from '@/components/navbar/NavBar';
 import { UserMenu } from '@/components/UserMenu';
@@ -41,7 +46,9 @@ import classes from './navbar.module.css';
 
 import 'reactflow/dist/style.css';
 
-import { IconCamera, IconJson, IconSitemap } from '@tabler/icons-react';
+import { IconCamera, IconJson, IconSitemap, IconSun, IconMoon, IconTrash } from '@tabler/icons-react';
+import { PMIcon } from "@/components/icons/PMIcon";
+import { useTheme } from '@/contexts/ThemeContext';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
 import {AssociationModal} from "@/components/dag/AssociationModal";
@@ -1251,6 +1258,8 @@ function layoutPCOAONodes(nodes: Node[], edges: Edge[]) {
 }
 
 function DAGContent() {
+    const { themeMode, toggleTheme } = useTheme();
+    
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1493,6 +1502,11 @@ function DAGContent() {
     }, [nodes.length, newNodeName, newNodeType, setNodes]);
 
     const clearGraph = useCallback(() => {
+        setNodes([]);
+        setEdges([]);
+    }, [setNodes, setEdges]);
+
+    const deleteAllNodes = useCallback(() => {
         setNodes([]);
         setEdges([]);
     }, [setNodes, setEdges]);
@@ -1869,20 +1883,94 @@ function DAGContent() {
 
     return (
         <AppShell
-            header={{ height: 0 }}
-            navbar={{
-                width: 75,
-                breakpoint: 'sm',
-            }}
-            padding="md"
+            header={{ height: 60 }}
+            transitionDuration={0}
         >
-            <AppShell.Navbar p="sm" style={{ height: '100vh' }} className={classes.navbar}>
-                <NavBar activePageIndex={1} />
-            </AppShell.Navbar>
-            <AppShell.Main style={{ height: '100vh', padding: '0 0 0 75px' }}>
-                <UserMenu />
-                <Stack gap="md" style={{ height: '100%' }}>
-                    <Paper shadow="sm" radius="md" style={{ height: '100%', position: 'relative' }}>
+            <AppShell.Header>
+                <Group h="100%" px="md" justify="space-between">
+                    <Group>
+                        <PMIcon style={{width: '36px', height: '36px'}}/>
+                        <Title order={2}>Policy Machine</Title>
+                    </Group>
+
+                    <NavBar activePageIndex={1} />
+
+                    <Group>
+                        <Tooltip label={themeMode === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}>
+                            <ActionIcon
+                                variant="subtle"
+                                size="md"
+                                onClick={toggleTheme}
+                            >
+                                {themeMode === 'light' ? <IconMoon size={24} /> : <IconSun size={24} />}
+                            </ActionIcon>
+                        </Tooltip>
+
+                        <UserMenu />
+                    </Group>
+                </Group>
+            </AppShell.Header>
+
+            <AppShell.Main style={{height: "100vh", overflow: "auto"}}>
+                <Stack gap={0} style={{ height: '100%' }}>
+                    {/* Toolbar */}
+                    <Box style={{
+                        height: 60,
+                        borderBottom: '1px solid var(--mantine-color-gray-3)',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '16px',
+                        paddingRight: '16px',
+                        backgroundColor: 'white'
+                    }}>
+                        <Group gap="md" align="center">
+                            <Stack gap={2} align="left">
+                                <Text size="xs" c="dimmed" fw={500}>
+                                    DAG Actions
+                                </Text>
+                                <Group gap="xs">
+                                    <ActionIcon
+                                        variant="subtle"
+                                        size="md"
+                                        onClick={() => setDownloadMenuOpened(true)}
+                                        title="Download Image"
+                                    >
+                                        <IconCamera size={20} />
+                                    </ActionIcon>
+                                    <ActionIcon
+                                        variant="subtle"
+                                        size="md"
+                                        onClick={() => setJsonModalOpened(true)}
+                                        title="View Graph JSON"
+                                    >
+                                        <IconJson size={20} />
+                                    </ActionIcon>
+                                    <ActionIcon
+                                        variant="subtle"
+                                        size="md"
+                                        onClick={() => formatGraph(nodes, edges)}
+                                        title="Format Graph"
+                                    >
+                                        <IconSitemap size={20} />
+                                    </ActionIcon>
+                                    <ActionIcon
+                                        variant="subtle"
+                                        size="md"
+                                        onClick={deleteAllNodes}
+                                        title="Delete All Nodes"
+                                        color="red"
+                                    >
+                                        <IconTrash size={20} />
+                                    </ActionIcon>
+                                </Group>
+                            </Stack>
+                            <Divider orientation="vertical" />
+                        </Group>
+                    </Box>
+
+                    {/* ReactFlow Canvas */}
+                    <Paper shadow="sm" radius="md" style={{ height: 'calc(100% - 60px)', position: 'relative' }}>
                         <div ref={reactFlowWrapper} style={{ width: '100%', height: '100%' }}>
                             <ReactFlow
                                 nodes={nodes}
@@ -1903,17 +1991,7 @@ function DAGContent() {
                                     backgroundColor: 'var(--mantine-color-gray-0)',
                                 }}
                             >
-                                <Controls>
-                                    <ControlButton onClick={() => setDownloadMenuOpened(true)} title="Download Image">
-                                        <IconCamera />
-                                    </ControlButton>
-                                    <ControlButton onClick={() => setJsonModalOpened(true)} title="View Graph JSON">
-                                        <IconJson size={16} />
-                                    </ControlButton>
-                                    <ControlButton onClick={() => formatGraph(nodes, edges)} title="Format Graph">
-                                        <IconSitemap size={16} />
-                                    </ControlButton>
-                                </Controls>
+                                <Controls />
                                 <MiniMap
                                     position="bottom-right"
                                     style={{
@@ -1928,14 +2006,14 @@ function DAGContent() {
                                 <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
                             </ReactFlow>
 
-                            {/* Download Menu positioned next to download button */}
+                            {/* Download Menu positioned next to toolbar download button */}
                             {downloadMenuOpened && (
                                 <div
                                     ref={downloadMenuRef}
                                     style={{
                                         position: 'absolute',
-                                        bottom: 50, // Position right above the controls
-                                        left: 10, // Align with the controls panel
+                                        top: 120, // Position below the toolbar
+                                        left: 20, // Align with the toolbar buttons
                                         zIndex: 1000,
                                         background: 'white',
                                         border: '1px solid var(--mantine-color-gray-4)',
