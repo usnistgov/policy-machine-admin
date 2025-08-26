@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { toJpeg, toPng, toSvg } from 'html-to-image';
 import {
     addEdge,
@@ -46,7 +46,7 @@ import classes from './navbar.module.css';
 
 import 'reactflow/dist/style.css';
 
-import { IconCamera, IconJson, IconSitemap, IconSun, IconMoon, IconTrash } from '@tabler/icons-react';
+import { IconCamera, IconJson, IconSitemap, IconSun, IconMoon, IconTrash, IconSettings } from '@tabler/icons-react';
 import { PMIcon } from "@/components/icons/PMIcon";
 import { useTheme } from '@/contexts/ThemeContext';
 import { NodeType } from '@/api/pdp.api';
@@ -144,7 +144,7 @@ function graphToJson(nodes: Node[], edges: Edge[]) {
 }
 
 // Converts Policy Machine JSON schema's 'graph' element to nodes and edges arrays
-function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
+function jsonToGraph(json: any, config: 'original' | 'simplified' = 'original'): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     if (!json || !json.graph) {
@@ -210,7 +210,7 @@ function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
                         id: `e${n.id}-${targetId}`,
                         source: idStr(n.id),
                         target: idStr(targetId),
-                        type: getEdgeType('assignment'),
+                        type: getEdgeType('assignment', config),
                         sourceHandle: 'assignment-out',
                         targetHandle: 'assignment-in',
                         data: {
@@ -242,7 +242,7 @@ function jsonToGraph(json: any): { nodes: Node[]; edges: Edge[] } {
                     id: `a${n.id}-${assoc.target}-${i}`,
                     source: idStr(n.id),
                     target: idStr(assoc.target),
-                    type: getEdgeType('association'),
+                    type: getEdgeType('association', config),
                     sourceHandle: 'association-out',
                     targetHandle: 'association-in',
                     data: {
@@ -309,6 +309,149 @@ function createHandle(
                 left,
             }}
         />
+    );
+}
+
+// Simplified Node Component for option 2 - centered handles
+function SimplifiedDAGNode({ data, selected }: NodeProps) {
+    const nodeType = data.type;
+    const typeColor = getNodeTypeColorFromTheme(nodeType);
+    const isHighlighted = data.isHighlighted;
+
+    // Determine highlight color based on node type
+    const highlightColor =
+        nodeType === NodeType.PC
+            ? getNodeTypeColorFromTheme(NodeType.PC)
+            : nodeType === NodeType.UA
+                ? getNodeTypeColorFromTheme(NodeType.UA)
+                : nodeType === NodeType.OA || nodeType === NodeType.O
+                    ? getNodeTypeColorFromTheme(NodeType.OA)
+                    : getNodeTypeColorFromTheme(NodeType.U);
+
+    return (
+        <div
+            style={{
+                background: 'transparent',
+                borderRadius: 6,
+                border: `2px solid ${typeColor}`,
+                padding: '6px 4px',
+                fontSize: '14px',
+                color: 'black',
+                boxShadow: isHighlighted
+                    ? `0 0 0 3px ${highlightColor}`
+                    : selected
+                        ? `0 0 0 2px ${typeColor}`
+                        : 'none',
+                whiteSpace: 'nowrap',
+            }}
+        >
+            {/* Left center: incoming associations */}
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="association-in"
+                style={{
+                    background: 'var(--mantine-color-green-7)',
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    border: '1px solid var(--mantine-color-green-7)',
+                    top: '50%',
+                    left: '-5px',
+                }}
+            />
+
+            {/* Right center: outgoing associations */}
+            {nodeType === NodeType.UA && (
+                <Handle
+                    type="source"
+                    position={Position.Right}
+                    id="association-out"
+                    style={{
+                        background: 'var(--mantine-color-green-7)',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        border: '1px solid var(--mantine-color-green-7)',
+                        top: '50%',
+                        right: '-5px',
+                    }}
+                />
+            )}
+
+            {/* Top center: incoming assignments */}
+            {(nodeType === NodeType.PC || nodeType === NodeType.UA || nodeType === NodeType.OA) && (
+                <Handle
+                    type="target"
+                    position={Position.Top}
+                    id="assignment-in"
+                    style={{
+                        background: 'black',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        border: '1px solid black',
+                        top: '-5px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                    }}
+                />
+            )}
+
+            {/* Bottom center: outgoing assignments */}
+            {(nodeType === NodeType.UA || nodeType === NodeType.OA || nodeType === NodeType.U || nodeType === NodeType.O) && (
+                <Handle
+                    type="source"
+                    position={Position.Bottom}
+                    id="assignment-out"
+                    style={{
+                        background: 'black',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        border: '1px solid black',
+                        bottom: '-5px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                    }}
+                />
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <div
+                    style={{
+                        fontSize: '10px',
+                        lineHeight: '14px',
+                        display: 'flex',
+                        width: '14px',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <NodeIcon
+                        type={nodeType}
+                        style={{
+                            fontSize: '10px',
+                            lineHeight: '14px',
+                            width: '14px',
+                            height: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    />
+                </div>
+                <span
+                    style={{
+                        fontWeight: 800,
+                        lineHeight: '14px',
+                        fontSize: '14px',
+                        fontFamily: 'Source Code Pro, monospace',
+                    }}
+                >
+                    {data.name}
+                </span>
+            </div>
+        </div>
     );
 }
 
@@ -527,6 +670,32 @@ function CustomAssociationEdge({
     );
 }
 
+// Simple Straight Edge Component for simplified assignment edges
+function SimpleStraightEdge({
+                               id,
+                               sourceX,
+                               sourceY,
+                               targetX,
+                               targetY,
+                               style = {},
+                               markerEnd,
+                           }: any) {
+    const path = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
+
+    return (
+        <g>
+            <path
+                id={id}
+                style={style}
+                className="react-flow__edge-path"
+                d={path}
+                markerEnd={markerEnd}
+                fill="none"
+            />
+        </g>
+    );
+}
+
 // Custom Orthogonal Edge Component for assignment edges
 function CustomOrthogonalEdge({
                                   id,
@@ -596,16 +765,18 @@ function CustomOrthogonalEdge({
     );
 }
 
-// Node types for ReactFlow (defined outside component to prevent recreation)
-const nodeTypes = {
-    dagNode: CustomDAGNode,
-};
+// Node types for ReactFlow - will be set dynamically based on configuration
+const getNodeTypes = (config: 'original' | 'simplified') => ({
+    dagNode: config === 'original' ? CustomDAGNode : SimplifiedDAGNode,
+});
 
-// Edge types for ReactFlow (defined outside component to prevent recreation)
-const edgeTypes = {
-    customOrthogonal: CustomOrthogonalEdge,
-    customAssociation: CustomAssociationEdge,
-};
+// Edge types for ReactFlow - will be set dynamically based on configuration
+const getEdgeTypes = (config: 'original' | 'simplified') => ({
+    customOrthogonal: config === 'original' ? CustomOrthogonalEdge : SimpleStraightEdge,
+    customAssociation: CustomAssociationEdge, // Used for original config
+    straight: SimpleStraightEdge,
+    // Note: 'default' type is built into ReactFlow for bezier edges
+});
 
 // Edge types with specific styling
 const getEdgeStyle = (
@@ -638,8 +809,12 @@ const getEdgeStyle = (
     };
 };
 
-const getEdgeType = (edgeType: 'assignment' | 'association') => {
-    return edgeType == 'assignment' ? 'customOrthogonal' : 'customAssociation';
+const getEdgeType = (edgeType: 'assignment' | 'association', config: 'original' | 'simplified' = 'original') => {
+    if (edgeType === 'assignment') {
+        return config === 'original' ? 'customOrthogonal' : 'straight';
+    }
+    // Association edges: custom routing for original, default bezier for simplified
+    return config === 'original' ? 'customAssociation' : 'default';
 };
 
 const getMarkerEnd = (
@@ -838,7 +1013,7 @@ const initialGraphJson = {
     }
 };
 
-const { nodes: initialNodes, edges: initialEdges } = jsonToGraph(initialGraphJson);
+const { nodes: initialNodes, edges: initialEdges } = jsonToGraph(initialGraphJson, 'original');
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     return layoutPCOAONodes(nodes, edges);
@@ -1259,6 +1434,7 @@ function layoutPCOAONodes(nodes: Node[], edges: Edge[]) {
 
 function DAGContent() {
     const { themeMode, toggleTheme } = useTheme();
+    const [handleConfig, setHandleConfig] = useState<'original' | 'simplified'>('original');
     
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -1298,6 +1474,20 @@ function DAGContent() {
     const downloadMenuRef = useRef<HTMLDivElement>(null);
     const [jsonEditValue, setJsonEditValue] = useState('');
     const [jsonError, setJsonError] = useState<string | null>(null);
+
+    // Memoize node and edge types to prevent React Flow warnings
+    const nodeTypes = useMemo(() => getNodeTypes(handleConfig), [handleConfig]);
+    const edgeTypes = useMemo(() => getEdgeTypes(handleConfig), [handleConfig]);
+
+    // Update existing edges when handle configuration changes
+    useEffect(() => {
+        setEdges((currentEdges) => {
+            return currentEdges.map((edge) => ({
+                ...edge,
+                type: getEdgeType(edge.data?.edgeType || 'assignment', handleConfig),
+            }));
+        });
+    }, [handleConfig, setEdges]);
 
     const formatGraph = useCallback(
         (nodesToFormat: Node[], edgesToUse: Edge[]) => {
@@ -1420,7 +1610,7 @@ function DAGContent() {
 
             const newEdge = {
                 ...params,
-                type: getEdgeType(edgeType),
+                type: getEdgeType(edgeType, handleConfig),
                 data: {
                     edgeType,
                     sourceNodeType: sourceNode?.data.type,
@@ -1432,7 +1622,7 @@ function DAGContent() {
 
             setEdges((eds) => addEdge(newEdge, eds));
         },
-        [setEdges, nodes]
+        [setEdges, nodes, handleConfig]
     );
 
     // Handle association modal submission
@@ -1446,7 +1636,7 @@ function DAGContent() {
 
             const newEdge = {
                 ...pendingConnection,
-                type: getEdgeType('association'),
+                type: getEdgeType('association', handleConfig),
                 data: {
                     edgeType: 'association' as const,
                     accessRights: accessRightsLabel,
@@ -1473,7 +1663,7 @@ function DAGContent() {
             setPendingConnection(null);
             setAssociationModalOpen(false);
         },
-        [pendingConnection, setEdges, nodes]
+        [pendingConnection, setEdges, nodes, handleConfig]
     );
 
     // Handle association modal close
@@ -1516,7 +1706,7 @@ function DAGContent() {
         setEdges(initialEdges);
     }, [setNodes, setEdges]);
 
-    // Handle node click to highlight outgoing paths using BFS
+    // Handle node click to highlight outgoing paths with specific logic for U/UA and O/OA nodes
     const onNodeClick = useCallback(
         (event: React.MouseEvent, node: Node) => {
             event.stopPropagation();
@@ -1545,89 +1735,112 @@ function DAGContent() {
                 return;
             }
 
-            // Use BFS to find all reachable nodes and edges
+            const startingNodeType = nodes.find((n) => n.id === newSelectedNodeId)?.data.type;
             const visitedNodes = new Set<string>();
             const highlightedEdges = new Set<string>();
-            const associationEdges = new Set<string>(); // Track association edges separately
-            const queue: string[] = [newSelectedNodeId];
+            const associationEdges = new Set<string>();
 
             visitedNodes.add(newSelectedNodeId);
 
-            // Get current edges for BFS traversal
-            const currentEdges = edges;
-            const startingNodeType = nodes.find((n) => n.id === newSelectedNodeId)?.data.type;
-            const isStartingFromUserSide =
-                startingNodeType === NodeType.U || startingNodeType === NodeType.UA;
+            if (startingNodeType === NodeType.U || startingNodeType === NodeType.UA) {
+                // User node logic: highlight outgoing paths until association edge, including association targets
+                const queue: string[] = [newSelectedNodeId];
 
-            while (queue.length > 0) {
-                const currentNodeId = queue.shift()!;
+                while (queue.length > 0) {
+                    const currentNodeId = queue.shift()!;
+                    const outgoingEdges = edges.filter((edge) => edge.source === currentNodeId);
 
-                // Find all outgoing edges from current node
-                const outgoingEdges = currentEdges.filter((edge) => edge.source === currentNodeId);
+                    outgoingEdges.forEach((edge) => {
+                        highlightedEdges.add(edge.id);
 
-                outgoingEdges.forEach((edge) => {
-                    highlightedEdges.add(edge.id);
-
-                    // Track association edges separately
-                    if (edge.data?.edgeType === 'association') {
-                        associationEdges.add(edge.id);
-                    }
-
-                    // Add target node to queue if not visited
-                    if (!visitedNodes.has(edge.target)) {
-                        visitedNodes.add(edge.target);
-
-                        // If we're starting from U/UA and this is an association edge,
-                        // don't continue traversal from the association target
-                        const isAssociationEdge = edge.data?.edgeType === 'association';
-                        if (!(isStartingFromUserSide && isAssociationEdge)) {
-                            queue.push(edge.target);
+                        if (edge.data?.edgeType === 'association') {
+                            associationEdges.add(edge.id);
+                            // Add association target but don't continue from it
+                            if (!visitedNodes.has(edge.target)) {
+                                visitedNodes.add(edge.target);
+                            }
+                        } else {
+                            // Assignment edge - continue traversal
+                            if (!visitedNodes.has(edge.target)) {
+                                visitedNodes.add(edge.target);
+                                queue.push(edge.target);
+                            }
                         }
-                    }
-                });
+                    });
+                }
+            } else if (startingNodeType === NodeType.O || startingNodeType === NodeType.OA) {
+                // Object node logic: highlight outgoing paths that terminate at PC nodes
+                const queue: string[] = [newSelectedNodeId];
+
+                while (queue.length > 0) {
+                    const currentNodeId = queue.shift()!;
+                    const outgoingEdges = edges.filter((edge) => edge.source === currentNodeId);
+
+                    outgoingEdges.forEach((edge) => {
+                        const targetNode = nodes.find((n) => n.id === edge.target);
+                        
+                        if (targetNode?.data.type === NodeType.PC) {
+                            // This path terminates at a PC - highlight this edge and target
+                            highlightedEdges.add(edge.id);
+                            if (!visitedNodes.has(edge.target)) {
+                                visitedNodes.add(edge.target);
+                            }
+                        } else {
+                            // Continue traversal for non-PC targets
+                            highlightedEdges.add(edge.id);
+                            if (!visitedNodes.has(edge.target)) {
+                                visitedNodes.add(edge.target);
+                                queue.push(edge.target);
+                            }
+                        }
+                    });
+                }
             }
 
-            const nodeType = node.data.type;
-            const isObjectDag = nodeType === NodeType.OA || nodeType === NodeType.O;
+            // Determine highlight color based on starting node type
+            const isUserNode = startingNodeType === NodeType.U || startingNodeType === NodeType.UA;
+            const isObjectNode = startingNodeType === NodeType.O || startingNodeType === NodeType.OA;
+
             // Update edges with highlighting
             setEdges((currentEdges) => {
                 return currentEdges.map((edge) => {
                     const isHighlighted = highlightedEdges.has(edge.id);
                     const isAssociation = associationEdges.has(edge.id);
 
-                    // For association edges, only make them bigger, don't change color
+                    // For association edges, only make them bigger, keep green color
                     if (isHighlighted && isAssociation) {
                         return {
                             ...edge,
                             style: {
-                                ...getEdgeStyle(edge.data?.edgeType || 'assignment', false, isObjectDag),
-                                strokeWidth: 4, // Make it bigger
+                                ...getEdgeStyle(edge.data?.edgeType || 'assignment', false, false),
+                                strokeWidth: 4, // Make it bigger but keep green
                             },
                             markerEnd: {
-                                ...getMarkerEnd(edge.data?.edgeType || 'assignment', false, isObjectDag),
+                                ...getMarkerEnd(edge.data?.edgeType || 'assignment', false, false),
                                 width: 12, // Make arrow bigger too
                                 height: 12,
                             },
                         };
                     }
 
+                    // For assignment edges, use node type color
                     return {
                         ...edge,
                         style: getEdgeStyle(
                             edge.data?.edgeType || 'assignment',
                             isHighlighted && !isAssociation,
-                            isObjectDag
+                            isObjectNode // Use object color for object nodes, user color for user nodes
                         ),
                         markerEnd: getMarkerEnd(
                             edge.data?.edgeType || 'assignment',
                             isHighlighted && !isAssociation,
-                            isObjectDag
+                            isObjectNode
                         ),
                     };
                 });
             });
 
-            // Update nodes with border highlighting (not selection)
+            // Update nodes with highlighting using appropriate color
             setNodes((currentNodes) => {
                 return currentNodes.map((n) => ({
                     ...n,
@@ -1638,7 +1851,7 @@ function DAGContent() {
                 }));
             });
         },
-        [selectedNodeId, setEdges, setNodes, edges]
+        [selectedNodeId, setEdges, setNodes, edges, nodes]
     );
 
     // Handle right-click on canvas
@@ -1966,6 +2179,19 @@ function DAGContent() {
                                 </Group>
                             </Stack>
                             <Divider orientation="vertical" />
+                            <Stack gap={2} align="left">
+                                <Text size="xs" c="dimmed" fw={500}>
+                                    Handle Style
+                                </Text>
+                                <ActionIcon
+                                    variant={handleConfig === 'simplified' ? "filled" : "subtle"}
+                                    size="md"
+                                    onClick={() => setHandleConfig(prev => prev === 'original' ? 'simplified' : 'original')}
+                                    title={`Switch to ${handleConfig === 'original' ? 'Simplified' : 'Original'} handles`}
+                                >
+                                    <IconSettings size={20} />
+                                </ActionIcon>
+                            </Stack>
                         </Group>
                     </Box>
 
@@ -2268,7 +2494,7 @@ function DAGContent() {
                                 onClick={() => {
                                     try {
                                         const parsed = JSON.parse(jsonEditValue);
-                                        const { nodes: newNodes, edges: newEdges } = jsonToGraph(parsed);
+                                        const { nodes: newNodes, edges: newEdges } = jsonToGraph(parsed, handleConfig);
                                         setEdges(newEdges);
                                         formatGraph(newNodes, newEdges);
                                         setJsonModalOpened(false);
