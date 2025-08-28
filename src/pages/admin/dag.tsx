@@ -21,6 +21,8 @@ import {
     useEdgesState,
     useNodesState,
     useReactFlow,
+    getRectOfNodes,
+    getTransformForBounds,
 } from 'reactflow';
 import {
     AppShell,
@@ -49,6 +51,7 @@ import 'reactflow/dist/style.css';
 import { IconCamera, IconJson, IconSitemap, IconSun, IconMoon, IconTrash, IconSettings } from '@tabler/icons-react';
 import { PMIcon } from "@/components/icons/PMIcon";
 import { useTheme } from '@/contexts/ThemeContext';
+import { useMantineTheme } from '@mantine/core';
 import { NodeType } from '@/api/pdp.api';
 import { TreeNode } from '@/utils/tree.utils';
 import {AssociationModal} from "@/components/dag/AssociationModal";
@@ -314,37 +317,50 @@ function createHandle(
 
 // Simplified Node Component for option 2 - centered handles
 function SimplifiedDAGNode({ data, selected }: NodeProps) {
+    const mantineTheme = useMantineTheme();
     const nodeType = data.type;
     const typeColor = getNodeTypeColorFromTheme(nodeType);
     const isHighlighted = data.isHighlighted;
 
-    // Determine highlight color based on node type
-    const highlightColor =
-        nodeType === NodeType.PC
-            ? getNodeTypeColorFromTheme(NodeType.PC)
-            : nodeType === NodeType.UA
-                ? getNodeTypeColorFromTheme(NodeType.UA)
-                : nodeType === NodeType.OA || nodeType === NodeType.O
-                    ? getNodeTypeColorFromTheme(NodeType.OA)
-                    : getNodeTypeColorFromTheme(NodeType.U);
+    // Determine outline color for highlighting - red for user nodes, blue for object nodes  
+    let outlineColor = '';
+    if (isHighlighted) {
+        const isUserSide = nodeType === NodeType.U || nodeType === NodeType.UA;
+        const isObjectSide = nodeType === NodeType.O || nodeType === NodeType.OA;
+        outlineColor = isUserSide ? mantineTheme.colors.red[4] : isObjectSide ? mantineTheme.colors.blue[4] : mantineTheme.colors.green[4];
+    }
 
     return (
         <div
             style={{
+                position: 'relative',
                 background: 'transparent',
-                borderRadius: 6,
+                borderRadius: 8,
                 border: `2px solid ${typeColor}`,
                 padding: '6px 4px',
                 fontSize: '14px',
                 color: 'black',
-                boxShadow: isHighlighted
-                    ? `0 0 0 3px ${highlightColor}`
-                    : selected
-                        ? `0 0 0 2px ${typeColor}`
-                        : 'none',
                 whiteSpace: 'nowrap',
             }}
         >
+            {/* Highlighted border overlay */}
+            {isHighlighted && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: -2,
+                        left: -2,
+                        right: -2,
+                        bottom: -2,
+                        borderRadius: 6,
+                        border: `2px solid ${typeColor}`,
+                        filter: `drop-shadow(0 0 2px ${outlineColor}) drop-shadow(0 0 4px ${outlineColor})`,
+                        pointerEvents: 'none',
+                        zIndex: -1,
+                    }}
+                />
+            )}
+            
             {/* Left center: incoming associations */}
             <Handle
                 type="target"
@@ -457,6 +473,7 @@ function SimplifiedDAGNode({ data, selected }: NodeProps) {
 
 // Custom Node Component with specific handles
 function CustomDAGNode({ data, selected }: NodeProps) {
+    const mantineTheme = useMantineTheme();
     const nodeType = data.type;
     const typeColor = getNodeTypeColorFromTheme(nodeType);
     const isHighlighted = data.isHighlighted;
@@ -473,33 +490,45 @@ function CustomDAGNode({ data, selected }: NodeProps) {
         nodeType === NodeType.UA || nodeType === NodeType.OA || nodeType === NodeType.O;
     const showAssociationOut = nodeType === NodeType.UA;
 
-    // Determine highlight color based on node type
-    const highlightColor =
-        nodeType === NodeType.PC
-            ? getNodeTypeColorFromTheme(NodeType.PC) // Green for PC
-            : nodeType === NodeType.UA
-                ? getNodeTypeColorFromTheme(NodeType.UA) // Red for UA
-                : nodeType === NodeType.OA || nodeType === NodeType.O
-                    ? getNodeTypeColorFromTheme(NodeType.OA) // Blue for OA/O
-                    : getNodeTypeColorFromTheme(NodeType.U); // Red for U
+    // Determine outline color for highlighting - red for user nodes, blue for object nodes  
+    let outlineColor = '';
+    if (isHighlighted) {
+        const isUserSide = nodeType === NodeType.U || nodeType === NodeType.UA;
+        const isObjectSide = nodeType === NodeType.O || nodeType === NodeType.OA;
+        outlineColor = isUserSide ? mantineTheme.colors.red[7] : isObjectSide ? mantineTheme.colors.blue[7] : mantineTheme.colors.green[7];
+    }
 
     return (
         <div
             style={{
+                position: 'relative',
                 background: 'transparent',
                 borderRadius: 6,
                 border: `2px solid ${typeColor}`,
                 padding: '6px 4px',
                 fontSize: '14px',
                 color: 'black',
-                boxShadow: isHighlighted
-                    ? `0 0 0 3px ${highlightColor}`
-                    : selected
-                        ? `0 0 0 2px ${typeColor}`
-                        : 'none',
                 whiteSpace: 'nowrap',
             }}
         >
+            {/* Highlighted border overlay */}
+            {isHighlighted && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: -2,
+                        left: -2,
+                        right: -2,
+                        bottom: -2,
+                        borderRadius: 6,
+                        border: `2px solid ${typeColor}`,
+                        filter: `drop-shadow(0 0 2px ${outlineColor}) drop-shadow(0 0 4px ${outlineColor})`,
+                        pointerEvents: 'none',
+                        zIndex: -1,
+                    }}
+                />
+            )}
+            
             {nodeType == 'PC' && [
                 createHandle(data, 'assignment-in', 'target', Position.Right, '50%', '-5', 'auto', 'auto'),
             ]}
@@ -1434,6 +1463,7 @@ function layoutPCOAONodes(nodes: Node[], edges: Edge[]) {
 
 function DAGContent() {
     const { themeMode, toggleTheme } = useTheme();
+    const mantineTheme = useMantineTheme();
     const [handleConfig, setHandleConfig] = useState<'original' | 'simplified'>('original');
     
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -1446,6 +1476,7 @@ function DAGContent() {
         'assignment' | 'association' | null
     >(null);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [highlightType, setHighlightType] = useState<'user' | 'object' | null>(null);
     const { screenToFlowPosition, fitView } = useReactFlow();
 
     // Association modal state
@@ -1716,6 +1747,7 @@ function DAGContent() {
 
             if (!newSelectedNodeId) {
                 // Clear all highlighting
+                setHighlightType(null);
                 setEdges((currentEdges) => {
                     return currentEdges.map((edge) => ({
                         ...edge,
@@ -1797,45 +1829,51 @@ function DAGContent() {
                 }
             }
 
-            // Determine highlight color based on starting node type
+            // Determine highlight type based on starting node type
             const isUserNode = startingNodeType === NodeType.U || startingNodeType === NodeType.UA;
             const isObjectNode = startingNodeType === NodeType.O || startingNodeType === NodeType.OA;
+            
+            // Set highlight type for background color
+            setHighlightType(isUserNode ? 'user' : isObjectNode ? 'object' : null);
 
-            // Update edges with highlighting
+            // Update edges with highlighting - keep original colors but add outline effect via filter
             setEdges((currentEdges) => {
                 return currentEdges.map((edge) => {
                     const isHighlighted = highlightedEdges.has(edge.id);
                     const isAssociation = associationEdges.has(edge.id);
 
-                    // For association edges, only make them bigger, keep green color
-                    if (isHighlighted && isAssociation) {
+                    if (isHighlighted) {
+                        const outlineColor = isUserNode ? mantineTheme.colors.red[7] : mantineTheme.colors.blue[7];
+                        
+                        // For association edges, keep green color and add green outline
+                        if (isAssociation) {
+                            const greenOutline = mantineTheme.colors.green[7];
+                            return {
+                                ...edge,
+                                style: {
+                                    ...getEdgeStyle(edge.data?.edgeType || 'assignment', false, false),
+                                    filter: `drop-shadow(0 0 2px ${greenOutline}) drop-shadow(0 0 4px ${greenOutline})`, // Add green outline glow
+                                },
+                                markerEnd: getMarkerEnd(edge.data?.edgeType || 'assignment', false, false),
+                            };
+                        }
+
+                        // For assignment edges, keep black color but add outline
                         return {
                             ...edge,
                             style: {
                                 ...getEdgeStyle(edge.data?.edgeType || 'assignment', false, false),
-                                strokeWidth: 4, // Make it bigger but keep green
+                                filter: `drop-shadow(0 0 2px ${outlineColor}) drop-shadow(0 0 4px ${outlineColor})`, // Add outline glow
                             },
-                            markerEnd: {
-                                ...getMarkerEnd(edge.data?.edgeType || 'assignment', false, false),
-                                width: 12, // Make arrow bigger too
-                                height: 12,
-                            },
+                            markerEnd: getMarkerEnd(edge.data?.edgeType || 'assignment', false, false),
                         };
                     }
 
-                    // For assignment edges, use node type color
+                    // Non-highlighted edges stay normal
                     return {
                         ...edge,
-                        style: getEdgeStyle(
-                            edge.data?.edgeType || 'assignment',
-                            isHighlighted && !isAssociation,
-                            isObjectNode // Use object color for object nodes, user color for user nodes
-                        ),
-                        markerEnd: getMarkerEnd(
-                            edge.data?.edgeType || 'assignment',
-                            isHighlighted && !isAssociation,
-                            isObjectNode
-                        ),
+                        style: getEdgeStyle(edge.data?.edgeType || 'assignment', false, false),
+                        markerEnd: getMarkerEnd(edge.data?.edgeType || 'assignment', false, false),
                     };
                 });
             });
@@ -1972,6 +2010,7 @@ function DAGContent() {
         // Clear node selection and reset edge highlighting
         if (selectedNodeId) {
             setSelectedNodeId(null);
+            setHighlightType(null);
             setEdges((currentEdges) => {
                 return currentEdges.map((edge) => ({
                     ...edge,
@@ -2019,33 +2058,31 @@ function DAGContent() {
         };
     }, [downloadMenuOpened]);
 
-    // Download image functionality
+    // Download image functionality following ReactFlow best practices
     const downloadImage = useCallback((format: 'png' | 'jpeg' | 'svg') => {
-        // Target only the ReactFlow viewport (graph area) excluding controls and UI
-        const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
-        if (!viewport) {
-            console.error('ReactFlow viewport not found');
+        if (nodes.length === 0) {
+            console.warn('No nodes to export');
             return;
         }
 
-        const options = {
-            cacheBust: true,
-            backgroundColor: 'transparent', // Transparent background
-            filter: (node: Element) => {
-                // Exclude controls, minimap, handles, and other UI elements
-                if (
-                    node?.classList?.contains('react-flow__controls') ||
-                    node?.classList?.contains('react-flow__minimap') ||
-                    node?.classList?.contains('react-flow__background') ||
-                    node?.classList?.contains('react-flow__panel') ||
-                    node?.classList?.contains('react-flow__handle') ||
-                    node?.classList?.contains('handle')
-                ) {
-                    return false;
-                }
-                return true;
-            },
-        };
+
+        // Use ReactFlow's getRectOfNodes to get proper bounds
+        const nodesBounds = getRectOfNodes(nodes);
+
+        // Calculate image dimensions with padding
+        const padding = 0.1; // 10% padding
+        const imageWidth = nodesBounds.width * (1 + padding * 2);
+        const imageHeight = nodesBounds.height * (1 + padding * 2);
+
+        // Calculate transform to center and fit the nodes
+        const transform = getTransformForBounds(
+            nodesBounds,
+            imageWidth,
+            imageHeight,
+            0.5, // minZoom
+            2,   // maxZoom  
+            padding
+        );
 
         let downloadFunction;
         let fileExtension;
@@ -2068,24 +2105,33 @@ function DAGContent() {
                 fileExtension = 'png';
         }
 
-        // Get the ReactFlow wrapper to capture the entire flow area with proper dimensions
-        const reactFlowElement = document.querySelector('.react-flow') as HTMLElement;
-        if (!reactFlowElement) {
-            console.error('ReactFlow element not found');
-            return;
-        }
-
-        downloadFunction(reactFlowElement, options)
-            .then((dataUrl) => {
-                const link = document.createElement('a');
-                link.download = `dag-graph.${fileExtension}`;
-                link.href = dataUrl;
-                link.click();
-            })
-            .catch((err) => {
-                console.error('Error downloading image:', err);
-            });
-    }, []);
+        const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
+        
+        downloadFunction(viewport, {
+            backgroundColor: 'transparent',
+            width: imageWidth,
+            height: imageHeight,
+            style: {
+                width: `${imageWidth}px`,
+                height: `${imageHeight}px`,
+                transform: `translate(${transform[0]}px, ${transform[1]}px) scale(${transform[2]})`,
+            },
+            filter: (node) => {
+                // Filter out handle elements
+                if (node.classList && node.classList.contains('react-flow__handle')) {
+                    return false;
+                }
+                return true;
+            },
+        }).then((dataUrl) => {
+            const link = document.createElement('a');
+            link.download = `dag-graph.${fileExtension}`;
+            link.href = dataUrl;
+            link.click();
+        }).catch((err) => {
+            console.error('Error downloading image:', err);
+        });
+    }, [nodes]);
 
     useEffect(() => {
         if (jsonModalOpened) {
