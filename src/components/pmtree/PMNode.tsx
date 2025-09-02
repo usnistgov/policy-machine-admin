@@ -12,20 +12,22 @@ import { NodeContextMenu } from "./NodeContextMenu";
 import { useAtom } from "jotai";
 import { useTheme } from "@/contexts/ThemeContext";
 import {INDENT_NUM, NodeIcon, shouldShowExpansionIcon} from "@/components/pmtree/tree-utils";
+import {NodeType} from "@/api/pdp.api";
 
 export interface PMNodeProps extends NodeRendererProps<TreeNode> {
 	clickHandlers?: PMTreeClickHandlers;
 	direction: TreeDirection;
 	treeDataAtom: PrimitiveAtom<TreeNode[]>;
 	className?: string;
+	nodeTypeFilter?: NodeType[];
 }
 
-export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAtom, className }: PMNodeProps) {
+export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAtom, className, nodeTypeFilter }: PMNodeProps) {
 	const { themeMode } = useTheme();
 	const [isHovered, setIsHovered] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-	const { fetchAndUpdateChildren, clearNodeChildren } = usePMTreeOperations(treeDataAtom, direction);
+	const { fetchAndUpdateChildren, clearNodeChildren } = usePMTreeOperations(treeDataAtom, direction, nodeTypeFilter);
 	const [treeData, setTreeData] = useAtom(treeDataAtom);
 
 	const handleClick = async (e: React.MouseEvent) => {
@@ -121,7 +123,7 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 			<div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
 				<NodeIcon
 					type={node.data.type}
-					size="16px"
+					size="24px"
 					fontSize="14px"
 				/>
 				<span style={{

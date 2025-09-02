@@ -35,6 +35,10 @@ export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIc
 				textAlign: 'center',
 				justifyContent: 'center',
 				alignItems: 'center',
+				overflow: 'hidden',
+				whiteSpace: 'nowrap',
+				minWidth: size,
+				flexShrink: 0,
 				...style,
 			}}
 

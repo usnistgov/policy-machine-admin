@@ -219,6 +219,13 @@ export namespace QueryService {
     }));
   }
 
+  // === Graph Queries ===
+  export async function getPolicyClasses(): Promise<PMNode[]> {
+    const request = Empty.create();
+    const response = await queryClient.GetPolicyClasses(request);
+    return response.nodes.map(transformNode);
+  }
+
   // === Association Queries ===
   export async function getAssociationsWithSource(nodeId: string): Promise<Association[]> {
     const request = PdpQuery.GetAssociationsQuery.create({ nodeId });

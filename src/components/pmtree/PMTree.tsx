@@ -36,11 +36,12 @@ export interface PMTreeProps {
 	treeDataAtom: PrimitiveAtom<TreeNode[]>;
 	
 	// Optional props
-	rootNode?: TreeNode;
+	rootNodes?: TreeNode[];
 	direction?: TreeDirection;
 	clickHandlers?: PMTreeClickHandlers;
 	className?: string;
 	style?: React.CSSProperties;
+	nodeTypeFilter?: NodeType[];
 	
 	// Layout props
 	headerHeight?: number;
@@ -70,11 +71,16 @@ export function PMTree(props: PMTreeProps) {
 	useEffect(() => {
 		async function initNodes() {
 			try {
-				if (props.rootNode) {
-					// Use provided root node
-					setPOSNodes([props.rootNode]);
+				if (props.rootNodes !== undefined) {
+					// Use provided root nodes (even if empty array)
+					console.log('PMTree: Using provided rootNodes:', props.rootNodes);
+					const filteredNodes = props.nodeTypeFilter 
+						? props.rootNodes.filter(node => props.nodeTypeFilter!.includes(node.type as NodeType))
+						: props.rootNodes;
+					setPOSNodes(filteredNodes);
 				} else {
-					// Get Personal Object System for the current user
+					// Only load POS if no rootNodes prop is provided at all
+					console.log('PMTree: No rootNodes prop provided, loading POS');
 					const response = await QueryService.selfComputePersonalObjectSystem();
 					
 					// Extract nodes from the response and transform to TreeNode
@@ -83,7 +89,10 @@ export function PMTree(props: PMTreeProps) {
 						.filter((node): node is NonNullable<typeof node> => node !== undefined);
 
 					const treeNodes = transformNodesToTreeNodes(nodes);
-					setPOSNodes(treeNodes);
+					const filteredNodes = props.nodeTypeFilter 
+						? treeNodes.filter(node => props.nodeTypeFilter!.includes(node.type as NodeType))
+						: treeNodes;
+					setPOSNodes(filteredNodes);
 				}
 			} catch (error) {
 				console.error('Failed to fetch initial tree data:', error);
@@ -93,13 +102,13 @@ export function PMTree(props: PMTreeProps) {
 		}
 
 		initNodes();
-	}, [props.rootNode]);
+	}, [props.rootNodes, props.nodeTypeFilter]);
 
 	useEffect(() => {
-		if (treeData.length === 0 && posNodes.length > 0) {
-			setTreeData(posNodes);
-		}
-	}, [posNodes, treeData.length, setTreeData]);
+		// Always set tree data when posNodes changes, even if empty
+		console.log('PMTree: Setting tree data:', posNodes);
+		setTreeData(posNodes);
+	}, [posNodes, setTreeData]);
 
 	useEffect(() => {
 		if (treeApiRef.current) {
@@ -119,6 +128,7 @@ export function PMTree(props: PMTreeProps) {
 			clickHandlers={props.clickHandlers}
 			direction={props.direction ?? 'descendants'}
 			treeDataAtom={props.treeDataAtom}
+			nodeTypeFilter={props.nodeTypeFilter}
 		/>
 	);
 

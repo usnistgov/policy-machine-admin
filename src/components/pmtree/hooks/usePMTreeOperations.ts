@@ -1,6 +1,6 @@
 import { useAtom, PrimitiveAtom } from 'jotai';
 import { NodeApi } from 'react-arborist';
-import { QueryService } from '@/api/pdp.api';
+import { QueryService, NodeType } from '@/api/pdp.api';
 import { TreeNode, transformNodesToTreeNodes, sortTreeNodes } from '@/utils/tree.utils';
 import {updateNodeChildren} from "@/components/pmtree/tree-utils";
 
@@ -8,7 +8,8 @@ export type TreeDirection = 'descendants' | 'ascendants';
 
 export function usePMTreeOperations(
 	treeDataAtom: PrimitiveAtom<TreeNode[]>,
-	direction: TreeDirection = 'descendants'
+	direction: TreeDirection = 'descendants',
+	nodeTypeFilter?: NodeType[]
 ) {
 	const [treeData, setTreeData] = useAtom(treeDataAtom);
 
@@ -19,9 +20,14 @@ export function usePMTreeOperations(
 			: await QueryService.selfComputeAdjacentAscendantPrivileges(node.data.pmId);
 
 		// Extract nodes
-		const nodes = response
+		let nodes = response
 			.map(nodePriv => nodePriv.node)
 			.filter((node): node is NonNullable<typeof node> => node !== undefined);
+		
+		// Apply node type filter if provided
+		if (nodeTypeFilter) {
+			nodes = nodes.filter(node => nodeTypeFilter.includes(node.type));
+		}
 		
 		const childrenTree = transformNodesToTreeNodes(nodes, node.data.id);
 		const sorted = sortTreeNodes(childrenTree);

@@ -28,7 +28,7 @@ export function AccessRightsPanel({
     <Stack>
       {/* Resource Access Rights */}
       <div>
-        <Group justify="space-between" align="center" mb="sm">
+        <Group gap="xs" align="center" mb="sm">
           <Title order={6}>Resource Access Rights</Title>
           <ActionIcon
             size="sm"
@@ -61,7 +61,7 @@ export function AccessRightsPanel({
 
       {/* Admin Access Rights */}
       <div>
-        <Group justify="space-between" align="center" mb="sm">
+        <Group gap="xs" align="center" mb="sm">
           <Title order={6}>Admin Access Rights</Title>
           <ActionIcon
             size="sm"

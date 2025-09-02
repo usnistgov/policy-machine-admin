@@ -268,7 +268,7 @@ export function AssociationTablePanel({
                   <PMTree
                     treeApiAtom={treeApiAtom}
                     treeDataAtom={treeDataAtom}
-                    rootNode={selectedNodeFromMainTree}
+                    rootNodes={[selectedNodeFromMainTree]}
                     direction={treeDirection}
                     headerHeight={0}
                     footerHeight={0}
@@ -369,7 +369,7 @@ export function AssociationTablePanel({
                 <PMTree
                   treeApiAtom={treeApiAtom}
                   treeDataAtom={treeDataAtom}
-                  rootNode={rootNode}
+                  rootNodes={[rootNode]}
                   direction={treeDirection}
                   headerHeight={0}
                   footerHeight={0}
