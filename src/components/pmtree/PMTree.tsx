@@ -1,33 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Tree, TreeApi } from "react-arborist";
+import { Tree, TreeApi, NodeRendererProps } from "react-arborist";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { useAtom } from "jotai";
 import { QueryService, NodeType } from "@/api/pdp.api";
 import { transformNodesToTreeNodes, TreeNode } from "@/utils/tree.utils";
 import { PrimitiveAtom } from "jotai/index";
-import { PMNode } from "./PMNode";
 import { TreeDirection } from "./hooks/usePMTreeOperations";
 import {INDENT_NUM} from "@/components/pmtree/tree-utils";
 
 export interface PMTreeClickHandlers {
 	onLeftClick?: (node: TreeNode) => void;
-	onRightClick?: (node: TreeNode) => void;
-	onAddAsAscendant?: (node: TreeNode) => void;
-	hasNodeCreationTabs?: boolean;
-	nodeTypeBeingCreated?: NodeType;
-	onAssignTo?: (node: TreeNode) => void;
-	onAssignNodeTo?: (targetNode: TreeNode) => void;
-	isAssignmentMode?: boolean;
-	assignmentSourceNode?: TreeNode | null;
-	onViewAssociations?: (node: TreeNode) => void;
-	onStartAssociationCreation?: (node: TreeNode) => void;
-	onSelectNodeForAssociation?: (node: TreeNode) => void;
-	isCreatingAssociation?: boolean;
-	associationCreationNode?: TreeNode | null;
-	// Association mode props
-	isAssociationMode?: boolean;
-	associationCreationMode?: 'outgoing' | 'incoming' | null;
-	onAssociateWith?: (node: TreeNode) => void;
+	onRightClick?: (node: TreeNode, event: React.MouseEvent) => void;
 }
 
 export interface PMTreeProps {
@@ -35,11 +18,11 @@ export interface PMTreeProps {
 	treeApiAtom: PrimitiveAtom<TreeApi<TreeNode> | null>;
 	treeDataAtom: PrimitiveAtom<TreeNode[]>;
 	height: string;
+	children: (props: NodeRendererProps<TreeNode>) => React.ReactElement;
 
 	// Optional props
 	rootNodes?: TreeNode[];
 	direction?: TreeDirection;
-	clickHandlers?: PMTreeClickHandlers;
 	className?: string;
 	style?: React.CSSProperties;
 	nodeTypeFilter?: NodeType[];
@@ -112,16 +95,8 @@ export function PMTree(props: PMTreeProps) {
 		}
 	}, [treeApiRef.current, setTreeApi]);
 
-	// Node renderer function that passes click handlers and direction
-	const nodeRenderer = (nodeProps: any) => (
-		<PMNode
-			{...nodeProps} 
-			clickHandlers={props.clickHandlers}
-			direction={props.direction ?? 'descendants'}
-			treeDataAtom={props.treeDataAtom}
-			nodeTypeFilter={props.nodeTypeFilter}
-		/>
-	);
+	// Use children as node renderer
+	const nodeRenderer = props.children;
 
 	return (
 		<div

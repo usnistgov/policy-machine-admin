@@ -15,7 +15,6 @@ import classes from "@/components/pmtree/pmtree.module.css";
 import { PMTreeClickHandlers } from "./PMTree";
 import { TreeDirection, usePMTreeOperations } from "./hooks/usePMTreeOperations";
 import { PrimitiveAtom } from "jotai/index";
-import { NodeContextMenu } from "./NodeContextMenu";
 import { useAtom } from "jotai";
 import { useTheme } from "@/contexts/ThemeContext";
 import {INDENT_NUM, NodeIcon, shouldShowExpansionIcon} from "@/components/pmtree/tree-utils";
@@ -33,7 +32,6 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 	const { themeMode } = useTheme();
 	const [isHovered, setIsHovered] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
-	const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 	const { fetchAndUpdateChildren, clearNodeChildren } = usePMTreeOperations(treeDataAtom, direction, nodeTypeFilter);
 	const [treeData, setTreeData] = useAtom(treeDataAtom);
 
@@ -76,12 +74,9 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 		e.preventDefault();
 		e.stopPropagation();
 
-		// Show context menu at cursor position
-		setContextMenu({ x: e.clientX, y: e.clientY });
-
 		// Call the right click callback if provided
 		if (clickHandlers?.onRightClick) {
-			clickHandlers.onRightClick(node.data);
+			clickHandlers.onRightClick(node.data, e);
 		}
 	};
 
@@ -192,26 +187,6 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 				{renderNodeContent()}
 			</div>
 
-			{contextMenu && (
-				<NodeContextMenu
-					node={node.data}
-					position={contextMenu}
-					onClose={() => setContextMenu(null)}
-					onAddAsAscendant={clickHandlers?.onAddAsAscendant}
-					hasNodeCreationTabs={clickHandlers?.hasNodeCreationTabs}
-					nodeTypeBeingCreated={clickHandlers?.nodeTypeBeingCreated}
-					onAssignTo={clickHandlers?.onAssignTo}
-					onAssignNodeTo={clickHandlers?.onAssignNodeTo}
-					isAssignmentMode={clickHandlers?.isAssignmentMode}
-					assignmentSourceNode={clickHandlers?.assignmentSourceNode || undefined}
-					onViewAssociations={clickHandlers?.onViewAssociations}
-					isCreatingAssociation={clickHandlers?.isCreatingAssociation}
-					onSelectNodeForAssociation={clickHandlers?.onSelectNodeForAssociation}
-					isAssociationMode={clickHandlers?.isAssociationMode}
-					associationCreationMode={clickHandlers?.associationCreationMode}
-					onAssociateWith={clickHandlers?.onAssociateWith}
-				/>
-			)}
 		</>
 	);
 }

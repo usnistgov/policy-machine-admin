@@ -6,9 +6,11 @@ import { NodeCreationTab } from './NodeCreationTab';
 import { AssignmentTab } from './AssignmentTab';
 import { AssociationsTab } from './AssociationsTab';
 import { NodeType } from '@/api/pdp.api';
+import { UserManagement } from '@/components/graphv2/UserManagement';
+import { ObjectManagement } from '@/components/graphv2/ObjectManagement';
 
 export interface SidePanel {
-    type: 'descendants' | 'association' | 'create-node' | 'assignment' | 'associations';
+    type: 'descendants' | 'association' | 'create-node' | 'assignment' | 'associations' | 'user-management' | 'object-management';
     title?: string; // Optional, only used for descendants and association panels
     node?: TreeNode;
     isUserTree?: boolean;
@@ -92,6 +94,10 @@ export function RightSidePanel({
                             selectedNodeFromMainTree={selectedNodeFromMainTree}
                             onStartAssociationMode={onStartAssociationMode}
                         />
+                    ) : panel.type === 'user-management' ? (
+                        <UserManagement />
+                    ) : panel.type === 'object-management' ? (
+                        <ObjectManagement />
                     ) : null }
                 </>
             )}

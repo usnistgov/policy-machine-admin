@@ -14,6 +14,8 @@ import { NodeType, AdjudicationService } from '@/api/pdp.api';
 import { useTheme } from '@/contexts/ThemeContext';
 import {NodeIcon} from "@/components/pmtree/tree-utils";
 import {PMTree} from "@/components/pmtree";
+import { PMNode } from "@/components/pmtree/PMNode";
+import { NodeContextMenu } from "@/components/pmtree/NodeContextMenu";
 
 // Create atoms for the PPMTree3 component
 const ppmTreeApiAtom = atom<TreeApi<TreeNode> | null>(null);
@@ -41,6 +43,9 @@ export function Graph() {
 
     // Selected node state for associations
     const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null);
 
     // Association creation state
     const [isCreatingAssociation, setIsCreatingAssociation] = useState(false);
@@ -320,6 +325,15 @@ export function Graph() {
         console.log(`Started ${mode} association mode`);
     };
 
+    // Context menu handlers
+    const handleNodeRightClick = (node: TreeNode, event: React.MouseEvent) => {
+        setContextMenu({ x: event.clientX, y: event.clientY, node });
+    };
+
+    const handleCloseContextMenu = () => {
+        setContextMenu(null);
+    };
+
     return (
         <AppShell
             header={{ height: 60 }}
@@ -393,25 +407,19 @@ export function Graph() {
                                 treeDataAtom={ppmTreeDataAtom}
                                 height="calc(100vh - 110px)"
                                 direction="ascendants"
-                                clickHandlers={{
-                                    onAddAsAscendant: handleAddAsAscendant,
-                                    hasNodeCreationTabs: activePanel?.type === 'create-node',
-                                    nodeTypeBeingCreated: activePanel?.type === 'create-node' ? activePanel.nodeType : undefined,
-                                    onAssignTo: handleAssignTo,
-                                    onAssignNodeTo: handleAssignNodeTo,
-                                    isAssignmentMode,
-                                    assignmentSourceNode,
-                                    onViewAssociations: handleViewAssociations,
-                                    onStartAssociationCreation: handleStartAssociationCreation,
-                                    onSelectNodeForAssociation: handleSelectNodeForAssociation,
-                                    isCreatingAssociation,
-                                    associationCreationNode,
-                                    isAssociationMode,
-                                    associationCreationMode,
-                                    onAssociateWith: handleAssociateWith
-                                }}
                                 style={{}}
-                            />
+                            >
+                                {(nodeProps) => (
+                                    <PMNode
+                                        {...nodeProps}
+                                        clickHandlers={{
+                                            onRightClick: handleNodeRightClick
+                                        }}
+                                        direction="ascendants"
+                                        treeDataAtom={ppmTreeDataAtom}
+                                    />
+                                )}
+                            </PMTree>
                         </Box>
                     </Stack>
 
@@ -421,6 +429,28 @@ export function Graph() {
                         <Text size="sm" c="dimmed">This is the right side panel card.</Text>
                     </Card>
                 </Group>
+
+                {/* Context Menu */}
+                {contextMenu && (
+                    <NodeContextMenu
+                        node={contextMenu.node}
+                        position={{ x: contextMenu.x, y: contextMenu.y }}
+                        onClose={handleCloseContextMenu}
+                        onAddAsAscendant={handleAddAsAscendant}
+                        hasNodeCreationTabs={activePanel?.type === 'create-node'}
+                        nodeTypeBeingCreated={activePanel?.type === 'create-node' ? activePanel.nodeType : undefined}
+                        onAssignTo={handleAssignTo}
+                        onAssignNodeTo={handleAssignNodeTo}
+                        isAssignmentMode={isAssignmentMode}
+                        assignmentSourceNode={assignmentSourceNode || undefined}
+                        onViewAssociations={handleViewAssociations}
+                        isCreatingAssociation={isCreatingAssociation}
+                        onSelectNodeForAssociation={handleSelectNodeForAssociation}
+                        isAssociationMode={isAssociationMode}
+                        associationCreationMode={associationCreationMode}
+                        onAssociateWith={handleAssociateWith}
+                    />
+                )}
 
                 {/*<RightSidePanel
                         isOpen
