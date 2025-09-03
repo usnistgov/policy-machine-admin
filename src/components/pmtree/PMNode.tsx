@@ -1,8 +1,15 @@
 import React, { useState } from "react";
-import { IconChevronDown, IconChevronRight, IconPoint } from "@tabler/icons-react";
+import {
+	IconChevronDown,
+	IconChevronRight,
+	IconCircle,
+	IconCircleMinus,
+	IconCirclePlus,
+	IconPoint, IconPointFilled, IconSquareRoundedMinus, IconSquareRoundedPlus
+} from "@tabler/icons-react";
 import clsx from "clsx";
 import { NodeRendererProps } from "react-arborist";
-import { ActionIcon, Loader } from "@mantine/core";
+import {ActionIcon, Loader, useMantineTheme} from "@mantine/core";
 import { TreeNode } from "@/utils/tree.utils";
 import classes from "@/components/pmtree/pmtree.module.css";
 import { PMTreeClickHandlers } from "./PMTree";
@@ -86,14 +93,14 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 			// Add vertical lines for each level except the current node
 			for (let i = 0; i < depth; i++) {
 				// Position the line to align with parent nodes
-				const left = i * INDENT_NUM + 10;
+				const left = i * INDENT_NUM + 22;
 
 				lines.push(
 					<div
 						key={`guideline-${node.data.id}-${i}`}
 						className={classes.guideLine}
 						style={{
-							left: `${left}px`,
+							left: `${left + 12}px`,
 							top: 0,
 							height: '100%'
 						}}
@@ -107,8 +114,8 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 					key={`horizontal-${node.data.id}`}
 					className={classes.horizontalLine}
 					style={{
-						left: `${(depth - 1) * INDENT_NUM + 10}px`,
-						width: `${18}px`,
+						left: `${(depth - 1) * INDENT_NUM + 34}px`,
+						width: `${14}px`,
 						top: 'calc(50% - 0.5px)'
 					}}
 				/>
@@ -120,11 +127,11 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 
 	const renderNodeContent = () => {
 		return (
-			<div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+			<div style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1 }}>
 				<NodeIcon
 					type={node.data.type}
-					size="24px"
-					fontSize="14px"
+					size="18px"
+					fontSize="12px"
 				/>
 				<span style={{
 					fontSize: '14px',
@@ -137,6 +144,8 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 			</div>
 		);
 	};
+
+	const mantineTheme = useMantineTheme();
 
 	return (
 		<>
@@ -157,31 +166,27 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 				<ActionIcon
 					size={20}
 					variant="transparent"
-					style={{ marginRight: '4px' }}
+					style={{ marginRight: '6px', marginLeft: '.5px' }}
 				>
 					{isLoading ? (
 						<Loader size={16} />
 					) : shouldShowExpansionIcon(node.data) ? (
 						node.isOpen ? (
-							<IconChevronDown
+							<IconSquareRoundedMinus
 								stroke={2}
 								size={16}
+								style={{backgroundColor: mantineTheme.other.intellijContentBg}}
 								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 							/>
 						) : (
-							<IconChevronRight
+							<IconSquareRoundedPlus
 								stroke={2}
 								size={16}
+								style={{backgroundColor: mantineTheme.other.intellijContentBg}}
 								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 							/>
 						)
-					) : (
-						<IconPoint
-							stroke={2}
-							size={16}
-							color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
-						/>
-					)}
+					) : null}
 				</ActionIcon>
 
 				{renderNodeContent()}

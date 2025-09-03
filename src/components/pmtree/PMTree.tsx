@@ -34,7 +34,8 @@ export interface PMTreeProps {
 	// Required props
 	treeApiAtom: PrimitiveAtom<TreeApi<TreeNode> | null>;
 	treeDataAtom: PrimitiveAtom<TreeNode[]>;
-	
+	height: string;
+
 	// Optional props
 	rootNodes?: TreeNode[];
 	direction?: TreeDirection;
@@ -42,12 +43,7 @@ export interface PMTreeProps {
 	className?: string;
 	style?: React.CSSProperties;
 	nodeTypeFilter?: NodeType[];
-	
-	// Layout props
-	headerHeight?: number;
-	footerHeight?: number;
-	footerOpened?: boolean;
-	
+
 	// Tree configuration
 	disableDrag?: boolean;
 	disableDrop?: boolean;
@@ -116,11 +112,6 @@ export function PMTree(props: PMTreeProps) {
 		}
 	}, [treeApiRef.current, setTreeApi]);
 
-	// Calculate the available height
-	const headerHeight = props.headerHeight ?? 60;
-	const footerHeight = props.footerOpened ? (props.footerHeight ?? 0) : 0;
-	const availableHeight = `calc(100vh - ${headerHeight}px - ${footerHeight}px)`;
-
 	// Node renderer function that passes click handlers and direction
 	const nodeRenderer = (nodeProps: any) => (
 		<PMNode
@@ -133,11 +124,11 @@ export function PMTree(props: PMTreeProps) {
 	);
 
 	return (
-		<div 
+		<div
 			ref={mergedRef} 
 			className={props.className}
 			style={{ 
-				height: availableHeight,
+				height: props.height,
 				width: "100%",
 				display: "flex",
 				flexDirection: "column",
@@ -169,6 +160,6 @@ export function PMTree(props: PMTreeProps) {
 					Loading tree...
 				</div>
 			)}
-		</div>
+		</div >
 	);
 }

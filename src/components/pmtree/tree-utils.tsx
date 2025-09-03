@@ -1,3 +1,4 @@
+import React from "react";
 import {v4 as uuidv4} from "uuid";
 import {TreeNode, sortTreeNodes} from "@/utils/tree.utils";
 import {Node, NodeType} from "@/api/pdp.api";
@@ -5,7 +6,7 @@ import {DescendantsIcon} from "@/components/icons/DescendantsIcon";
 import {px, useMantineTheme} from "@mantine/core";
 
 // Constants
-export const INDENT_NUM = 28;
+export const INDENT_NUM = 24;
 
 export const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O];
 export const USER_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.U];
@@ -16,6 +17,7 @@ export type NodeIconProps = {
 	size?: string,
 	fontSize?: string,
 	style?: React.CSSProperties,
+	children?: React.ReactNode,
 }
 
 // Components
@@ -41,7 +43,6 @@ export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIc
 				flexShrink: 0,
 				...style,
 			}}
-
 		>
 			{type}
 		</span>
