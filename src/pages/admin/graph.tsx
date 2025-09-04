@@ -31,6 +31,7 @@ export function Graph() {
     const mantineTheme = useMantineTheme();
     const { themeMode, toggleTheme } = useTheme();
     const [treeData, setTreeData] = useAtom(ppmTreeDataAtom);
+    const [treeApi, setTreeApi] = useAtom(ppmTreeApiAtom);
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
     const [activePanel, setActivePanel] = useState<SidePanel | null>(null);
     const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(false);
@@ -100,11 +101,7 @@ export function Graph() {
     };
 
     const handleNodeCreated = () => {
-        // Refresh only the parent node by triggering a re-fetch
-        // For now, we'll use a simple refresh approach
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
+        
     };
 
     const handleOpenDescendantsPanel = (node: any, isUserTree: boolean) => {
