@@ -25,7 +25,7 @@ export function AccessRightsPanel({
   onClearAdminRights,
 }: AccessRightsPanelProps) {
   return (
-    <Stack>
+    <Stack style={{height:'100%'}}>
       {/* Resource Access Rights */}
       <div>
         <Group gap="xs" align="center" mb="sm">

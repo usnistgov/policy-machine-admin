@@ -104,6 +104,22 @@ export function Graph() {
         
     };
 
+    const handleInspectNode = (node: TreeNode) => {
+        const newPanel: SidePanel = {
+            type: 'inspect',
+            title: `Inspect ${node.name}`,
+            node
+        };
+
+        setActivePanel(newPanel);
+        setSidePanelOpen(true);
+
+        // Automatically open the aside panel if it's closed
+        if (!asideOpened) {
+            toggleAside();
+        }
+    };
+
     const handleOpenDescendantsPanel = (node: any, isUserTree: boolean) => {
         const newPanel: SidePanel = {
             type: 'descendants',
@@ -469,9 +485,19 @@ export function Graph() {
                     </Stack>
 
                     {/* Aside Panel Card */}
-                    <Card shadow="lg" padding="lg" radius={0} withBorder style={{backgroundColor: mantineTheme.other.intellijPanelBg}}>
-                        <Text size="lg" fw={500} mb="md">Aside Panel</Text>
-                        <Text size="sm" c="dimmed">This is the right side panel card.</Text>
+                    <Card shadow="lg" padding="lg" radius={0} withBorder style={{backgroundColor: mantineTheme.other.intellijPanelBg, height: '100%'}}>
+                        <RightSidePanel
+                            isOpen={sidePanelOpen}
+                            onToggle={handleToggleSidePanel}
+                            panel={activePanel}
+                            onClose={handleClosePanel}
+                            onUpdateSelectedNodes={handleUpdateSelectedNodes}
+                            onRemoveAssignmentTarget={handleRemoveAssignmentTarget}
+                            onAssignNodes={handleAssignNodes}
+                            embedded
+                            selectedNodeFromMainTree={selectedNode}
+                            onStartAssociationMode={handleStartAssociationMode}
+                        />
                     </Card>
                 </Group>
 
@@ -495,21 +521,10 @@ export function Graph() {
                         associationCreationMode={associationCreationMode}
                         onAssociateWith={handleAssociateWith}
                         onCreateChildNode={handleOpenCreateNodeModal}
+                        onInspectNode={handleInspectNode}
                     />
                 )}
 
-                {/*<RightSidePanel
-                        isOpen
-                        onToggle={handleToggleSidePanel}
-                        panel={activePanel}
-                        onClose={handleClosePanel}
-                        onUpdateSelectedNodes={handleUpdateSelectedNodes}
-                        onRemoveAssignmentTarget={handleRemoveAssignmentTarget}
-                        onAssignNodes={handleAssignNodes}
-                        embedded
-                        selectedNodeFromMainTree={selectedNode}
-                        onStartAssociationMode={handleStartAssociationMode}
-                    />*/}
 
                 {/* Policy Class Creation Modal */}
                 <PolicyClassModal

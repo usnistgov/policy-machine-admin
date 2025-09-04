@@ -8,9 +8,10 @@ import { AssociationsTab } from './AssociationsTab';
 import { NodeType } from '@/api/pdp.api';
 import { UserManagement } from '@/components/graphv2/UserManagement';
 import { ObjectManagement } from '@/components/graphv2/ObjectManagement';
+import { InspectPanel } from '@/components/panels/InspectPanel';
 
 export interface SidePanel {
-    type: 'descendants' | 'association' | 'create-node' | 'assignment' | 'associations' | 'user-management' | 'object-management';
+    type: 'descendants' | 'association' | 'create-node' | 'assignment' | 'associations' | 'user-management' | 'object-management' | 'inspect';
     title?: string; // Optional, only used for descendants and association panels
     node?: TreeNode;
     isUserTree?: boolean;
@@ -98,6 +99,11 @@ export function RightSidePanel({
                         <UserManagement />
                     ) : panel.type === 'object-management' ? (
                         <ObjectManagement />
+                    ) : panel.type === 'inspect' ? (
+                        <InspectPanel
+                            node={panel.node!}
+                            onClose={onClose}
+                        />
                     ) : null }
                 </>
             )}

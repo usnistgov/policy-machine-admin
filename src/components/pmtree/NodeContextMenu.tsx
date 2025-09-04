@@ -28,9 +28,11 @@ export interface NodeContextMenuProps {
   onAssociateWith?: (node: TreeNode) => void;
   // Create child node props
   onCreateChildNode?: (nodeType: NodeType, parentNode: TreeNode) => void;
+  // Inspect node props
+  onInspectNode?: (node: TreeNode) => void;
 }
 
-export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, hasNodeCreationTabs, nodeTypeBeingCreated, onAssignTo, onAssignNodeTo, isAssignmentMode, assignmentSourceNode, onViewAssociations, isCreatingAssociation, onSelectNodeForAssociation, isAssociationMode, associationCreationMode, onAssociateWith, onCreateChildNode }: NodeContextMenuProps) {
+export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, hasNodeCreationTabs, nodeTypeBeingCreated, onAssignTo, onAssignNodeTo, isAssignmentMode, assignmentSourceNode, onViewAssociations, isCreatingAssociation, onSelectNodeForAssociation, isAssociationMode, associationCreationMode, onAssociateWith, onCreateChildNode, onInspectNode }: NodeContextMenuProps) {
   const theme = useMantineTheme();
 
   const handleAddAsAscendant = () => {
@@ -95,6 +97,11 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
 
   const handleCreateChildNode = (nodeType: NodeType) => {
     onCreateChildNode?.(nodeType, node);
+    onClose();
+  };
+
+  const handleInspectNode = () => {
+    onInspectNode?.(node);
     onClose();
   };
 
@@ -291,6 +298,13 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
           )}
 
           <Menu.Divider />
+
+          <Menu.Item
+            leftSection={<IconEye size={16} />}
+            onClick={handleInspectNode}
+          >
+            Inspect
+          </Menu.Item>
           
           <Menu.Item
             leftSection={<IconCopy size={16} />}
