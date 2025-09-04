@@ -10,7 +10,7 @@ export interface TreeNode {
   parent?: string; // Parent tree node ID (UUID)
   expanded?: boolean;
   selected?: boolean;
-  isTemporary?: boolean; // Flag for temporary nodes being created
+  isCreating?: boolean; // Flag for temporary nodes being created
 }
 
 /**

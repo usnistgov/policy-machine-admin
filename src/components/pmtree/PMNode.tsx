@@ -8,7 +8,7 @@ import {
 	IconPoint, IconPointFilled, IconSquareRoundedMinus, IconSquareRoundedPlus
 } from "@tabler/icons-react";
 import clsx from "clsx";
-import { NodeRendererProps } from "react-arborist";
+import {NodeApi, NodeRendererProps} from "react-arborist";
 import {ActionIcon, Loader, useMantineTheme} from "@mantine/core";
 import { TreeNode } from "@/utils/tree.utils";
 import classes from "@/components/pmtree/pmtree.module.css";
@@ -18,7 +18,8 @@ import { PrimitiveAtom } from "jotai/index";
 import { useAtom } from "jotai";
 import { useTheme } from "@/contexts/ThemeContext";
 import {INDENT_NUM, NodeIcon, shouldShowExpansionIcon} from "@/components/pmtree/tree-utils";
-import {NodeType} from "@/api/pdp.api";
+import {NodeType, AdjudicationService} from "@/api/pdp.api";
+import { notifications } from "@mantine/notifications";
 
 export interface PMNodeProps extends NodeRendererProps<TreeNode> {
 	clickHandlers?: PMTreeClickHandlers;
@@ -134,7 +135,7 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 					color: 'var(--mantine-color-text)',
 					userSelect: 'none'
 				}}>
-						{node.data.name}
+					{node.data.name}
 				</span>
 			</div>
 		);

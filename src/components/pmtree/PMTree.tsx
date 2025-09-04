@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Tree, TreeApi, NodeRendererProps } from "react-arborist";
+import {Tree, TreeApi, NodeRendererProps, NodeApi} from "react-arborist";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { useAtom } from "jotai";
 import { QueryService, NodeType } from "@/api/pdp.api";
@@ -61,7 +61,7 @@ export function PMTree(props: PMTreeProps) {
 					// Only load POS if no rootNodes prop is provided at all
 					console.log('PMTree: No rootNodes prop provided, loading POS');
 					const response = await QueryService.selfComputePersonalObjectSystem();
-					
+					console.log('PMTree: Response:', response);
 					// Extract nodes from the response and transform to TreeNode
 					const nodes = response
 						.map(nodePriv => nodePriv.node)

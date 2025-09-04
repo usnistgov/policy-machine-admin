@@ -13,7 +13,7 @@
 /* Guide lines styles */
 .guideLine {
     position: absolute;
-    border-left: 1px solid #ccc;
+    border-left: 1px solid lightgrey;
     height: 100%;
     z-index: 0;
     pointer-events: none;
@@ -21,7 +21,7 @@
 
 .horizontalLine {
     position: absolute;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid lightgrey;
     z-index: 0;
     pointer-events: none;
 }

@@ -8,7 +8,8 @@ import {useDisclosure} from "@mantine/hooks";
 import {PMIcon} from "@/components/icons/PMIcon";
 import {IconLayoutSidebar, IconLayoutSidebarRight, IconLayoutBottombar, IconSun, IconMoon} from '@tabler/icons-react';
 import { atom } from 'jotai';
-import { TreeApi } from 'react-arborist';
+import {NodeApi, TreeApi} from 'react-arborist';
+import { useAtom } from 'jotai';
 import { TreeNode } from '@/utils/tree.utils';
 import { NodeType, AdjudicationService } from '@/api/pdp.api';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -16,6 +17,9 @@ import {NodeIcon} from "@/components/pmtree/tree-utils";
 import {PMTree} from "@/components/pmtree";
 import { PMNode } from "@/components/pmtree/PMNode";
 import { NodeContextMenu } from "@/components/pmtree/NodeContextMenu";
+import { GraphPMNode } from "@/components/graph/GraphPMNode";
+import { PolicyClassModal } from "@/components/modals/PolicyClassModal";
+import { CreateNodeModal } from "@/components/modals/CreateNodeModal";
 
 // Create atoms for the PPMTree3 component
 const ppmTreeApiAtom = atom<TreeApi<TreeNode> | null>(null);
@@ -26,6 +30,7 @@ const TARGET_ALLOWED_TYPES: NodeType[] = [NodeType.PC, NodeType.UA, NodeType.OA,
 export function Graph() {
     const mantineTheme = useMantineTheme();
     const { themeMode, toggleTheme } = useTheme();
+    const [treeData, setTreeData] = useAtom(ppmTreeDataAtom);
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
     const [activePanel, setActivePanel] = useState<SidePanel | null>(null);
     const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(false);
@@ -56,7 +61,51 @@ export function Graph() {
     const [associationCreationMode, setAssociationCreationMode] = useState<'outgoing' | 'incoming' | null>(null);
 
     // Toolbar height
-    const toolbarHeight = 50;
+    const toolbarHeight = 60;
+
+    // Policy Class modal state
+    const [policyClassModalOpened, setPolicyClassModalOpened] = useState(false);
+
+    // Create Node modal state
+    const [createNodeModalOpened, setCreateNodeModalOpened] = useState(false);
+    const [createNodeType, setCreateNodeType] = useState<NodeType | null>(null);
+    const [createNodeParent, setCreateNodeParent] = useState<TreeNode | null>(null);
+
+    const handleOpenPolicyClassModal = () => {
+        setPolicyClassModalOpened(true);
+    };
+
+    const handleClosePolicyClassModal = () => {
+        setPolicyClassModalOpened(false);
+    };
+
+    const handlePolicyClassCreated = () => {
+        // Refresh the tree by reloading the page for now
+        // This ensures we get the latest data from the API
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    };
+
+    const handleOpenCreateNodeModal = (nodeType: NodeType, parentNode: TreeNode) => {
+        setCreateNodeType(nodeType);
+        setCreateNodeParent(parentNode);
+        setCreateNodeModalOpened(true);
+    };
+
+    const handleCloseCreateNodeModal = () => {
+        setCreateNodeModalOpened(false);
+        setCreateNodeType(null);
+        setCreateNodeParent(null);
+    };
+
+    const handleNodeCreated = () => {
+        // Refresh only the parent node by triggering a re-fetch
+        // For now, we'll use a simple refresh approach
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    };
 
     const handleOpenDescendantsPanel = (node: any, isUserTree: boolean) => {
         const newPanel: SidePanel = {
@@ -378,22 +427,21 @@ export function Graph() {
                             paddingLeft: '16px',
                             paddingRight: '16px'
                         }}>
-                            <Group gap="md" align="center">
+                            <Group gap="md">
                                 <Stack gap={2} align="left">
                                     <Text size="xs" c="dimmed" fw={500}>
-                                        Create Node
+                                        Create Policy Class
                                     </Text>
                                     <Group gap="xs">
-                                        {[NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O].map((nodeType) => (
+
                                             <ActionIcon
-                                                key={nodeType}
-                                                variant="subtle"
+                                                key={NodeType.PC}
+                                                variant="default"
                                                 size="md"
-                                                onClick={() => handleOpenNodeCreationPanel(nodeType)}
+                                                onClick={handleOpenPolicyClassModal}
                                             >
-                                                <NodeIcon type={nodeType} size="20px" fontSize="14px" />
+                                                <NodeIcon type={NodeType.PC} size="20px" fontSize="14px" />
                                             </ActionIcon>
-                                        ))}
                                     </Group>
                                 </Stack>
                                 <Divider orientation="vertical" />
@@ -405,7 +453,7 @@ export function Graph() {
                             <PMTree
                                 treeApiAtom={ppmTreeApiAtom}
                                 treeDataAtom={ppmTreeDataAtom}
-                                height="calc(100vh - 110px)"
+                                height="calc(100vh - 120px)"
                                 direction="ascendants"
                                 style={{}}
                             >
@@ -449,6 +497,7 @@ export function Graph() {
                         isAssociationMode={isAssociationMode}
                         associationCreationMode={associationCreationMode}
                         onAssociateWith={handleAssociateWith}
+                        onCreateChildNode={handleOpenCreateNodeModal}
                     />
                 )}
 
@@ -465,7 +514,26 @@ export function Graph() {
                         onStartAssociationMode={handleStartAssociationMode}
                     />*/}
 
+                {/* Policy Class Creation Modal */}
+                <PolicyClassModal
+                    opened={policyClassModalOpened}
+                    onClose={handleClosePolicyClassModal}
+                    onSuccess={handlePolicyClassCreated}
+                />
+
+                {/* Create Node Modal */}
+                {createNodeType && createNodeParent && (
+                    <CreateNodeModal
+                        opened={createNodeModalOpened}
+                        onClose={handleCloseCreateNodeModal}
+                        onSuccess={handleNodeCreated}
+                        nodeType={createNodeType}
+                        parentNode={createNodeParent}
+                    />
+                )}
+
             </AppShell.Main>
         </AppShell>
     );
 }
+

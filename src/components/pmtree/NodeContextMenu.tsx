@@ -26,9 +26,11 @@ export interface NodeContextMenuProps {
   isAssociationMode?: boolean;
   associationCreationMode?: 'outgoing' | 'incoming' | null;
   onAssociateWith?: (node: TreeNode) => void;
+  // Create child node props
+  onCreateChildNode?: (nodeType: NodeType, parentNode: TreeNode) => void;
 }
 
-export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, hasNodeCreationTabs, nodeTypeBeingCreated, onAssignTo, onAssignNodeTo, isAssignmentMode, assignmentSourceNode, onViewAssociations, isCreatingAssociation, onSelectNodeForAssociation, isAssociationMode, associationCreationMode, onAssociateWith }: NodeContextMenuProps) {
+export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, hasNodeCreationTabs, nodeTypeBeingCreated, onAssignTo, onAssignNodeTo, isAssignmentMode, assignmentSourceNode, onViewAssociations, isCreatingAssociation, onSelectNodeForAssociation, isAssociationMode, associationCreationMode, onAssociateWith, onCreateChildNode }: NodeContextMenuProps) {
   const theme = useMantineTheme();
 
   const handleAddAsAscendant = () => {
@@ -91,6 +93,25 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
     onClose();
   };
 
+  const handleCreateChildNode = (nodeType: NodeType) => {
+    onCreateChildNode?.(nodeType, node);
+    onClose();
+  };
+
+  // Helper function to get available child node types based on parent type
+  const getAvailableChildTypes = (): NodeType[] => {
+    switch (node.type as NodeType) {
+      case NodeType.PC:
+        return [NodeType.UA, NodeType.OA];
+      case NodeType.UA:
+        return [NodeType.UA];
+      case NodeType.OA:
+        return [NodeType.OA];
+      default:
+        return [];
+    }
+  };
+
   // Helper function to check if assignment is valid
   const isValidAssignment = (sourceType: NodeType, targetType: NodeType): boolean => {
     const validAssignments: Partial<Record<NodeType, NodeType[]>> = {
@@ -126,6 +147,7 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
   const canViewAssociations = [NodeType.OA as NodeType, NodeType.O as NodeType, NodeType.UA as NodeType].includes(node.type as NodeType) && !isAssignmentMode;
   const canSelectForAssociation = isCreatingAssociation && [NodeType.OA as NodeType, NodeType.O as NodeType, NodeType.UA as NodeType].includes(node.type as NodeType);
   const showAssociateWith = canAssociateWith();
+  const availableChildTypes = getAvailableChildTypes();
 
   return (
       <Menu
@@ -245,6 +267,27 @@ export function NodeContextMenu({ node, position, onClose, onAddAsAscendant, has
             >
               View Associations
             </Menu.Item>
+          )}
+
+          {/* CREATE CHILD NODE ITEMS */}
+          {availableChildTypes.length > 0 && (
+            <>
+              <Menu.Divider />
+              {availableChildTypes.map((childType) => (
+                <Menu.Item
+                  key={childType}
+                  leftSection={<NodeIcon type={childType} size="16px" fontSize="12px" />}
+                  onClick={() => handleCreateChildNode(childType)}
+                  style={{
+                    backgroundColor: 'var(--mantine-color-blue-0)',
+                    borderLeft: '3px solid var(--mantine-color-blue-6)',
+                    fontWeight: 500
+                  }}
+                >
+                  Create {childType}
+                </Menu.Item>
+              ))}
+            </>
           )}
 
           <Menu.Divider />
