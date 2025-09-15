@@ -190,7 +190,7 @@ function AssociationsTreeTable({
 			variant="contained"
 			radius="md"
 			chevronPosition="left"
-			defaultValue={isAssociationMode ? "association-creation" : undefined}
+			value={isAssociationMode ? "association-creation" : undefined}
 			styles={{
 				label: {
 					paddingTop: 8,
