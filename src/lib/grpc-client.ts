@@ -26,8 +26,12 @@ export const getRequestMetadata = (): grpc.Metadata => {
   return metadata;
 };
 
-// Error handler for gRPC calls
-export const handleGrpcError = (error: grpc.Code, message: string): Error => {
-  console.error(`gRPC Error [${error}]: ${message}`);
-  return new Error(`gRPC call failed: ${message}`);
+// Enhanced error handler for gRPC calls with better user messaging
+export const handleGrpcError = (grpcCode: grpc.Code, message: string): Error => {
+  console.error(`gRPC Error [${grpcCode}]: ${message}`);
+
+  const error = new Error(message);
+  (error as any).cause = { grpcCode, originalMessage: message };
+
+  return error;
 }; 

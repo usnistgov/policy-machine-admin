@@ -1,0 +1,1 @@
+export { AccessRightsSelection } from './AccessRightsSelection';

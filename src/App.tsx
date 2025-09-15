@@ -6,7 +6,7 @@ import { Router } from './Router';
 import {Notifications} from "@mantine/notifications";
 import '@mantine/notifications/styles.css';
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
-import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './shared/theme/ThemeContext';
 
 function AppContent() {
     const { theme, themeMode } = useTheme();

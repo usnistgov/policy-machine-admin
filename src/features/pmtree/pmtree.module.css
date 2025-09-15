@@ -1,0 +1,114 @@
+.tree {
+    border-radius: 0;
+    position: relative;
+}
+
+.treeContainer {
+    display: flex;
+    height: 100%;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Guide lines styles */
+.guideLine {
+    position: absolute;
+    border-left: 1px solid lightgrey;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.horizontalLine {
+    position: absolute;
+    border-top: 1px solid lightgrey;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.node {
+    position: relative;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    color: black;
+    cursor: pointer;
+    z-index: 1;
+
+    .actions {
+        visibility: hidden;
+        height: 100%;
+    }
+
+    &:hover .actions {
+        visibility: visible;
+    }
+}
+
+.descendantNode {
+    background-color: var(--mantine-color-blue-0);
+}
+
+.descendantNode::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: var(--mantine-color-blue-6);
+}
+
+.descendantNodeUserTree {
+    background-color: var(--mantine-color-red-0);
+}
+
+.descendantNodeUserTree::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: var(--mantine-color-red-6);
+}
+
+.node:global(.isSelectedStart.isSelectedEnd) {
+    background: var(--mantine-primary-color-0);
+    border-radius: 8px;
+}
+
+.nodeRowItem {
+    border-radius: 30%;
+    font-size: 11px;
+    font-weight: bold;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Toolbar styles */
+.toolbar {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    padding: 2px 4px;
+    background-color: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.toolbar:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.toolbarIcon {
+    transition: all 0.15s ease;
+}
+
+.toolbarIcon:hover {
+    transform: scale(1.1);
+}
