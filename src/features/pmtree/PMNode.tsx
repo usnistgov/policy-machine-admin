@@ -179,21 +179,18 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 							<IconSquareRoundedMinus
 								stroke={2}
 								size={16}
-								style={{backgroundColor: mantineTheme.other.intellijContentBg}}
 								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 							/>
 						) : (
 							<IconSquareRoundedPlus
 								stroke={2}
 								size={16}
-								style={{backgroundColor: mantineTheme.other.intellijContentBg}}
 								color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 							/>
 						)
 					) : <IconPoint
 						stroke={2}
 						size={16}
-						style={{backgroundColor: mantineTheme.other.intellijContentBg}}
 						color={themeMode === 'dark' ? 'var(--mantine-color-gray-4)' : 'var(--mantine-color-gray-9)'}
 					/>}
 				</ActionIcon>
