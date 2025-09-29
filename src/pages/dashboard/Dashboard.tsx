@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IconBan, IconInfoSquareRounded, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconBan, IconCopy, IconInfoSquareRounded, IconPlus, IconTrash } from '@tabler/icons-react';
 import { NodeApi } from 'react-arborist';
 import {
 	ActionIcon,
@@ -53,6 +53,18 @@ export function Dashboard() {
 			setSelectedNodeForInfo(rightClickedNode);
 			setRightPanelComponent(RightPanelComponent.NODE_INFO);
 			setRightPanelExpanded(true);
+		}
+		setContextMenuOpened(false);
+	};
+
+	const handleCopyNodeName = () => {
+		if (rightClickedNode) {
+			navigator.clipboard.writeText(rightClickedNode.name);
+			notifications.show({
+				title: 'Copied',
+				message: `Node name "${rightClickedNode.name}" copied to clipboard`,
+				color: 'green',
+			});
 		}
 		setContextMenuOpened(false);
 	};
@@ -114,26 +126,32 @@ export function Dashboard() {
 	};
 
 	const handleCreateNodeConfirm = async () => {
-		if (!rightClickedNode || !rightClickedNode.pmId || !nodeTypeToCreate || !newNodeName.trim()) {
-			return;
-		}
-
 		try {
-			const parentIds = [rightClickedNode.pmId];
+			if (nodeTypeToCreate === NodeType.PC) {
+				await AdjudicationService.createPolicyClass(newNodeName.trim());
+			} else {
+				if (!rightClickedNode || !rightClickedNode.pmId || !nodeTypeToCreate || !newNodeName.trim()) {
+					return;
+				}
 
-			switch (nodeTypeToCreate) {
-				case NodeType.UA:
-					await AdjudicationService.createUserAttribute(newNodeName.trim(), parentIds);
-					break;
-				case NodeType.OA:
-					await AdjudicationService.createObjectAttribute(newNodeName.trim(), parentIds);
-					break;
-				case NodeType.U:
-					await AdjudicationService.createUser(newNodeName.trim(), parentIds);
-					break;
-				case NodeType.O:
-					await AdjudicationService.createObject(newNodeName.trim(), parentIds);
-					break;
+				switch (nodeTypeToCreate) {
+					case NodeType.UA:
+						await AdjudicationService.createUserAttribute(newNodeName.trim(), [
+							rightClickedNode.pmId,
+						]);
+						break;
+					case NodeType.OA:
+						await AdjudicationService.createObjectAttribute(newNodeName.trim(), [
+							rightClickedNode.pmId,
+						]);
+						break;
+					case NodeType.U:
+						await AdjudicationService.createUser(newNodeName.trim(), [rightClickedNode.pmId]);
+						break;
+					case NodeType.O:
+						await AdjudicationService.createObject(newNodeName.trim(), [rightClickedNode.pmId]);
+						break;
+				}
 			}
 
 			notifications.show({
@@ -251,6 +269,11 @@ export function Dashboard() {
 					{/* Info section */}
 					<Menu.Item onClick={handleInfoClick} leftSection={<IconInfoSquareRounded size={16} />}>
 						Info
+					</Menu.Item>
+
+					{/* Copy Node Name */}
+					<Menu.Item onClick={handleCopyNodeName} leftSection={<IconCopy size={16} />}>
+						Copy Node Name
 					</Menu.Item>
 
 					{/* Create nodes section */}

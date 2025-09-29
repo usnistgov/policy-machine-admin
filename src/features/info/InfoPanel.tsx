@@ -1,42 +1,14 @@
-import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {IconSquareRoundedMinus} from "@tabler/icons-react";
-import {
-	Accordion,
-	ActionIcon,
-	Alert,
-	Box,
-	Center,
-	Checkbox, Divider,
-	Grid,
-	Group, Space,
-	Stack,
-	Text,
-	Title,
-	useMantineTheme
-} from "@mantine/core";
-import {PMTree} from "@/features/pmtree";
-import {
-	AssociationDirection,
-	AssociationIcon,
-	NodeIcon,
-	transformNodesToTreeNodes,
-	TreeNode, truncateMiddle
-} from "@/features/pmtree/tree-utils";
-import {AdjudicationService, NODE_TYPES, NodePrivilegeInfo, NodeType, QueryService} from "@/shared/api/pdp.api";
-import {fetchAssociationChildren} from "@/features/pmtree/tree-data-fetcher";
-import {notifications} from "@mantine/notifications";
-import {AccessRightsSelection} from "@/components/access-rights";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {IconArrowLeftCircle, IconPlus, IconSquareRoundedMinus, IconX} from "@tabler/icons-react";
+import { NodeApi } from "react-arborist";
+import { ActionIcon, Alert, Box, Button, Divider, Group, ScrollArea, Stack, Text, Title, useMantineTheme } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { AccessRightsSelection } from "@/components/access-rights";
+import { PMTree } from "@/features/pmtree";
+import { fetchAssociationChildren } from "@/features/pmtree/tree-data-fetcher";
+import { AssociationDirection, AssociationIcon, NodeIcon, transformNodesToTreeNodes, TreeNode, truncateMiddle } from "@/features/pmtree/tree-utils";
+import { AdjudicationService, NODE_TYPES, NodePrivilegeInfo, NodeType, QueryService } from "@/shared/api/pdp.api";
 
-
-
-interface AssociationDetailsSectionProps {
-	association: TreeNode;
-}
-
-interface AccessRightsSectionProps {
-	association: TreeNode;
-	resourceOperations: string[];
-}
 
 // Helper function to create truncated access rights preview
 function createAccessRightsPreview(accessRights: string[], maxLength: number = 50): string {
@@ -53,56 +25,40 @@ function transformNodePrivilegeInfoToTreeNodes(privileges: NodePrivilegeInfo[]):
 	const nodes = privileges
 		.map(priv => priv.node)
 		.filter((node): node is NonNullable<typeof node> => node !== undefined);
-	
+
 	return transformNodesToTreeNodes(nodes);
 }
 
-// Component for the associations tree table
-interface AssociationsTreeTableProps {
-	associationTreeNodes: TreeNode[];
-	onAssociationSelect: (association: TreeNode) => void;
-	// Association creation props
-	isAssociationMode?: boolean;
-	associationDirection?: 'outgoing' | 'incoming' | null;
-	associationTarget?: TreeNode | null;
-	selectedAccessRights?: string[];
-	resourceOperations?: string[];
-	onRemoveAssociationTarget?: () => void;
-	onSubmitAssociation?: () => void;
-	onCancelAssociation?: () => void;
-	onAccessRightsChange?: (rights: string[]) => void;
-	// For existing association management
-	rootNode?: TreeNode;
-	onAssociationUpdated?: () => void;
+// Component for association details panel
+interface AssociationDetailsPanelProps {
+	associationNode: TreeNode;
+	rootNode: TreeNode;
+	resourceOperations: string[];
+	onAssociationUpdated: () => void;
+	onClose: () => void;
+	style?: React.CSSProperties;
 }
 
-function AssociationsTreeTable({ 
-	associationTreeNodes, 
-	isAssociationMode,
-	associationDirection,
-	associationTarget,
-	selectedAccessRights,
-	resourceOperations,
-	onRemoveAssociationTarget,
-	onSubmitAssociation,
-	onCancelAssociation,
-	onAccessRightsChange,
+function AssociationDetailsPanel({
+	associationNode,
 	rootNode,
-	onAssociationUpdated
-}: AssociationsTreeTableProps) {
+	resourceOperations,
+	onAssociationUpdated,
+	onClose,
+	style
+}: AssociationDetailsPanelProps) {
 	const theme = useMantineTheme();
-	const [editingAssociation, setEditingAssociation] = useState<string | null>(null);
-	const [editingAccessRights, setEditingAccessRights] = useState<{[key: string]: string[]}>({});
+	const [editingAccessRights, setEditingAccessRights] = useState<string[]>(
+		associationNode.associationDetails?.accessRightSet || []
+	);
 
 	// Handle updating an existing association
-	const handleUpdateAssociation = useCallback(async (associationTreeNode: TreeNode) => {
-		if (!rootNode?.pmId || !associationTreeNode.pmId) {
+	const handleUpdateAssociation = useCallback(async () => {
+		if (!rootNode?.pmId || !associationNode.pmId) {
 			return;
 		}
 
-		const newAccessRights = editingAccessRights[associationTreeNode.id] || associationTreeNode.associationDetails?.accessRightSet || [];
-		
-		if (newAccessRights.length === 0) {
+		if (editingAccessRights.length === 0) {
 			notifications.show({
 				color: 'red',
 				title: 'Update Error',
@@ -113,25 +69,18 @@ function AssociationsTreeTable({
 
 		try {
 			// Determine source and target based on association direction
-			// For outgoing associations: rootNode -> associationTreeNode
-			// For incoming associations: associationTreeNode -> rootNode
-			const isOutgoing = associationTreeNode.associationDetails?.type === 'outgoing';
-			const sourcePmId = isOutgoing ? rootNode.pmId : associationTreeNode.pmId;
-			const targetPmId = isOutgoing ? associationTreeNode.pmId : rootNode.pmId;
+			// For outgoing associations: rootNode -> associationNode
+			// For incoming associations: associationNode -> rootNode
+			const isOutgoing = associationNode.associationDetails?.type === AssociationDirection.Outgoing;
+			const sourcePmId = isOutgoing ? rootNode.pmId : associationNode.pmId;
+			const targetPmId = isOutgoing ? associationNode.pmId : rootNode.pmId;
 
 			// First dissociate the old association, then create new one with updated access rights
 			await AdjudicationService.dissociate(sourcePmId, targetPmId);
-			await AdjudicationService.associate(sourcePmId, targetPmId, newAccessRights);
-
-			// Clear editing state for this association
-			setEditingAccessRights(prev => {
-				const updated = { ...prev };
-				delete updated[associationTreeNode.id];
-				return updated;
-			});
+			await AdjudicationService.associate(sourcePmId, targetPmId, editingAccessRights);
 
 			// Refresh associations list
-			onAssociationUpdated?.();
+			onAssociationUpdated();
 
 			notifications.show({
 				color: 'green',
@@ -145,37 +94,32 @@ function AssociationsTreeTable({
 				message: (error as Error).message,
 			});
 		}
-	}, [rootNode, editingAccessRights, onAssociationUpdated]);
+	}, [rootNode, associationNode, editingAccessRights, onAssociationUpdated]);
 
 	// Handle deleting an association
-	const handleDeleteAssociation = useCallback(async (associationTreeNode: TreeNode) => {
-		if (!rootNode?.pmId || !associationTreeNode.pmId) {
+	const handleDeleteAssociation = useCallback(async () => {
+		if (!rootNode?.pmId || !associationNode.pmId) {
 			return;
 		}
 
 		try {
 			// Determine source and target based on association direction
-			const isOutgoing = associationTreeNode.associationDetails?.type === 'outgoing';
-			const sourcePmId = isOutgoing ? rootNode.pmId : associationTreeNode.pmId;
-			const targetPmId = isOutgoing ? associationTreeNode.pmId : rootNode.pmId;
+			const isOutgoing = associationNode.associationDetails?.type === AssociationDirection.Outgoing;
+			const sourcePmId = isOutgoing ? rootNode.pmId : associationNode.pmId;
+			const targetPmId = isOutgoing ? associationNode.pmId : rootNode.pmId;
 
 			await AdjudicationService.dissociate(sourcePmId, targetPmId);
 
-			// Clear editing state for this association
-			setEditingAccessRights(prev => {
-				const updated = { ...prev };
-				delete updated[associationTreeNode.id];
-				return updated;
-			});
-
-			// Refresh associations list
-			onAssociationUpdated?.();
+			// Close the panel and refresh associations list
+			onClose();
+			onAssociationUpdated();
 
 			notifications.show({
 				color: 'green',
 				title: 'Association Deleted',
 				message: 'Association has been deleted successfully',
 			});
+
 		} catch (error) {
 			notifications.show({
 				color: 'red',
@@ -183,195 +127,178 @@ function AssociationsTreeTable({
 				message: (error as Error).message,
 			});
 		}
-	}, [rootNode, onAssociationUpdated]);
+	}, [rootNode, associationNode, onClose, onAssociationUpdated]);
 
 	return (
-		<Accordion
-			variant="contained"
-			radius="md"
-			chevronPosition="left"
-			value={isAssociationMode ? "association-creation" : undefined}
-			styles={{
-				label: {
-					paddingTop: 8,
-					paddingBottom: 8,
-				}
-			}}>
-			{/* Association Creation Accordion Item */}
-			{isAssociationMode && (
-				<Accordion.Item value="association-creation">
-					<Accordion.Control>
-						<Group justify="space-between" style={{ width: '100%' }}>
-							<Group gap="xs">
-								<Text>Create {associationDirection === 'outgoing' ? 'Outgoing' : 'Incoming'} Association</Text>
-							</Group>
-						</Group>
-					</Accordion.Control>
-					<Accordion.Panel>
-						<Grid>
-							<Grid.Col span={6}>
-								<Text size="sm" fw={500} mb="xs">{associationDirection === 'outgoing' ? 'Target' : 'Source'} Node</Text>
-								<Box style={{ height: '120px', border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', padding: '12px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
-									{!associationTarget && (
-										<Alert variant="light" color="blue" mb="sm">
-											<Text size="sm">
-												{associationDirection === 'incoming'
-													? 'Select a UA node from the tree on the left'
-													: 'Select a UA, OA, or O node from the tree on the left'
-												}
-											</Text>
-										</Alert>
-									)}
-									{associationTarget && (
-										<Group justify="space-between" style={{
-											padding: '8px 12px',
-											border: '1px solid var(--mantine-color-gray-2)',
-											borderRadius: '4px',
-											backgroundColor: 'white'
-										}}>
-											<Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-												<NodeIcon type={associationTarget.type} size="18px" fontSize="14px" />
-												<Text
-													size="sm"
-													style={{
-														overflow: 'hidden',
-														textOverflow: 'ellipsis',
-														whiteSpace: 'nowrap',
-														flex: 1
-													}}
-												>
-													{associationTarget.name}
-												</Text>
-											</Group>
-											<ActionIcon
-												size="sm"
-												variant="subtle"
-												color="red"
-												onClick={onRemoveAssociationTarget}
-											>
-												<IconSquareRoundedMinus size={16} />
-											</ActionIcon>
-										</Group>
-									)}
-								</Box>
+		<Box style={{
+			flex: 1,
+			display: 'flex',
+			flexDirection: 'column',
+			height: '100%',
+			minWidth: 0,
+			...style
+		}}>
+			<Group justify="space-between" style={{ flex: '0 0 auto' }}>
+				<Group gap="xs">
+					<AssociationIcon
+						direction={associationNode.associationDetails?.type as AssociationDirection}
+						size="32"
+						color={theme.colors.green[9]}
+					/>
+					<NodeIcon type={associationNode.type} size="30px" fontSize="22px" />
+					<Text size="lg" fw={500}>{truncateMiddle(associationNode.name)}</Text>
+				</Group>
+				<ActionIcon variant="subtle" onClick={onClose}>
+					<IconX size={16} />
+				</ActionIcon>
+			</Group>
 
-								{/* Submit/Cancel Buttons */}
-								<Group justify="center" mt="sm" gap="xs">
-									<ActionIcon
-										variant="filled"
-										size="md"
-										onClick={onSubmitAssociation}
-										disabled={!associationTarget || (selectedAccessRights?.length || 0) === 0}
-										style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-									>
-										<Text size="sm" style={{ color: 'white' }}>Create</Text>
-									</ActionIcon>
-									<ActionIcon
-										variant="outline"
-										size="md"
-										onClick={onCancelAssociation}
-										style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-									>
-										<Text size="sm">Cancel</Text>
-									</ActionIcon>
-								</Group>
-							</Grid.Col>
-							<Grid.Col span={6}>
-								<Text size="sm" fw={500} mb="xs">Access Rights</Text>
-								<Box style={{ height: '200px', overflow: 'auto' }}>
-									{selectedAccessRights && onAccessRightsChange && resourceOperations && (
-										<AccessRightsSelection
-											selectedRights={selectedAccessRights}
-											onRightsChange={onAccessRightsChange}
-											resourceOperations={resourceOperations}
-										/>
-									)}
-								</Box>
-							</Grid.Col>
-						</Grid>
-					</Accordion.Panel>
-				</Accordion.Item>
-			)}
-			
-			{/* Existing Association Items */}
-			{associationTreeNodes.map((associationTreeNode: TreeNode, index: number) => {
-				return (
-					<Accordion.Item key={associationTreeNode.id} value={`${associationTreeNode.id}-${index}`}>
-						<Accordion.Control>
-							<Group justify="space-between" style={{ width: '100%' }}>
-								<Group gap="xs">
-									<AssociationIcon
-										direction={associationTreeNode.associationDetails?.type as AssociationDirection}
-										size="20"
-										color={theme.colors.green[9]}
-									/>
-									<NodeIcon type={associationTreeNode.type} size="20px" fontSize="14px" />
-									<Text size="sm">{truncateMiddle(associationTreeNode.name)}</Text>
-								</Group>
-								<Text size="sm" c="dimmed" style={{ maxWidth: '300px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-									{createAccessRightsPreview(associationTreeNode.associationDetails?.accessRightSet || [])}
-								</Text>
-							</Group>
-						</Accordion.Control>
-						<Accordion.Panel>
-							<Grid>
-								<Grid.Col span={6}>
-									<Box style={{ height: '300px', border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px' }}>
-										<PMTree
-											direction="ascendants"
-											rootNodes={[associationTreeNode]}
-											showToolbar={false}
-											filterConfig={{
-												nodeTypes: NODE_TYPES,
-												showIncomingAssociations: false,
-												showOutgoingAssociations: false,
-											}}
-										/>
-									</Box>
-								</Grid.Col>
-								<Grid.Col span={6}>
-									<Box style={{ height: '300px', overflow: 'auto' }}>
-										{resourceOperations && (
-											<AccessRightsSelection
-												selectedRights={editingAccessRights[associationTreeNode.id] || associationTreeNode.associationDetails?.accessRightSet || []}
-												onRightsChange={(rights) => setEditingAccessRights(prev => ({...prev, [associationTreeNode.id]: rights}))}
-												resourceOperations={resourceOperations}
-											/>
-										)}
-									</Box>
-									
-									{/* Update/Delete Buttons */}
-									<Group justify="center" mt="sm" gap="xs">
-										<ActionIcon
-											variant="filled"
-											color="blue"
-											size="md"
-											onClick={() => handleUpdateAssociation(associationTreeNode)}
-											style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-										>
-											<Text size="sm" style={{ color: 'white' }}>Update</Text>
-										</ActionIcon>
-										<ActionIcon
-											variant="filled"
-											color="red"
-											size="md"
-											onClick={() => handleDeleteAssociation(associationTreeNode)}
-											style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-										>
-											<Text size="sm" style={{ color: 'white' }}>Delete</Text>
-										</ActionIcon>
-									</Group>
-								</Grid.Col>
-							</Grid>
-						</Accordion.Panel>
-					</Accordion.Item>
-				)
-			})}
-		</Accordion>
+			<Box style={{
+				flex: 1,
+				minHeight: 0,
+				display: 'flex',
+				flexDirection: 'column',
+				borderRadius: '4px'
+			}}>
+				<ScrollArea style={{ flex: 1 }}>
+					<AccessRightsSelection
+						selectedRights={editingAccessRights}
+						onRightsChange={setEditingAccessRights}
+						resourceOperations={resourceOperations}
+					/>
+				</ScrollArea>
+			</Box>
+
+			<Group gap="xs" justify="center" mt="md" style={{ flex: '0 0 auto' }}>
+				<Button
+					variant="filled"
+					color="blue"
+					onClick={handleUpdateAssociation}
+				>
+					Update
+				</Button>
+				<Button
+					variant="filled"
+					color="red"
+					onClick={handleDeleteAssociation}
+				>
+					Delete
+				</Button>
+			</Group>
+		</Box>
 	);
 }
 
+interface AssociationCreationPanelProps {
+	direction: AssociationDirection;
+	selectedNode: TreeNode | null;
+	selectedAccessRights: string[];
+	onRightsChange: (rights: string[]) => void;
+	resourceOperations: string[];
+	onSubmit: () => void;
+	onCancel: () => void;
+	onClearSelection: () => void;
+	style?: React.CSSProperties;
+}
 
+function AssociationCreationPanel({
+	direction,
+	selectedNode,
+	selectedAccessRights,
+	onRightsChange,
+	resourceOperations,
+	onSubmit,
+	onCancel,
+	onClearSelection,
+	style
+}: AssociationCreationPanelProps) {
+	const theme = useMantineTheme();
+	const isNodeSelected = !!selectedNode;
+	const instruction = direction === AssociationDirection.Incoming
+		? 'Select a node from the main tree to act as the source of this association.'
+		: 'Select a node from the main tree to act as the target of this association.';
+
+	const createDisabled = !isNodeSelected || selectedAccessRights.length === 0;
+
+	return (
+		<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, ...style }}>
+			<Group justify="space-between" align="flex-start" mb="sm">
+				<Stack gap={2}>
+					<Title order={5}>Creating {direction === AssociationDirection.Incoming ? 'Incoming' : 'Outgoing'} Association</Title>
+				</Stack>
+			</Group>
+			<Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
+				<Stack gap={4}>
+					<Text size="xs" c="dimmed">{direction === AssociationDirection.Incoming ? 'Selected source' : 'Selected target'}</Text>
+					{!selectedNode && (<Alert variant="light" color="blue" mb="sm">
+						<Text size="sm">{instruction}</Text>
+					</Alert>)}
+					{selectedNode && (
+						<Box style={{
+							border: '1px solid var(--mantine-color-gray-3)',
+							borderRadius: '4px',
+							padding: '8px 12px',
+							backgroundColor: 'white'
+						}}>
+							<Group justify="space-between" align="center" gap="xs">
+								<Group gap="xs" align="center">
+									<NodeIcon type={selectedNode.type} size="18px" fontSize="14px" />
+									<Text size="sm">{truncateMiddle(selectedNode.name)}</Text>
+								</Group>
+								<ActionIcon size="sm" variant="subtle" color="gray" onClick={onClearSelection}>
+									<IconSquareRoundedMinus color="red" size={14} />
+								</ActionIcon>
+							</Group>
+						</Box>
+					)}
+				</Stack>
+
+				<Box style={{
+					flex: 1,
+					minHeight: 0,
+					display: 'flex',
+					flexDirection: 'column',
+					border: '1px solid var(--mantine-color-gray-3)',
+					borderRadius: '4px',
+					overflow: 'hidden',
+					backgroundColor: 'var(--mantine-color-gray-0)'
+				}}>
+					{!isNodeSelected && (
+						<Box style={{ padding: '8px 12px' }}>
+							<Text size="xs" c="dimmed">Select a node to configure access rights.</Text>
+						</Box>
+					)}
+					<ScrollArea style={{ flex: 1 }}>
+						<AccessRightsSelection
+							selectedRights={selectedAccessRights}
+							onRightsChange={onRightsChange}
+							resourceOperations={resourceOperations}
+							readOnly={!isNodeSelected}
+						/>
+					</ScrollArea>
+				</Box>
+			</Stack>
+
+			<Group gap="xs" justify="flex-end" mt="md">
+				<Button
+					variant="filled"
+					color="blue"
+					onClick={onSubmit}
+					disabled={createDisabled}
+				>
+					Create
+				</Button>
+				<Button
+					variant="default"
+					color="gray"
+					onClick={onCancel}
+				>
+					Cancel
+				</Button>
+			</Group>
+		</Box>
+	);
+}
 
 
 export interface InfoPanelProps {
@@ -380,6 +307,8 @@ export interface InfoPanelProps {
 }
 
 export function InfoPanel(props: InfoPanelProps) {
+	const theme = useMantineTheme();
+
 	const [associationRootNodes, setAssociationRootNodes] = useState<TreeNode[]>([]);
 	const [descendantsNodes, setDescendantsNodes] = useState<TreeNode[]>([]);
 	const [resourceOperations, setResourceOperations] = useState<string[]>([]);
@@ -387,15 +316,19 @@ export function InfoPanel(props: InfoPanelProps) {
 	// Assignment mode state
 	const [isAssignmentMode, setIsAssignmentMode] = useState(false);
 	const [assignmentTargets, setAssignmentTargets] = useState<TreeNode[]>([]);
-	
+
 	// Association creation mode state
 	const [isAssociationMode, setIsAssociationMode] = useState(false);
 	const [associationTarget, setAssociationTarget] = useState<TreeNode | null>(null);
 	const [associationDirection, setAssociationDirection] = useState<'outgoing' | 'incoming' | null>(null);
 	const [selectedAccessRights, setSelectedAccessRights] = useState<string[]>([]); // No defaults - user must select
-	
+
 	// Descendants tree selection state
 	const [selectedDescendantNode, setSelectedDescendantNode] = useState<TreeNode | null>(null);
+
+	// Association selection state
+	const [selectedAssociationNode, setSelectedAssociationNode] = useState<TreeNode | null>(null);
+	const [selectedAssociationDirection, setSelectedAssociationDirection] = useState<AssociationDirection>(AssociationDirection.Incoming);
 
 	// Handle selection in descendants tree
 	const handleDescendantSelection = useCallback((nodeApi: any[]) => {
@@ -423,12 +356,12 @@ export function InfoPanel(props: InfoPanelProps) {
 
 		try {
 			await AdjudicationService.deassign(props.rootNode.pmId, [selectedDescendantNode.pmId]);
-			
+
 			// Immediately remove the deassigned node from the descendants tree
-			setDescendantsNodes(currentNodes => 
+			setDescendantsNodes(currentNodes =>
 				currentNodes.filter(node => node.pmId !== selectedDescendantNode.pmId)
 			);
-			
+
 			// Clear selection since the node is no longer assigned
 			setSelectedDescendantNode(null);
 		} catch (error) {
@@ -449,11 +382,11 @@ export function InfoPanel(props: InfoPanelProps) {
 
 	const handleSubmitAssignment = useCallback(async () => {
 		const descendantIds = assignmentTargets.map(node => node.pmId).filter(id => id !== undefined);
-		
+
 		if (!props.rootNode.pmId || descendantIds.length === 0) {
 			return;
 		}
-		
+
 		try {
 			// Use the assign API to create assignments
 			await AdjudicationService.assign(props.rootNode.pmId, descendantIds);
@@ -461,12 +394,12 @@ export function InfoPanel(props: InfoPanelProps) {
 			// Reset assignment mode
 			setIsAssignmentMode(false);
 			setAssignmentTargets([]);
-			
+
 			// Refresh descendants tree
 			const updatedDescendants = await QueryService.selfComputeAdjacentDescendantPrivileges(props.rootNode.pmId);
 			const transformedDescendants = transformNodePrivilegeInfoToTreeNodes(updatedDescendants);
 			setDescendantsNodes(transformedDescendants);
-			
+
 			// Refresh the associations tree as assignments can affect associations
 			const updatedAssociations = await fetchAssociationChildren(
 				props.rootNode.pmId,
@@ -478,7 +411,7 @@ export function InfoPanel(props: InfoPanelProps) {
 				props.rootNode.id
 			);
 			setAssociationRootNodes(updatedAssociations);
-			
+
 		} catch (error) {
 			notifications.show({
 				color: 'red',
@@ -493,11 +426,13 @@ export function InfoPanel(props: InfoPanelProps) {
 	}, []);
 
 	// Association mode handlers
-	const handleStartAssociation = useCallback((direction: 'outgoing' | 'incoming') => {
+	const handleStartAssociation = useCallback((direction: AssociationDirection) => {
 		setIsAssociationMode(true);
 		setAssociationDirection(direction);
 		setAssociationTarget(null); // Start with no target
 		setSelectedAccessRights([]); // Reset to empty - user must select
+		setSelectedAssociationNode(null);
+		setSelectedAssociationDirection(direction);
 	}, []);
 
 	const handleCancelAssociation = useCallback(() => {
@@ -507,38 +442,57 @@ export function InfoPanel(props: InfoPanelProps) {
 		setSelectedAccessRights([]);
 	}, []);
 
+	const handleClearAssociationSelection = useCallback(() => {
+		setAssociationTarget(null);
+		setSelectedAccessRights([]);
+	}, []);
+
 	const handleSubmitAssociation = useCallback(async () => {
 		if (!props.rootNode.pmId || !associationTarget?.pmId || !associationDirection) {
 			return;
 		}
-		
+
 		try {
 			// Use the associate API to create associations
 			// For outgoing: root -> target, for incoming: target -> root
+			let updatedAssociations: TreeNode[] = [];
 			if (associationDirection === 'outgoing') {
 				await AdjudicationService.associate(props.rootNode.pmId, associationTarget.pmId, selectedAccessRights);
+				updatedAssociations = await fetchAssociationChildren(
+					props.rootNode.pmId,
+					{
+						nodeTypes: NODE_TYPES,
+						showIncomingAssociations: true,
+						showOutgoingAssociations: true,
+					},
+					props.rootNode.id
+				);
 			} else {
 				await AdjudicationService.associate(associationTarget.pmId, props.rootNode.pmId, selectedAccessRights);
+				updatedAssociations = await fetchAssociationChildren(
+					props.rootNode.pmId,
+					{
+						nodeTypes: NODE_TYPES,
+						showIncomingAssociations: true,
+						showOutgoingAssociations: true,
+					},
+					props.rootNode.id
+				);
 			}
+			setAssociationRootNodes(updatedAssociations);
+
+			notifications.show({
+				color: 'green',
+				title: 'Association Created',
+				message: `Association successfully created with ${associationDirection === 'outgoing' ? 'target' : 'source'} ${associationTarget.name}`,
+			});
 
 			// Reset association mode
 			setIsAssociationMode(false);
 			setAssociationTarget(null);
 			setAssociationDirection(null);
 			setSelectedAccessRights([]);
-			
-			// Refresh the associations tree
-			const updatedAssociations = await fetchAssociationChildren(
-				props.rootNode.pmId,
-				{
-					nodeTypes: NODE_TYPES,
-					showIncomingAssociations: true,
-					showOutgoingAssociations: true,
-				},
-				props.rootNode.id
-			);
-			setAssociationRootNodes(updatedAssociations);
-			
+
 		} catch (error) {
 			notifications.show({
 				color: 'red',
@@ -573,7 +527,7 @@ export function InfoPanel(props: InfoPanelProps) {
 		if (isAssignmentMode && props.selectedNodes && props.selectedNodes.length > 0) {
 			setAssignmentTargets(prev => {
 				// Add any new nodes that aren't already in the assignment targets
-				const newNodes = props.selectedNodes!.filter(selectedNode => 
+				const newNodes = props.selectedNodes!.filter(selectedNode =>
 					!prev.some(existingNode => existingNode.id === selectedNode.id)
 				);
 				return [...prev, ...newNodes];
@@ -593,11 +547,11 @@ export function InfoPanel(props: InfoPanelProps) {
 				// For outgoing associations, UA, OA, and O nodes are valid
 				allowedTypes = [NodeType.UA, NodeType.OA, NodeType.O];
 			}
-			
-			const validNode = props.selectedNodes.find(node => 
+
+			const validNode = props.selectedNodes.find(node =>
 				allowedTypes.includes(node.type as NodeType)
 			);
-			
+
 			if (validNode) {
 				setAssociationTarget(validNode);
 			}
@@ -641,6 +595,57 @@ export function InfoPanel(props: InfoPanelProps) {
 		fetchResourceOperations();
 	}, []);
 
+	const handleAssociationSelected = useCallback((node: NodeApi<TreeNode>[]) => {
+		if (isAssociationMode) {
+			return;
+		}
+		if (node && node.length > 0) {
+			const selectedNode = node[0].data as TreeNode;
+
+			if (!selectedNode.isAssociation) {
+				return
+			}
+
+			// Only update state if the selected node is actually different
+			setSelectedAssociationNode(prev => {
+				if (prev?.id === selectedNode.id) {
+					return prev; // Don't change state if same node is selected
+				}
+				return selectedNode;
+			});
+		} else {
+			setSelectedAssociationNode(null);
+		}
+	}, [isAssociationMode]);
+
+	const associationNodesForDirection = useMemo(
+		() => associationRootNodes.filter(node => node.associationDetails?.type === selectedAssociationDirection),
+		[associationRootNodes, selectedAssociationDirection]
+	);
+
+	// Memoize tree props to prevent unnecessary re-renders
+	const associationTreeProps = useMemo(() => ({
+		direction: "ascendants" as const,
+		rootNodes: associationNodesForDirection,
+		showToolbar: true,
+		filterConfig: {
+			nodeTypes: NODE_TYPES,
+			showIncomingAssociations: false,
+			showOutgoingAssociations: false,
+		},
+		clickHandlers: {
+			onSelect: handleAssociationSelected
+		}
+	}), [associationNodesForDirection, handleAssociationSelected]);
+
+	const creationDirection = associationDirection ? associationDirection as AssociationDirection : null;
+	const hasAssociationDetails = selectedAssociationNode?.associationDetails?.type === selectedAssociationDirection;
+	const activeAssociationNode = hasAssociationDetails ? selectedAssociationNode : null;
+	const isCreatingForSelectedDirection = creationDirection !== null && creationDirection === selectedAssociationDirection;
+	const showAssociationEmptyState = associationNodesForDirection.length === 0 && !isCreatingForSelectedDirection;
+	const isDetailsColumnVisible = Boolean(activeAssociationNode) || isAssociationMode;
+	const treeFlexValue = isDetailsColumnVisible ? '1 1 50%' : '1 1 100%';
+
 	return (
 		<Stack gap="md" style={{ padding: "0 16px 16px 16px", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 			<Box>
@@ -666,12 +671,12 @@ export function InfoPanel(props: InfoPanelProps) {
 					<Box style={{ flex: 0.4, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
 						{!isAssignmentMode ? (
 							<>
-								<Group gap="xs" align="baseline" mb="sm">
-									<Title order={5}>Descendants</Title>
+								<Group gap="xs" align="baseline" mb="xs">
+									<Title order={4}>Descendants</Title>
 									<Divider orientation="vertical" />
 									<Text size="sm" c="dimmed">Select a node from the tree to deassign</Text>
 								</Group>
-								<Box style={{ flex: 1, border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+								<Box style={{ flex: 1, backgroundColor: theme.other.intellijContentBg, border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 									<PMTree
 										key={`descendants-${descendantsNodes.length}-${descendantsNodes.map(n => n.id).join('-')}`}
 										direction="descendants"
@@ -687,42 +692,32 @@ export function InfoPanel(props: InfoPanelProps) {
 										}}
 									/>
 								</Box>
-								
+
 								{/* Action Buttons */}
 								<Group justify="center" mt="sm" mb="sm" gap="xs">
-									<ActionIcon
-										variant="filled"
-										size="md"
-										onClick={handleStartAssignment}
-										style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-									>
-										<Group gap="xs">
-											<Text size="sm" style={{ color: 'white' }}>Assign To</Text>
-										</Group>
-									</ActionIcon>
-									
+									<Button
+										leftSection={<IconArrowLeftCircle />}
+										onClick={() => handleStartAssignment()}>
+										Assign To
+									</Button>
+
 									{isSelectedNodeRoot && selectedDescendantNode && (
-										<ActionIcon
-											variant="filled"
+										<Button
+											leftSection={<IconX />}
 											color="red"
-											size="md"
-											onClick={handleDeassignSelected}
-											style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-										>
-											<Group gap="xs">
-												<Text size="sm" style={{ color: 'white' }}>Deassign From</Text>
-											</Group>
-										</ActionIcon>
+											onClick={handleDeassignSelected} >
+											Deassign From
+										</Button>
 									)}
 								</Group>
 							</>
 						) : (
 							<>
-								<Title order={5} mb="sm">Assign To</Title>
-								<Box style={{ 
+								<Title order={4} mb="sm">Assign To</Title>
+								<Box style={{
 									flex: 1,
-									border: '1px solid var(--mantine-color-gray-3)', 
-									borderRadius: '4px', 
+									border: '1px solid var(--mantine-color-gray-3)',
+									borderRadius: '4px',
 									padding: '12px',
 									backgroundColor: 'var(--mantine-color-gray-0)',
 									overflow: 'auto'
@@ -758,7 +753,7 @@ export function InfoPanel(props: InfoPanelProps) {
 										</Stack>
 									) : null}
 								</Box>
-								
+
 								{/* Submit/Cancel Buttons */}
 								<Group justify="center" mt="sm" mb="sm" gap="xs">
 									<ActionIcon
@@ -783,65 +778,209 @@ export function InfoPanel(props: InfoPanelProps) {
 					</Box>
 				)}
 
-				{/* Associations Tree Table */}
-				{props.rootNode.type !== "PC" && (
-					<Box style={{ flex: 0.6, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-						<Title order={5} mb="sm">Associations</Title>
-						
-						{/* Association Creation Buttons */}
-						{!isAssociationMode && (
-							<Group justify="flex-start" mb="sm" gap="xs">
-								{/* Create Outgoing - only available for UA nodes */}
-								{props.rootNode.type === NodeType.UA && (
-									<ActionIcon
-										variant="filled"
-										size="md"
-										onClick={() => handleStartAssociation('outgoing')}
-										style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-									>
-										<Center>
-											<Text size="sm" style={{ color: 'white' }}>Create Outgoing</Text>
-											<Space px={2}/>
-											<AssociationIcon size="20px" direction={AssociationDirection.Outgoing}/>
-										</Center>
-									</ActionIcon>
-								)}
-								
-								{/* Create Incoming - available for all non-PC nodes */}
-								<ActionIcon
-									variant="filled"
-									size="md"
-									onClick={() => handleStartAssociation('incoming')}
-									style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-								>
-									<Center>
-										<Text size="sm" style={{ color: 'white' }}>Create Incoming</Text>
-										<Space px={2}/>
-										<AssociationIcon size="20px" direction={AssociationDirection.Incoming}/>
-									</Center>
-								</ActionIcon>
+				<Divider orientation="horizontal" />
+
+				{/* Associations Tabs */}
+				{(props.rootNode.type !== "PC" && props.rootNode.type !== "U") && (
+					<Box style={{ flex: 0.6, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
+						<Group gap="xs" align="baseline" mb="xs">
+							<Title order={4} mb={0}>Associations</Title>
+						<Button.Group>
+							<Button
+								variant={selectedAssociationDirection === AssociationDirection.Incoming ? "filled" : "default"}
+								onClick={() => setSelectedAssociationDirection(AssociationDirection.Incoming)}
+								disabled={isAssociationMode}
+							>
+								Incoming
+							</Button>
+							<Button
+								variant={selectedAssociationDirection === AssociationDirection.Outgoing ? "filled" : "default"}
+								onClick={() => setSelectedAssociationDirection(AssociationDirection.Outgoing)}
+								disabled={isAssociationMode}
+							>
+								Outgoing
+							</Button>
+						</Button.Group>
+						</Group>
+
+						<Box
+							style={{
+								flex: 1,
+								minHeight: 0,
+								border: '1px solid var(--mantine-color-gray-3)',
+								borderRadius: '4px',
+								display: 'flex',
+								minWidth: 0,
+								height: '100%',
+								overflow: 'hidden'
+							}}
+						>
+							<Box
+								style={{
+									flex: treeFlexValue,
+									minWidth: 0,
+									minHeight: 0,
+									display: 'flex',
+									flexDirection: 'column',
+									backgroundColor: theme.other.intellijContentBg
+								}}
+							>
+								<Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+									{showAssociationEmptyState ? (
+										<Alert variant="light" color="gray">
+											<Text size="sm" c="dimmed">No {selectedAssociationDirection} associations</Text>
+										</Alert>
+									) : (
+										<PMTree {...associationTreeProps} />
+									)}
+								</Box>
+							</Box>
+
+							{isAssociationMode && creationDirection ? (
+								<AssociationCreationPanel
+									direction={creationDirection}
+									selectedNode={associationTarget}
+									selectedAccessRights={selectedAccessRights}
+									onRightsChange={setSelectedAccessRights}
+									resourceOperations={resourceOperations}
+									onSubmit={handleSubmitAssociation}
+									onCancel={handleCancelAssociation}
+									onClearSelection={handleClearAssociationSelection}
+									style={{
+										flex: '1 1 50%',
+										minWidth: 0,
+										padding: '1rem',
+										backgroundColor: 'var(--mantine-color-gray-0)',
+										borderLeft: '1px solid var(--mantine-color-gray-3)'
+									}}
+								/>
+							) : activeAssociationNode && (
+								<AssociationDetailsPanel
+									associationNode={activeAssociationNode}
+									rootNode={props.rootNode}
+									resourceOperations={resourceOperations}
+									onAssociationUpdated={handleAssociationUpdated}
+									onClose={() => setSelectedAssociationNode(null)}
+									style={{
+										flex: '1 1 50%',
+										minWidth: 0,
+										padding: '1rem',
+										backgroundColor: 'var(--mantine-color-gray-0)',
+										borderLeft: '1px solid var(--mantine-color-gray-3)'
+									}}
+								/>
+							)}
+						</Box>
+
+						{!isAssociationMode && (props.rootNode.type === NodeType.UA || props.rootNode.type === NodeType.OA || props.rootNode.type === NodeType.O) && (
+							<Group justify="center" style={{ paddingTop: '12px' }}>
+								<Button
+									leftSection={<IconPlus />}
+									onClick={() => handleStartAssociation(selectedAssociationDirection)}>
+									Create
+								</Button>
 							</Group>
 						)}
-						
-						<Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-							<AssociationsTreeTable
-								key={`associations-${associationRootNodes.length}-${associationRootNodes.map(n => n.id).join('-')}`}
-								associationTreeNodes={associationRootNodes}
-								onAssociationSelect={() => {}} // No-op since we don't need selection
-								isAssociationMode={isAssociationMode}
-								associationDirection={associationDirection}
-								associationTarget={associationTarget}
-								selectedAccessRights={selectedAccessRights}
-								resourceOperations={resourceOperations}
-								onRemoveAssociationTarget={handleRemoveAssociationTarget}
-								onSubmitAssociation={handleSubmitAssociation}
-								onCancelAssociation={handleCancelAssociation}
-								onAccessRightsChange={setSelectedAccessRights}
-								rootNode={props.rootNode}
-								onAssociationUpdated={handleAssociationUpdated}
-							/>
-						</Box>
-						
+
+						{/*<Tabs variant="default" defaultValue="incoming" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+							<Tabs.List>
+								<Tabs.Tab value="incoming">
+									<Text>Incoming ({associationRootNodes.filter(node => node.associationDetails?.type === AssociationDirection.Incoming).length})</Text>
+								</Tabs.Tab>
+								<Tabs.Tab value="outgoing">
+									<Text>Outgoing ({associationRootNodes.filter(node => node.associationDetails?.type === AssociationDirection.Outgoing).length})</Text>
+								</Tabs.Tab>
+							</Tabs.List>
+
+							<Tabs.Panel value="incoming" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0, padding: "4px 0" }}>
+								<Box style={{ flex: 1, minHeight: 0, display: 'flex', minWidth: 0 }}>
+									<Box
+										style={{
+											flex: 1,
+											minHeight: 0,
+											backgroundColor: theme.other.intellijContentBg,
+											border: '1px solid var(--mantine-color-gray-3)',
+											borderRadius: '4px',
+											display: 'flex',
+											flexDirection: 'column',
+											minWidth: 0 }}
+									>
+										{associationRootNodes.filter(node => node.associationDetails?.type === AssociationDirection.Incoming).length === 0 && !(isAssociationMode && associationDirection === 'incoming') ? (
+											<Alert variant="light" color="gray">
+												<Text size="sm" c="dimmed">No incoming associations</Text>
+											</Alert>
+										) : (
+											<PMTree
+												key={`incoming-tree-${associationTreeProps.rootNodes.map(n => n.id).join('-')}`}
+												{...associationTreeProps}
+											/>
+										)}
+									</Box>
+									{selectedAssociationNode && selectedAssociationNode.associationDetails?.type === AssociationDirection.Incoming && (
+										<AssociationDetailsPanel
+											associationNode={selectedAssociationNode}
+											rootNode={props.rootNode}
+											resourceOperations={resourceOperations}
+											onAssociationUpdated={handleAssociationUpdated}
+											onClose={() => setSelectedAssociationNode(null)}
+										/>
+									)}
+								</Box>
+								{!isAssociationMode && (props.rootNode.type === NodeType.UA || props.rootNode.type === NodeType.OA || props.rootNode.type === NodeType.O) && (
+									<Group justify="center" style={{ paddingTop: '12px' }}>
+										<Button
+											leftSection={<IconPlus />}
+											onClick={() => handleStartAssociation(AssociationDirection.Incoming)}>
+											Create
+										</Button>
+									</Group>
+								)}
+							</Tabs.Panel>
+
+							<Tabs.Panel value="outgoing" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingTop: '4px' }}>
+								<Box style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+									<Box
+										style={{
+											flex: 1,
+											minHeight: 0,
+											backgroundColor: theme.other.intellijContentBg,
+											border: '1px solid var(--mantine-color-gray-3)',
+											borderRadius: '4px',
+											display: 'flex',
+											flexDirection: 'column' }}
+									>
+										{associationRootNodes.filter(node => node.associationDetails?.type === AssociationDirection.Outgoing).length === 0 && !(isAssociationMode && associationDirection === 'outgoing') ? (
+											<Alert variant="light" color="gray">
+												<Text size="sm" c="dimmed">No outgoing associations</Text>
+											</Alert>
+										) : (
+											<PMTree
+												key={`outgoing-tree-${outgoingTreeProps.rootNodes.map(n => n.id).join('-')}`}
+												{...outgoingTreeProps}
+											/>
+										)}
+									</Box>
+									{selectedAssociationNode && selectedAssociationNode.associationDetails?.type === AssociationDirection.Outgoing && (
+										<AssociationDetailsPanel
+											associationNode={selectedAssociationNode}
+											rootNode={props.rootNode}
+											resourceOperations={resourceOperations}
+											onAssociationUpdated={handleAssociationUpdated}
+											onClose={() => setSelectedAssociationNode(null)}
+										/>
+									)}
+								</Box>
+								{!isAssociationMode && props.rootNode.type === NodeType.UA && (
+									<Group justify="center" mt="xs">
+										<Button
+											leftSection={<IconPlus />}
+											onClick={() => handleStartAssociation(AssociationDirection.Outgoing)}>
+											Create
+										</Button>
+									</Group>
+								)}
+							</Tabs.Panel>
+						</Tabs>*/}
 					</Box>
 				)}
 			</Box>

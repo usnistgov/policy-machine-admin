@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Checkbox, Stack, Text } from "@mantine/core";
+import {Box, Checkbox, Stack, Text, useMantineTheme} from "@mantine/core";
 
 // Admin access rights categorization
 const adminAccessRightsSections = {
@@ -96,9 +96,11 @@ interface AccessRightsSelectionProps {
 }
 
 export function AccessRightsSelection({ selectedRights, onRightsChange, resourceOperations, readOnly = false }: AccessRightsSelectionProps) {
+	const theme = useMantineTheme();
+
 	const handleRightToggle = (right: string) => {
 		if (readOnly) return;
-		
+
 		if (selectedRights.includes(right)) {
 			onRightsChange(selectedRights.filter(r => r !== right));
 		} else {
@@ -108,7 +110,12 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 
 	const renderSection = (sectionName: string, rights: string[]) => {
 		return (
-			<Box key={sectionName}>
+			<Box key={sectionName}
+			     style={{
+				     backgroundColor: theme.other.intellijContentBg,
+				     borderRadius: '4px',
+				     padding: '4px'
+			     }}>
 				<Text size="xs" fw={600} >
 					{sectionName.charAt(0).toUpperCase() + sectionName.slice(1)}
 				</Text>
