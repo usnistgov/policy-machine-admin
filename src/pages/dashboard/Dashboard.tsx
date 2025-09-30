@@ -342,7 +342,7 @@ export function Dashboard() {
 			>
 				<Stack gap="md">
 					{/* Parent Node Information */}
-					{rightClickedNode && (
+					{rightClickedNode && nodeTypeToCreate !== "PC" && (
 						<Group
 							gap="sm"
 							p="sm"

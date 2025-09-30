@@ -105,31 +105,58 @@ function transformAssociation(association: Model.Association): Association {
 // Helper function to convert arguments to ValueMap
 function argsToValueMap(args: Record<string, any>): Model.ValueMap {
   const valueMap: { [key: string]: Model.Value } = {};
-  
-  for (const [key, value] of Object.entries(args)) {
-    if (value !== undefined && value !== null && value !== '') {
-      if (typeof value === 'string') {
-        valueMap[key] = Model.Value.create({ stringValue: value });
-      } else if (typeof value === 'number') {
-        valueMap[key] = Model.Value.create({ int64Value: value.toString() });
-      } else if (typeof value === 'boolean') {
-        valueMap[key] = Model.Value.create({ boolValue: value });
-      } else if (Array.isArray(value)) {
-        const valueList = Model.ValueList.create({
-          values: value.map(v => 
-            typeof v === 'string' 
-              ? Model.Value.create({ stringValue: v })
-              : Model.Value.create({ stringValue: String(v) })
-          )
-        });
-        valueMap[key] = Model.Value.create({ listValue: valueList });
-      } else {
-        // For complex objects, convert to string
-        valueMap[key] = Model.Value.create({ stringValue: JSON.stringify(value) });
+
+  const toModelValue = (value: any): Model.Value | undefined => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (typeof value === 'string') {
+      return Model.Value.create({ stringValue: value });
+    }
+
+    if (typeof value === 'number') {
+      return Model.Value.create({ int64Value: value.toString() });
+    }
+
+    if (typeof value === 'boolean') {
+      return Model.Value.create({ boolValue: value });
+    }
+
+    if (Array.isArray(value)) {
+      const convertedItems = value
+        .map(item => toModelValue(item))
+        .filter((item): item is Model.Value => item !== undefined);
+
+      return Model.Value.create({
+        listValue: Model.ValueList.create({ values: convertedItems })
+      });
+    }
+
+    if (typeof value === 'object') {
+      const entries: Record<string, Model.Value> = {};
+      for (const [entryKey, entryValue] of Object.entries(value)) {
+        const converted = toModelValue(entryValue);
+        if (converted !== undefined) {
+          entries[String(entryKey)] = converted;
+        }
       }
+
+      return Model.Value.create({
+        mapValue: Model.ValueMap.create({ values: entries })
+      });
+    }
+
+    return Model.Value.create({ stringValue: String(value) });
+  };
+
+  for (const [key, rawValue] of Object.entries(args)) {
+    const converted = toModelValue(rawValue);
+    if (converted !== undefined) {
+      valueMap[key] = converted;
     }
   }
-  
+
   return Model.ValueMap.create({ values: valueMap });
 }
 

@@ -1,10 +1,10 @@
-import {ActionIcon, Center, Stack} from "@mantine/core";
-import {IconAutomation, IconBan, IconInfoSquareRounded} from "@tabler/icons-react";
+import { ActionIcon, Center, Stack } from "@mantine/core";
+import { IconAutomation, IconBan, IconFunction, IconInfoSquareRounded } from "@tabler/icons-react";
 import React from "react";
 import {InfoPanel} from "@/features/info/InfoPanel";
 import {ProhibitionsPanel, ProhibitionDetails} from "@/features/prohibitions";
 import {ObligationsPanel} from "@/features/obligations/ObligationsPanel";
-import {PMLEditor2Demo} from "@/features/pml2/PMLEditor2Demo";
+import { AdminFunctions } from "@/features/admin-functions";
 
 export enum RightPanelComponent {
 	NODE_INFO = 'NODE_INFO',
@@ -40,6 +40,11 @@ export function RightPanel({component, isExpanded, onComponentClick, selectedNod
 			component: RightPanelComponent.OBLIGATIONS,
 			icon: <IconAutomation size={24}/>,
 			title: "Obligations"
+		},
+		{
+			component: RightPanelComponent.ADMIN_FUNCTIONS,
+			icon: <IconFunction size={24}/>,
+			title: "Functions"
 		}
 	];
 
@@ -142,15 +147,6 @@ function renderComponent(component: RightPanelComponent | null, selectedNodeForI
 		default:
 			return <Center style={{ height: '100%' }}>Select a component</Center>;
 	}
-}
-
-
-function AdminFunctions() {
-	return (
-		<>
-			af
-		</>
-	)
 }
 
 function PMLEditor() {
