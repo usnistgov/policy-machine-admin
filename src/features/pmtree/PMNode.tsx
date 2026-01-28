@@ -34,11 +34,6 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 	const [filterConfig] = useAtom(filterConfigAtom);
 	const { toggleNodeWithData } = usePMTreeOperations(treeDataAtom, direction, filterConfig);
 
-	// Call the double click callback if provided
-	if (clickHandlers?.onDoubleClick) {
-		clickHandlers.onDoubleClick(node.data);
-	}
-
 	const handleExpansionClick = async (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();

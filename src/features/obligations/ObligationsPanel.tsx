@@ -177,11 +177,11 @@ export function ObligationsPanel() {
         <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <Box p="md" pb="sm">
-                <Group justify="space-between" mb="sm">
+                <Group mb="sm">
                     <Title order={4}>Obligations</Title>
                     <ActionIcon
                         variant="filled"
-                        color="blue"
+                        color="var(--mantine-primary-color-filled)"
                         onClick={handleCreateNew}
                         disabled={isCreatingNew}
                     >

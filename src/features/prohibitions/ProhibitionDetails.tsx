@@ -6,7 +6,6 @@ import {
   Group,
   Stack,
   TextInput,
-  Title,
   Text,
   Alert,
   ActionIcon,
@@ -108,8 +107,8 @@ export function ProhibitionDetails({
   useEffect(() => {
     async function fetchResourceOperations() {
       try {
-        const response = await QueryService.getResourceOperations();
-        setResourceOperations(response.values || []);
+        const accessRights = await QueryService.getResourceAccessRights();
+        setResourceOperations(accessRights);
       } catch (error) {
         setResourceOperations([]);
       }
@@ -175,7 +174,7 @@ export function ProhibitionDetails({
           node: {
             id: subject.pmId || subject.id,
             name: subject.name,
-            type: subject.type,
+            type: subject.type as NodeType,
             properties: {}
           }
         },
@@ -185,7 +184,7 @@ export function ProhibitionDetails({
           container: {
             id: cc.node.pmId || cc.node.id,
             name: cc.node.name,
-            type: cc.node.type,
+            type: cc.node.type as NodeType,
             properties: {}
           },
           complement: cc.isComplement
@@ -223,7 +222,7 @@ export function ProhibitionDetails({
   }, [name, subject, selectedAccessRights, intersection, containerConditions, isEditing, onSuccess]);
 
   const handleDelete = useCallback(async () => {
-    if (!initialProhibition?.name) return;
+    if (!initialProhibition?.name) {return;}
 
     setIsSubmitting(true);
 

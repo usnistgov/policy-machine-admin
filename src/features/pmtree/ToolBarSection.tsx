@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stack, Text, Center } from '@mantine/core';
+import { Stack, Text, Box } from '@mantine/core';
 
 export interface ToolBarSectionProps {
 	title: string;
@@ -9,13 +9,13 @@ export interface ToolBarSectionProps {
 
 export function ToolBarSection({ title, children, contentHeight = 30 }: ToolBarSectionProps) {
 	return (
-		<Stack gap={2}>
+		<Stack gap={2} align="flex-start">
 			<Text size="xs" c="dimmed" fw={500}>
 				{title}
 			</Text>
-			<Center style={{ height: contentHeight }}>
+			<Box style={{ height: contentHeight, display: 'flex', alignItems: 'center' }}>
 				{children}
-			</Center>
+			</Box>
 		</Stack>
 	);
 }

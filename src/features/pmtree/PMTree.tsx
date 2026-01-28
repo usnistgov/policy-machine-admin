@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {IconCircleArrowDownLeft, IconCircleArrowUpLeft, IconCircleArrowUpRight, IconAlertCircle, IconRefresh} from '@tabler/icons-react';
+import { IconAlertCircle, IconRefresh } from '@tabler/icons-react';
 import { atom, useAtom } from 'jotai';
-import {NodeApi, NodeRendererProps, Tree, TreeApi} from 'react-arborist';
-import { Divider, Group, Text, Loader, Alert, Button, Center, Stack } from '@mantine/core';
+import { NodeApi, NodeRendererProps, Tree, TreeApi } from 'react-arborist';
+import { Alert, Button, Center, Stack } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
-    AssociationDirection,
     INDENT_NUM,
     transformNodesToTreeNodes,
     TreeNode,
@@ -14,9 +13,8 @@ import { NodeType, QueryService } from '@/shared/api/pdp.api';
 import { withCriticalRetry } from '@/lib/retry-utils';
 import { TreeDirection, TreeFilterConfig } from './hooks/usePMTreeOperations';
 import { PMNode } from './PMNode';
-import { ToolBarSection } from './ToolBarSection';
-import { TreeFilterToolbar } from './TreeFilterToolbar';
-import {FillFlexParent} from "./fill-flex-parent";
+import { PMTreeToolbar } from './PMTreeToolbar';
+import { FillFlexParent } from "./fill-flex-parent";
 import "./pmtree.module.css";
 
 
@@ -44,10 +42,14 @@ export interface PMTreeProps {
     rowHeight?: number;
     overscanCount?: number;
 
-    // Built-in filter toolbar
-    showToolbar?: boolean;
+    // Toolbar visibility controls
+    showReset?: boolean;
+    showCreatePolicyClass?: boolean;
+    showTreeFilters?: boolean;
+    showDirection?: boolean;
+    onCreatePolicyClass?: () => void;
 
-    // Custom toolbar sections (similar to Mantine Button sections)
+    // Custom toolbar sections
     leftToolbarSection?: React.ReactNode;
     rightToolbarSection?: React.ReactNode;
 }
@@ -74,7 +76,7 @@ export function PMTree(props: PMTreeProps) {
     const [posNodes, setPOSNodes] = useState<TreeNode[]>([]);
     const [initialError, setInitialError] = useState<string | null>(null);
 
-    // Internal filter state (used when showFilterToolbar is true)
+    // Internal filter state
     const [internalFilters, setInternalFiltersState] = useState<TreeFilterConfig>(
         props.filterConfig || {
             nodeTypes: [NodeType.PC, NodeType.UA, NodeType.OA, NodeType.U, NodeType.O],
@@ -104,9 +106,9 @@ export function PMTree(props: PMTreeProps) {
 
     const loadPOSNodes = useCallback(async () => {
         if (props.rootNodes !== undefined) return;
-        
+
         setInitialError(null);
-        
+
         try {
             // Only load POS if no rootNodes prop is provided at all
             const response = await withCriticalRetry(() => QueryService.selfComputePersonalObjectSystem());
@@ -122,7 +124,7 @@ export function PMTree(props: PMTreeProps) {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
             setInitialError(errorMessage);
-            
+
             notifications.show({
                 color: 'red',
                 title: 'Failed to Load Policy Data',
@@ -171,65 +173,50 @@ export function PMTree(props: PMTreeProps) {
         [props.direction, treeDataAtom, filterConfigAtom, props.clickHandlers]
     );
 
-    // Create internal toolbar with sections
-    const shouldShowFilterToolbar = props.showToolbar ?? true;
-    const directionLabel = props.direction === 'descendants' ? 'Descendants' : 'Ascendants';
-    const hasLeftSection = !!props.leftToolbarSection;
-    const hasRightSection = !!props.rightToolbarSection;
-    const hasFilterToolbar = shouldShowFilterToolbar;
-    const showAnyToolbar = hasLeftSection || hasRightSection || hasFilterToolbar;
+    // Determine if toolbar should be shown (if any section is visible)
+    const showReset = props.showReset ?? true;
+    const showCreatePolicyClass = props.showCreatePolicyClass ?? false;
+    const showTreeFilters = props.showTreeFilters ?? true;
+    const showDirection = props.showDirection ?? true;
+    const showAnyToolbar = showReset || showCreatePolicyClass || showTreeFilters || showDirection ||
+        props.leftToolbarSection || props.rightToolbarSection;
+
+    // Reset handler - reloads data and closes all nodes
+    const handleReset = useCallback(() => {
+        // Reload data
+        if (props.rootNodes !== undefined) {
+            // If using external rootNodes, just reset to original
+            setTreeData(props.rootNodes);
+        } else {
+            // Reload POS nodes from server
+            loadPOSNodes();
+        }
+
+        // Close all nodes in the tree
+        treeApi?.closeAll();
+    }, [props.rootNodes, setTreeData, loadPOSNodes, treeApi]);
 
     const internalToolbar = showAnyToolbar && (
-        <Group
-            gap="md"
-            justify="space-between"
-            style={{
-                borderBottom: '1px solid var(--mantine-color-gray-3)',
-                padding: '2px 8px',
-                height: '60px',
-            }}
-        >
-            {/* Left section */}
-            <Group gap="md">
-                {hasLeftSection && (
-                    <>
-                        {props.leftToolbarSection}
-                        <Divider orientation="vertical" />
-                    </>
-                )}
-                {hasFilterToolbar && (
-                    <>
-                        <ToolBarSection title="Tree Filters">
-                            <TreeFilterToolbar
-                                filters={internalFilters}
-                                onFiltersChange={setInternalFilters}
-                            />
-                        </ToolBarSection>
-                        <Divider orientation="vertical" />
-                        <ToolBarSection title="Direction">
-                            <Group gap={0}>
-                                {props.direction === 'ascendants' ? (
-                                    <IconCircleArrowUpRight />
-                                ) : (
-                                    <IconCircleArrowDownLeft />
-                                )}
-                                <Text size="xs">{directionLabel}</Text>
-                            </Group>
-                        </ToolBarSection>
-                    </>
-                )}
-            </Group>
-
-            {/* Right section */}
-            {hasRightSection && <Group gap="md">{props.rightToolbarSection}</Group>}
-        </Group>
+        <PMTreeToolbar
+            showReset={showReset}
+            showCreatePolicyClass={showCreatePolicyClass}
+            showTreeFilters={showTreeFilters}
+            showDirection={showDirection}
+            direction={props.direction || 'ascendants'}
+            filters={internalFilters}
+            onFiltersChange={setInternalFilters}
+            onReset={handleReset}
+            onCreatePolicyClass={props.onCreatePolicyClass}
+            leftSection={props.leftToolbarSection}
+            rightSection={props.rightToolbarSection}
+        />
     );
 
     return (
         <>
             <div style={{
                 height: '100%',
-                display:"flex",
+                display: "flex",
                 flexDirection: "column",
             }}>
                 <div style={{
@@ -253,15 +240,15 @@ export function PMTree(props: PMTreeProps) {
                                     return (
                                         <Center style={{ width, height }}>
                                             <Stack align="center" gap="md" maw={400}>
-                                                <Alert 
-                                                    icon={<IconAlertCircle size={16} />} 
-                                                    title="Failed to Load Data" 
+                                                <Alert
+                                                    icon={<IconAlertCircle size={16} />}
+                                                    title="Failed to Load Data"
                                                     color="red"
                                                     variant="light"
                                                 >
                                                     {initialError}
                                                 </Alert>
-                                                <Button 
+                                                <Button
                                                     leftSection={<IconRefresh size={16} />}
                                                     variant="light"
                                                     onClick={loadPOSNodes}
@@ -272,7 +259,7 @@ export function PMTree(props: PMTreeProps) {
                                         </Center>
                                     );
                                 }
-                                
+
                                 return (
                                     <Tree
                                         ref={handleTreeApiRef}

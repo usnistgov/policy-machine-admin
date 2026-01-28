@@ -1,17 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Accordion,
   ActionIcon,
   Box,
   Button,
   Center,
-  Divider,
+  Code,
   Group,
   Loader,
   NumberInput,
   ScrollArea,
-  SegmentedControl,
-  Select,
   Stack,
   Switch,
   Text,
@@ -20,84 +18,277 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconFunction, IconPlus, IconX } from "@tabler/icons-react";
+import { IconFunction, IconPlus, IconRefresh, IconTrash, IconX } from "@tabler/icons-react";
 import {
   AdjudicationService,
   ParamType,
   QueryService,
   Signature,
 } from "@/shared/api/pdp.api";
+import { PMLEditor } from "@/features/pml/PMLEditor";
 
-type FunctionMode = "operation" | "routine";
+type OperationType = "admin" | "resource" | "query" | "routine" | "function";
 
 interface MapEntryValue {
   key: any;
   value: any;
 }
 
-export function AdminFunctions() {
-  const [mode, setMode] = useState<FunctionMode>("operation");
-  const [signatures, setSignatures] = useState<Signature[]>([]);
-  const [selectedName, setSelectedName] = useState<string | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+// Helper function to unwrap protobuf Value message
+function unwrapValue(value: any): any {
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
 
-  const selectedSignature = useMemo(() => {
-    return signatures.find((signature) => signature.name === selectedName) ?? null;
-  }, [signatures, selectedName]);
-
-  useEffect(() => {
-    let isMounted = true;
-    async function loadSignatures() {
-      setLoading(true);
-      try {
-        const response =
-            mode === "operation"
-                ? await QueryService.getAdminOperationNames()
-                : await QueryService.getAdminRoutineNames();
-        if (!isMounted) {
-          return;
-        }
-        const list = response?.signatures ?? [];
-        setSignatures(list);
-        setSelectedName(list.length > 0 ? list[0].name ?? null : null);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-        notifications.show({
-          color: "red",
-          title: "Failed to load signatures",
-          message: (error as Error).message,
-        });
-        setSignatures([]);
-        setSelectedName(null);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+  // Check which oneof field is set and return its value
+  if (value.stringValue !== undefined && value.stringValue !== null) {
+    return value.stringValue;
+  }
+  if (value.int64Value !== undefined && value.int64Value !== null) {
+    return value.int64Value;
+  }
+  if (value.boolValue !== undefined && value.boolValue !== null) {
+    return value.boolValue;
+  }
+  if (value.listValue !== undefined && value.listValue !== null) {
+    // Recursively unwrap list elements
+    if (Array.isArray(value.listValue.values)) {
+      return value.listValue.values.map(unwrapValue);
     }
+    return value.listValue;
+  }
+  if (value.mapValue !== undefined && value.mapValue !== null) {
+    // Recursively unwrap map values
+    if (value.mapValue.values && typeof value.mapValue.values === 'object') {
+      const unwrapped: Record<string, any> = {};
+      for (const [key, val] of Object.entries(value.mapValue.values)) {
+        unwrapped[key] = unwrapValue(val);
+      }
+      return unwrapped;
+    }
+    return value.mapValue;
+  }
 
-    loadSignatures();
-    return () => {
-      isMounted = false;
-    };
+  // If no oneof field is set or recognized, return the value as-is
+  return value;
+}
+
+interface OperationsProps {
+  initialMode?: OperationType;
+}
+
+export function Operations({ initialMode = "admin" }: OperationsProps) {
+  const [mode, setMode] = useState<OperationType>(initialMode);
+  const [signatures, setSignatures] = useState<Signature[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [accordionValue, setAccordionValue] = useState<string | null>(null);
+
+  // Update mode when initialMode prop changes
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
+  const loadSignatures = useCallback(async () => {
+    setLoading(true);
+    try {
+      let list: Signature[];
+      switch (mode) {
+        case "admin":
+          list = await QueryService.getAdminOperationSignatures();
+          break;
+        case "resource":
+          list = await QueryService.getResourceOperationSignatures();
+          break;
+        case "query":
+          list = await QueryService.getQuerySignatures();
+          break;
+        case "routine":
+          list = await QueryService.getRoutineSignatures();
+          break;
+        case "function":
+          list = await QueryService.getFunctionSignatures();
+          break;
+        default:
+          list = [];
+      }
+      setSignatures(list);
+    } catch (error) {
+      notifications.show({
+        color: "red",
+        title: "Failed to load signatures",
+        message: (error as Error).message,
+      });
+      setSignatures([]);
+    } finally {
+      setLoading(false);
+    }
   }, [mode]);
 
   useEffect(() => {
-    if (!selectedSignature) {
-      setFormValues({});
-      return;
-    }
+    loadSignatures();
+  }, [loadSignatures]);
 
+  const getOperationTypeLabel = useCallback((type: OperationType): string => {
+    switch (type) {
+      case "admin": return "Admin Operations";
+      case "resource": return "Resource Operations";
+      case "query": return "Queries";
+      case "routine": return "Routines";
+      case "function": return "Functions";
+      default: return "Operations";
+    }
+  }, []);
+
+  const handleCreateNew = () => {
+    setIsCreatingNew(true);
+    setAccordionValue("create-new");
+  };
+
+  const handleAccordionChange = (value: string | null) => {
+    setAccordionValue(value);
+    if (value !== "create-new" && isCreatingNew) {
+      setIsCreatingNew(false);
+    }
+  };
+
+  const handleCreateOperation = useCallback(async (pml: string) => {
+    try {
+      // Execute the PML
+      await AdjudicationService.executePML(pml);
+
+      // Wait a moment for the backend to process and make the operation available
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Reload signatures to include the newly created operation
+      await loadSignatures();
+
+      // Reset creation state after successful reload
+      setIsCreatingNew(false);
+      setAccordionValue(null);
+
+      notifications.show({
+        color: 'green',
+        title: `${getOperationTypeLabel(mode).slice(0, -1)} Created`,
+        message: `${getOperationTypeLabel(mode).slice(0, -1)} has been created successfully`,
+      });
+    } catch (error) {
+      throw error; // Let PMLEditor handle the error display
+    }
+  }, [mode, loadSignatures]);
+
+  return (
+      <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <Box p="md" pb="sm">
+          <Group mb="sm">
+            <Title order={4}>{getOperationTypeLabel(mode)}</Title>
+            <Group gap="xs">
+              <ActionIcon
+                variant="filled"
+                color="var(--mantine-primary-color-filled)"
+                onClick={loadSignatures}
+                disabled={loading}
+              >
+                <IconRefresh size={20} />
+              </ActionIcon>
+              <ActionIcon
+                variant="filled"
+                color="var(--mantine-primary-color-filled)"
+                onClick={handleCreateNew}
+                disabled={isCreatingNew}
+              >
+                <IconPlus size={20} />
+              </ActionIcon>
+            </Group>
+          </Group>
+        </Box>
+
+        {/* Content */}
+        <Box style={{ flex: 1, overflowY: 'auto', paddingLeft: '16px', paddingRight: '16px' }}>
+          {loading ? (
+            <Center style={{ height: '100%' }}>
+              <Loader size="sm" />
+            </Center>
+          ) : (
+            <Accordion
+              value={accordionValue}
+              onChange={handleAccordionChange}
+              variant="contained"
+              radius="md"
+              chevronPosition="left"
+            >
+              {/* Create New Operation Accordion Item */}
+              {isCreatingNew && (
+                <Accordion.Item key="create-new" value="create-new">
+                  <Accordion.Control>
+                    <Group gap="xs">
+                      <IconPlus size={16} />
+                      <Text fw={500}>Create New {getOperationTypeLabel(mode).slice(0, -1)}</Text>
+                    </Group>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    <PMLEditor
+                      onExecute={handleCreateOperation}
+                      containerHeight={400}
+                      autoFocus={true}
+                    />
+                  </Accordion.Panel>
+                </Accordion.Item>
+              )}
+
+              {/* Existing Operations */}
+              {signatures.length === 0 && !isCreatingNew ? (
+                <Center style={{ padding: '2rem' }}>
+                  <Text size="sm" c="dimmed">
+                    No {getOperationTypeLabel(mode).toLowerCase()} available.
+                  </Text>
+                </Center>
+              ) : null}
+
+              {signatures.map((signature) => (
+                <Accordion.Item key={signature.name} value={signature.name || ""}>
+                  <Accordion.Control>
+                    <Text fw={500}>{signature.name || "(unnamed)"}</Text>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    <OperationDetails
+                      signature={signature}
+                      mode={mode}
+                      getOperationTypeLabel={getOperationTypeLabel}
+                      onDelete={loadSignatures}
+                    />
+                  </Accordion.Panel>
+                </Accordion.Item>
+              ))}
+            </Accordion>
+          )}
+        </Box>
+      </Box>
+  );
+}
+
+interface OperationDetailsProps {
+  signature: Signature;
+  mode: OperationType;
+  getOperationTypeLabel: (type: OperationType) => string;
+  onDelete: () => void;
+}
+
+function OperationDetails({ signature, mode, getOperationTypeLabel, onDelete }: OperationDetailsProps) {
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [returnValue, setReturnValue] = useState<any>(null);
+
+  useEffect(() => {
     const nextValues: Record<string, any> = {};
-    for (const param of selectedSignature.params ?? []) {
+    for (const param of signature.params ?? []) {
       nextValues[param.name] = createDefaultValueForParamType(param.type);
     }
     setFormValues(nextValues);
-  }, [selectedSignature]);
+    setReturnValue(null); // Clear return value when signature changes
+  }, [signature]);
 
   const handleParamChange = (paramName: string, value: any) => {
     setFormValues((prev) => ({
@@ -107,17 +298,17 @@ export function AdminFunctions() {
   };
 
   const handleExecute = async () => {
-    if (!selectedSignature || !selectedSignature.name) {
+    if (!signature.name) {
       notifications.show({
         color: "red",
-        title: "No function selected",
-        message: "Select an admin operation or routine before executing.",
+        title: "No operation selected",
+        message: "Select an operation before executing.",
       });
       return;
     }
 
     const args: Record<string, any> = {};
-    for (const param of selectedSignature.params ?? []) {
+    for (const param of signature.params ?? []) {
       const conversion = convertValueForSubmission(
           param.name,
           param.type,
@@ -138,17 +329,23 @@ export function AdminFunctions() {
 
     setSubmitting(true);
     try {
-      if (mode === "operation") {
-        await AdjudicationService.genericAdminCmd(selectedSignature.name, args);
+      const response = await AdjudicationService.adjudicateOperation(signature.name, args);
+
+      // Store return value if present, unwrapping the protobuf Value structure
+      if (response?.value !== undefined && response?.value !== null) {
+        const unwrapped = unwrapValue(response.value);
+        setReturnValue(unwrapped);
       } else {
-        await AdjudicationService.genericRoutineCmd(selectedSignature.name, args);
+        setReturnValue(null);
       }
+
       notifications.show({
         color: "green",
         title: "Execution succeeded",
-        message: `${mode === "operation" ? "Operation" : "Routine"} "${selectedSignature.name}" executed successfully.`,
+        message: `${mode.charAt(0).toUpperCase() + mode.slice(1)} operation "${signature.name}" executed successfully.`,
       });
     } catch (error) {
+      setReturnValue(null);
       notifications.show({
         color: "red",
         title: "Execution failed",
@@ -159,107 +356,138 @@ export function AdminFunctions() {
     }
   };
 
-  const selectOptions = useMemo(
-      () =>
-          signatures.map((signature) => ({
-            value: signature.name ?? "",
-            label: signature.name ?? "(unnamed)",
-          })),
-      [signatures],
-  );
+  const handleDelete = async () => {
+    if (!signature.name) {
+      notifications.show({
+        color: "red",
+        title: "No operation selected",
+        message: "Select an operation before deleting.",
+      });
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await AdjudicationService.deleteAdminOperation(signature.name);
+
+      notifications.show({
+        color: "green",
+        title: "Operation Deleted",
+        message: `${getOperationTypeLabel(mode).slice(0, -1)} "${signature.name}" has been deleted successfully.`,
+      });
+
+      // Reload the signatures list
+      onDelete();
+    } catch (error) {
+      notifications.show({
+        color: "red",
+        title: "Delete failed",
+        message: (error as Error).message,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
-      <Stack gap="md" p="md" style={{ height: "100%" }}>
-        <Group justify="space-between" align="center">
-          <Title order={4}>Admin Functions</Title>
-          <SegmentedControl
-              size="sm"
-              value={mode}
-              onChange={(value) => setMode(value as FunctionMode)}
-              data={[
-                { label: "Operations", value: "operation" },
-                { label: "Routines", value: "routine" },
-              ]}
-          />
-        </Group>
-
-        {loading ? (
-            <Center style={{ flex: 1 }}>
-              <Loader size="sm" />
-            </Center>
-        ) : signatures.length === 0 ? (
-            <Center style={{ flex: 1 }}>
-              <Text size="sm" c="dimmed">
-                No {mode === "operation" ? "operations" : "routines"} available.
-              </Text>
-            </Center>
-        ) : (
-            <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
-              <Title order={5}>{mode === "operation" ? "Operation" : "Routine"}</Title>
-              <Select
-                  data={selectOptions}
-                  value={selectedName ?? ""}
-                  onChange={(value) => setSelectedName(value)}
-              />
-              <Title order={5}>Parameters</Title>
-              <ScrollArea style={{ flex: 1 }}>
-                {selectedSignature && (selectedSignature.params?.length ?? 0) > 0 ? (
-                    <Accordion
-                        chevronPosition="left"
-                        variant="contained"
-                        multiple
-                        defaultValue={selectedSignature.params?.map((param, index) =>
-                            param.name && param.name.length > 0 ? param.name : `param-${index}`
+    <Stack gap="sm">
+      {(signature.params?.length ?? 0) > 0 ? (
+        <>
+          <Title order={5}>Parameters</Title>
+          <ScrollArea style={{ maxHeight: 400 }}>
+            <Accordion
+              chevronPosition="left"
+              variant="contained"
+              multiple
+              defaultValue={signature.params?.map((param, index) =>
+                param.name && param.name.length > 0 ? param.name : `param-${index}`
+              )}
+            >
+              {signature.params?.map((param, index) => {
+                const itemValue = param.name && param.name.length > 0 ? param.name : `param-${index}`;
+                const displayName = param.name && param.name.length > 0 ? param.name : `Parameter ${index + 1}`;
+                const typeLabel = formatParamTypeLabel(param.type ?? undefined);
+                const hasReqCaps = param.reqCaps && param.reqCaps.values && param.reqCaps.values.length > 0;
+                return (
+                  <Accordion.Item key={itemValue} value={itemValue}>
+                    <Accordion.Control>
+                      <Stack gap={2}>
+                        <Group gap="xs" align="center">
+                          <Title order={6}>{displayName}</Title>
+                          <Text size="xs" c="dimmed">
+                            ({typeLabel})
+                          </Text>
+                        </Group>
+                        {hasReqCaps && (
+                          <Text size="xs" c="blue" fw={500}>
+                            Required capabilities: {param.reqCaps!.values.join(', ')}
+                          </Text>
                         )}
-                    >
-                      {selectedSignature.params?.map((param, index) => {
-                        const itemValue = param.name && param.name.length > 0 ? param.name : `param-${index}`;
-                        const displayName = param.name && param.name.length > 0 ? param.name : `Parameter ${index + 1}`;
-                        const typeLabel = formatParamTypeLabel(param.type ?? undefined);
-                        return (
-                            <Accordion.Item key={itemValue} value={itemValue}>
-                              <Accordion.Control>
-                                <Group gap="xs" align="center">
-                                  <Title order={6}>{displayName}</Title>
-                                  <Text size="xs" c="dimmed">
-                                    ({typeLabel})
-                                  </Text>
-                                </Group>
-                              </Accordion.Control>
-                              <Accordion.Panel>
-                                <Box>
-                                  <ParamField
-                                      name={displayName}
-                                      type={param.type}
-                                      value={formValues[param.name]}
-                                      onChange={(value) => handleParamChange(param.name, value)}
-                                  />
-                                </Box>
-                              </Accordion.Panel>
-                            </Accordion.Item>
-                        );
-                      })}
-                    </Accordion>
-                ) : (
-                    <Box py="sm">
-                      <Text size="sm" c="dimmed">
-                        This {mode === "operation" ? "operation" : "routine"} has no parameters.
-                      </Text>
-                    </Box>
-                )}
-              </ScrollArea>
-              <Group justify="flex-end">
-                <Button
-                    leftSection={<IconFunction size={16} />}
-                    onClick={handleExecute}
-                    loading={submitting}
-                >
-                  Execute
-                </Button>
-              </Group>
-            </Stack>
-        )}
-      </Stack>
+                      </Stack>
+                    </Accordion.Control>
+                    <Accordion.Panel>
+                      <Box>
+                        <ParamField
+                          name={param.name}
+                          type={param.type}
+                          value={formValues[param.name]}
+                          onChange={(value) => handleParamChange(param.name, value)}
+                        />
+                      </Box>
+                    </Accordion.Panel>
+                  </Accordion.Item>
+                );
+              })}
+            </Accordion>
+          </ScrollArea>
+        </>
+      ) : (
+        <Box py="sm">
+          <Text size="sm" c="dimmed">
+            This {getOperationTypeLabel(mode).toLowerCase().replace(/s$/, '')} has no parameters.
+          </Text>
+        </Box>
+      )}
+      <Group justify="flex-end">
+        <Button
+          leftSection={<IconTrash size={16} />}
+          onClick={handleDelete}
+          loading={deleting}
+          disabled={submitting}
+          color="red"
+          variant="outline"
+        >
+          Delete
+        </Button>
+        <Button
+          leftSection={<IconFunction size={16} />}
+          onClick={handleExecute}
+          loading={submitting}
+          disabled={deleting}
+        >
+          Execute
+        </Button>
+      </Group>
+
+      {/* Display return value if present */}
+      {returnValue !== null && returnValue !== undefined && (
+        <Box mt="md" p="md" style={{
+          border: '1px solid var(--mantine-color-gray-3)',
+          borderRadius: '4px',
+          backgroundColor: 'var(--mantine-color-gray-0)'
+        }}>
+          <Title order={6} mb="xs">Return Value</Title>
+          <Code block style={{
+            maxHeight: '300px',
+            overflow: 'auto',
+            fontSize: '12px',
+            whiteSpace: 'pre-wrap'
+          }}>
+            {JSON.stringify(returnValue, null, 2)}
+          </Code>
+        </Box>
+      )}
+    </Stack>
   );
 }
 

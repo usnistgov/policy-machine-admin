@@ -1,18 +1,30 @@
 import { ActionIcon, Center, Stack } from "@mantine/core";
-import { IconAutomation, IconBan, IconFunction, IconInfoSquareRounded } from "@tabler/icons-react";
+import {
+	IconBan,
+	IconCalendarCode,
+	IconInfoSquareRounded
+} from "@tabler/icons-react";
 import React from "react";
 import {InfoPanel} from "@/features/info/InfoPanel";
 import {ProhibitionsPanel, ProhibitionDetails} from "@/features/prohibitions";
 import {ObligationsPanel} from "@/features/obligations/ObligationsPanel";
-import { AdminFunctions } from "@/features/admin-functions";
+import { Operations } from "@/features/operations";
+import {AdminOperationIcon} from "@/components/icons/AdminOperationIcon";
+import {ResourceOperationIcon} from "@/components/icons/ResourceOperationIcon";
+import {QueryOperationIcon} from "@/components/icons/QueryOperationIcon";
+import {RoutineIcon} from "@/components/icons/RoutineIcon";
+import {FunctionIcon} from "@/components/icons/FunctionIcon";
 
 export enum RightPanelComponent {
 	NODE_INFO = 'NODE_INFO',
 	PROHIBITIONS = 'PROHIBITIONS',
 	CREATE_PROHIBITION = 'CREATE_PROHIBITION',
 	OBLIGATIONS = 'OBLIGATIONS',
-	ADMIN_FUNCTIONS = 'ADMIN_FUNCTIONS',
-	PML_EDITOR = 'PML_EDITOR',
+	ADMIN_OPERATIONS = 'ADMIN_OPERATIONS',
+	RESOURCE_OPERATIONS = 'RESOURCE_OPERATIONS',
+	QUERIES = 'QUERIES',
+	ROUTINES = 'ROUTINES',
+	FUNCTIONS = 'FUNCTIONS',
 }
 
 export type RightPanelProps = {
@@ -38,12 +50,32 @@ export function RightPanel({component, isExpanded, onComponentClick, selectedNod
 		},
 		{
 			component: RightPanelComponent.OBLIGATIONS,
-			icon: <IconAutomation size={24}/>,
+			icon: <IconCalendarCode size={24}/>,
 			title: "Obligations"
 		},
 		{
-			component: RightPanelComponent.ADMIN_FUNCTIONS,
-			icon: <IconFunction size={24}/>,
+			component: RightPanelComponent.ADMIN_OPERATIONS,
+			icon: <AdminOperationIcon size={24}/>,
+			title: "Admin Operations"
+		},
+		{
+			component: RightPanelComponent.RESOURCE_OPERATIONS,
+			icon: <ResourceOperationIcon size={24}/>,
+			title: "Resource Operations"
+		},
+		{
+			component: RightPanelComponent.QUERIES,
+			icon: <QueryOperationIcon size={24}/>,
+			title: "Queries"
+		},
+		{
+			component: RightPanelComponent.ROUTINES,
+			icon: <RoutineIcon size={24}/>,
+			title: "Routines"
+		},
+		{
+			component: RightPanelComponent.FUNCTIONS,
+			icon: <FunctionIcon size={24}/>,
 			title: "Functions"
 		}
 	];
@@ -66,7 +98,13 @@ export function RightPanel({component, isExpanded, onComponentClick, selectedNod
 						title={title}
 					>
 						{React.cloneElement(icon, {
-							color: component === btnComponent ? "white" : "var(--mantine-primary-color-filled)"
+							color: component === btnComponent ? "white" : "var(--mantine-primary-color-filled)",
+							...(icon.type !== IconInfoSquareRounded &&
+								icon.type !== IconBan &&
+								icon.type !== IconCalendarCode && {
+								filled: component === btnComponent,
+								fillColor: "var(--mantine-primary-color-filled)"
+							})
 						})}
 					</ActionIcon>
 				</Center>
@@ -140,19 +178,17 @@ function renderComponent(component: RightPanelComponent | null, selectedNodeForI
 			);
 		case RightPanelComponent.OBLIGATIONS:
 			return <ObligationsPanel />;
-		case RightPanelComponent.ADMIN_FUNCTIONS:
-			return <AdminFunctions />;
-		case RightPanelComponent.PML_EDITOR:
-			return <PMLEditor />;
+		case RightPanelComponent.ADMIN_OPERATIONS:
+			return <Operations initialMode="admin" />;
+		case RightPanelComponent.RESOURCE_OPERATIONS:
+			return <Operations initialMode="resource" />;
+		case RightPanelComponent.QUERIES:
+			return <Operations initialMode="query" />;
+		case RightPanelComponent.ROUTINES:
+			return <Operations initialMode="routine" />;
+		case RightPanelComponent.FUNCTIONS:
+			return <Operations initialMode="function" />;
 		default:
 			return <Center style={{ height: '100%' }}>Select a component</Center>;
 	}
-}
-
-function PMLEditor() {
-	return (
-		<>
-			pml
-		</>
-	)
 }

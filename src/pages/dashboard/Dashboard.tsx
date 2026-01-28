@@ -32,7 +32,6 @@ export function Dashboard() {
 	const [createNodeModalOpened, setCreateNodeModalOpened] = useState(false);
 	const [nodeTypeToCreate, setNodeTypeToCreate] = useState<NodeType | null>(null);
 	const [newNodeName, setNewNodeName] = useState('');
-	const [policyClassModalOpened, setPolicyClassModalOpened] = useState(false);
 
 	// Main dashboard tree filter configuration - PMTree now manages this internally
 	const treeFilters: TreeFilterConfig = {
@@ -203,21 +202,8 @@ export function Dashboard() {
 				onRightClick: handleNodeRightClick,
 				onSelect: handleSelect,
 			}}
-			leftToolbarSection={
-				<Stack gap={2} align="left">
-					<Text size="xs" c="dimmed" fw={500}>
-						Create Policy Class
-					</Text>
-					<ActionIcon
-						key={NodeType.PC}
-						variant="default"
-						size="md"
-						onClick={() => handleCreateNodeClick(NodeType.PC)}
-					>
-						<NodeIcon type={NodeType.PC} size="20px" fontSize="14px" />
-					</ActionIcon>
-				</Stack>
-			}
+			showCreatePolicyClass={true}
+			onCreatePolicyClass={() => handleCreateNodeClick(NodeType.PC)}
 		/>
 	);
 
@@ -267,7 +253,14 @@ export function Dashboard() {
 				</Menu.Target>
 				<Menu.Dropdown>
 					{/* Info section */}
-					<Menu.Item onClick={handleInfoClick} leftSection={<IconInfoSquareRounded size={16} />}>
+					<Menu.Item
+						onClick={handleInfoClick}
+						leftSection={<IconInfoSquareRounded size={16} />}
+						style={{
+							backgroundColor: `var(--mantine-color-${theme.primaryColor}-0)`,
+							borderLeft: `3px solid ${theme.colors[theme.primaryColor][6]}`
+						}}
+					>
 						Info
 					</Menu.Item>
 
@@ -342,7 +335,7 @@ export function Dashboard() {
 			>
 				<Stack gap="md">
 					{/* Parent Node Information */}
-					{rightClickedNode && nodeTypeToCreate !== "PC" && (
+					{rightClickedNode && nodeTypeToCreate !== NodeType.PC && (
 						<Group
 							gap="sm"
 							p="sm"

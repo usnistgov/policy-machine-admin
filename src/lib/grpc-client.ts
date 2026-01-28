@@ -9,8 +9,11 @@ const GRPC_PROXY_PORT = import.meta.env.PM_ADMIN_GRPC_PROXY_PORT || '8888';
 // gRPC client configuration pointing to Envoy proxy
 export const grpcConfig = {
   host: `http://${GRPC_PROXY_HOST}:${GRPC_PROXY_PORT}`,
-  transport: grpc.CrossBrowserHttpTransport({}),
+  transport: grpc.CrossBrowserHttpTransport({
+    withCredentials: false,
+  }),
   debug: import.meta.env.NODE_ENV === 'development',
+  timeout: 60000, // 60 second timeout for long-running operations
 };
 
 // Default request metadata with authentication

@@ -3,9 +3,8 @@ import Editor from '@monaco-editor/react';
 import { Button, Group, Text, Alert, LoadingOverlay } from '@mantine/core';
 import { IconPlayerPlay, IconTrash, IconInfoCircle, IconFileUpload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { AdjudicationService, QueryService } from '@/shared/api/pdp.api';
+import { AdjudicationService } from '@/shared/api/pdp.api';
 import { useTheme } from '@/shared/theme/ThemeContext';
-import type * as monaco from "monaco-editor";
 import {
   PML_LANGUAGE_ID,
   PML_LANGUAGE_CONFIG,
@@ -75,9 +74,9 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, onE
 
   // Use ResizeObserver to detect container size changes
   useEffect(() => {
-    if (!editorRef.current || !containerRef.current) return;
+    if (!editorRef.current || !containerRef.current) {return;}
 
-    const resizeObserver = new ResizeObserver((entries) => {
+    const resizeObserver = new ResizeObserver((_) => {
       if (editorRef.current) {
         // Force layout recalculation with a small delay
         setTimeout(() => {
@@ -121,7 +120,7 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, onE
 
       // Register completion provider
       monaco.languages.registerCompletionItemProvider(PML_LANGUAGE_ID, {
-        provideCompletionItems: (model, position) => {
+        provideCompletionItems: (model: any, position: any) => {
           const word = model.getWordUntilPosition(position);
           const range = {
             startLineNumber: position.lineNumber,
@@ -132,11 +131,11 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, onE
 
           const suggestions = getAllCompletions(monaco).map(completion => ({
             ...completion,
-            range: range
+            range
           }));
 
           return {
-            suggestions: suggestions
+            suggestions
           };
         }
       });
@@ -220,7 +219,7 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, onE
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     // Check if it's a .pml file
     if (!file.name.toLowerCase().endsWith('.pml')) {
