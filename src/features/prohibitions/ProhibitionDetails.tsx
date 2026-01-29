@@ -14,7 +14,9 @@ import {
 import { IconSquareRoundedMinus, IconPlus } from "@tabler/icons-react";
 import { AccessRightsSelection } from "@/components/access-rights";
 import { TreeNode, NodeIcon } from "@/features/pmtree/tree-utils";
-import { AdjudicationService, QueryService, NodeType, Prohibition } from "@/shared/api/pdp.api";
+import { NodeType, Prohibition } from "@/shared/api/pdp.types";
+import * as QueryService from "@/shared/api/pdp_query.api";
+import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { notifications } from "@mantine/notifications";
 
 interface ProhibitionDetailsProps {
@@ -274,7 +276,7 @@ export function ProhibitionDetails({
             {isSelectingSubject && !isEditing && (
               <Alert variant="light" color="orange" mb="sm">
                 <Text size="sm">
-                  Selecting subject... Click on a U or UA node in the left tree
+                  Selecting subject... Click on a U or UA node in the tree to the left
                 </Text>
               </Alert>
             )}
@@ -310,11 +312,6 @@ export function ProhibitionDetails({
                   </ActionIcon>
                 )}
               </Group>
-            )}
-            {!subject && !isEditing && (
-              <Alert variant="light" color="gray" mb="sm">
-                <Text size="sm">No subject selected</Text>
-              </Alert>
             )}
           </Box>
           
@@ -385,7 +382,7 @@ export function ProhibitionDetails({
                       {cc.node.name}
                     </Text>
                     <Checkbox
-                      label="Is Complement"
+                      label="Complement"
                       size="xs"
                       checked={cc.isComplement}
                       onChange={() => handleToggleContainerComplement(cc.node.id)}

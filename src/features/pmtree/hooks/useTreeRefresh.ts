@@ -3,7 +3,7 @@ import { TreeApi, NodeApi } from 'react-arborist';
 import {TreeNode, updateNodeChildren} from '@/features/pmtree/tree-utils';
 import { TreeDirection, TreeFilterConfig } from './usePMTreeOperations';
 import { fetchAllFilteredChildren } from '../tree-data-fetcher';
-import { NodeType } from '@/shared/api/pdp.api';
+import { NodeType } from '@/shared/api/pdp.types';
 
 /**
  * Hook for refreshing tree nodes with filtered data while preserving expansion state

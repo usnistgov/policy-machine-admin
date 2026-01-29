@@ -1,0 +1,466 @@
+import * as Model from '@/generated/grpc/v1/model';
+import { PolicyQueryServiceClientImpl } from '@/generated/grpc/v1/pdp_query';
+import * as PdpQuery from '@/generated/grpc/v1/pdp_query';
+import { NodeType, PMNode, Association, Prohibition, Obligation, NodePrivilegeInfo } from './pdp.types';
+import { rpc, createNodeRef, transformNode, transformAssociation } from './pdp.utils';
+
+const queryClient = new PolicyQueryServiceClientImpl(rpc);
+
+// === Node Queries ===
+
+export async function nodeExists(id: string): Promise<boolean> {
+  const request = PdpQuery.NodeExistsRequest.create({ node: createNodeRef(id) });
+  const response = await queryClient.nodeExists(request);
+  return response.exists;
+}
+
+export async function getNode(id: string): Promise<PMNode> {
+  const request = PdpQuery.GetNodeRequest.create({ node: createNodeRef(id) });
+  const response = await queryClient.getNode(request);
+  return transformNode(response.node!);
+}
+
+export async function getNodeId(name: string): Promise<string> {
+  const request = PdpQuery.GetNodeIdRequest.create({ name });
+  const response = await queryClient.getNodeId(request);
+  return response.id;
+}
+
+export async function searchNodes(type: NodeType, properties?: Record<string, string>): Promise<PMNode[]> {
+  const request = PdpQuery.SearchNodesRequest.create({
+    type: Model.NodeType[type],
+    properties: properties || {}
+  });
+  const response = await queryClient.searchNodes(request);
+  return response.nodes.map(transformNode);
+}
+
+// === Graph Queries ===
+
+export async function getPolicyClasses(): Promise<PMNode[]> {
+  const request = PdpQuery.GetPolicyClassesRequest.create({});
+  const response = await queryClient.getPolicyClasses(request);
+  return response.policyClasses.map(transformNode);
+}
+
+export async function getAdjacentDescendants(nodeId: string): Promise<PMNode[]> {
+  const request = PdpQuery.GetAdjacentDescendantsRequest.create({ node: createNodeRef(nodeId) });
+  const response = await queryClient.getAdjacentDescendants(request);
+  return response.nodes.map(transformNode);
+}
+
+export async function getAdjacentAscendants(nodeId: string): Promise<PMNode[]> {
+  const request = PdpQuery.GetAdjacentAscendantsRequest.create({ node: createNodeRef(nodeId) });
+  const response = await queryClient.getAdjacentAscendants(request);
+  return response.nodes.map(transformNode);
+}
+
+export async function getAscendantSubgraph(nodeId: string): Promise<PdpQuery.Subgraph | undefined> {
+  const request = PdpQuery.GetAscendantSubgraphRequest.create({ node: createNodeRef(nodeId) });
+  const response = await queryClient.getAscendantSubgraph(request);
+  return response.subgraph;
+}
+
+export async function getDescendantSubgraph(nodeId: string): Promise<PdpQuery.Subgraph | undefined> {
+  const request = PdpQuery.GetDescendantSubgraphRequest.create({ node: createNodeRef(nodeId) });
+  const response = await queryClient.getDescendantSubgraph(request);
+  return response.subgraph;
+}
+
+export async function getAttributeDescendants(attributeId: string): Promise<PMNode[]> {
+  const request = PdpQuery.GetAttributeDescendantsRequest.create({ node: createNodeRef(attributeId) });
+  const response = await queryClient.getAttributeDescendants(request);
+  return response.nodes.map(transformNode);
+}
+
+export async function getPolicyClassDescendants(policyClassId: string): Promise<PMNode[]> {
+  const request = PdpQuery.GetPolicyClassDescendantsRequest.create({ node: createNodeRef(policyClassId) });
+  const response = await queryClient.getPolicyClassDescendants(request);
+  return response.nodes.map(transformNode);
+}
+
+export async function isAscendant(ascendantId: string, descendantId: string): Promise<boolean> {
+  const request = PdpQuery.IsAscendantRequest.create({
+    ascendant: createNodeRef(ascendantId),
+    descendant: createNodeRef(descendantId)
+  });
+  const response = await queryClient.isAscendant(request);
+  return response.result;
+}
+
+export async function isDescendant(descendantId: string, ascendantId: string): Promise<boolean> {
+  const request = PdpQuery.IsDescendantRequest.create({
+    descendant: createNodeRef(descendantId),
+    ascendant: createNodeRef(ascendantId)
+  });
+  const response = await queryClient.isDescendant(request);
+  return response.result;
+}
+
+// === Association Queries ===
+
+export async function getAssociationsWithSource(nodeId: string): Promise<Association[]> {
+  const request = PdpQuery.GetAssociationsWithSourceRequest.create({ node: createNodeRef(nodeId) });
+  const response = await queryClient.getAssociationsWithSource(request);
+  return response.associations.map(transformAssociation);
+}
+
+export async function getAssociationsWithTarget(nodeId: string): Promise<Association[]> {
+  const request = PdpQuery.GetAssociationsWithTargetRequest.create({ node: createNodeRef(nodeId) });
+  const response = await queryClient.getAssociationsWithTarget(request);
+  return response.associations.map(transformAssociation);
+}
+
+// === Prohibition Queries ===
+
+export async function getProhibitions(): Promise<Prohibition[]> {
+  const request = PdpQuery.GetProhibitionsRequest.create({});
+  const response = await queryClient.getProhibitions(request);
+  return response.prohibitions.map(p => ({
+    name: p.name,
+    subject: p.node ? {
+      node: p.node ? transformNode(p.node) : undefined,
+      process: p.process
+    } : undefined,
+    accessRights: p.arset,
+    intersection: p.intersection,
+    containerConditions: p.containerConditions.map(cc => ({
+      container: cc.container ? transformNode(cc.container) : undefined,
+      complement: cc.complement
+    }))
+  }));
+}
+
+export async function getProhibitionsBySubject(subjectId: string): Promise<Prohibition[]> {
+  const request = PdpQuery.GetProhibitionsBySubjectRequest.create({ node: createNodeRef(subjectId) });
+  const response = await queryClient.getProhibitionsBySubject(request);
+  return response.prohibitions.map(p => ({
+    name: p.name,
+    subject: p.node ? {
+      node: p.node ? transformNode(p.node) : undefined,
+      process: p.process
+    } : undefined,
+    accessRights: p.arset,
+    intersection: p.intersection,
+    containerConditions: p.containerConditions.map(cc => ({
+      container: cc.container ? transformNode(cc.container) : undefined,
+      complement: cc.complement
+    }))
+  }));
+}
+
+export async function getProhibition(name: string): Promise<Prohibition> {
+  const request = PdpQuery.GetProhibitionRequest.create({ name });
+  const response = await queryClient.getProhibition(request);
+  const p = response.prohibition!;
+  return {
+    name: p.name,
+    subject: p.node ? {
+      node: p.node ? transformNode(p.node) : undefined,
+      process: p.process
+    } : undefined,
+    accessRights: p.arset,
+    intersection: p.intersection,
+    containerConditions: p.containerConditions.map(cc => ({
+      container: cc.container ? transformNode(cc.container) : undefined,
+      complement: cc.complement
+    }))
+  };
+}
+
+export async function getInheritedProhibitions(nodeId: string): Promise<Prohibition[]> {
+  const request = PdpQuery.GetInheritedProhibitionsRequest.create({ subject: createNodeRef(nodeId) });
+  const response = await queryClient.getInheritedProhibitions(request);
+  return response.prohibitions.map(p => ({
+    name: p.name,
+    subject: p.node ? {
+      node: p.node ? transformNode(p.node) : undefined,
+      process: p.process
+    } : undefined,
+    accessRights: p.arset,
+    intersection: p.intersection,
+    containerConditions: p.containerConditions.map(cc => ({
+      container: cc.container ? transformNode(cc.container) : undefined,
+      complement: cc.complement
+    }))
+  }));
+}
+
+export async function getProhibitionsWithContainer(containerId: string): Promise<Prohibition[]> {
+  const request = PdpQuery.GetProhibitionsWithContainerRequest.create({ container: createNodeRef(containerId) });
+  const response = await queryClient.getProhibitionsWithContainer(request);
+  return response.prohibitions.map(p => ({
+    name: p.name,
+    subject: p.node ? {
+      node: p.node ? transformNode(p.node) : undefined,
+      process: p.process
+    } : undefined,
+    accessRights: p.arset,
+    intersection: p.intersection,
+    containerConditions: p.containerConditions.map(cc => ({
+      container: cc.container ? transformNode(cc.container) : undefined,
+      complement: cc.complement
+    }))
+  }));
+}
+
+// === Obligation Queries ===
+
+export async function getObligations(): Promise<Obligation[]> {
+  const request = PdpQuery.GetObligationsRequest.create({});
+  const response = await queryClient.getObligations(request);
+  return response.obligations.map(o => ({
+    name: o.name,
+    author: o.author ? transformNode(o.author) : undefined,
+    pml: o.pml
+  }));
+}
+
+export async function getObligation(name: string): Promise<Obligation> {
+  const request = PdpQuery.GetObligationRequest.create({ name });
+  const response = await queryClient.getObligation(request);
+  const o = response.obligation!;
+  return {
+    name: o.name,
+    author: o.author ? transformNode(o.author) : undefined,
+    pml: o.pml
+  };
+}
+
+export async function getObligationsByAuthor(authorId: string): Promise<Obligation[]> {
+  const request = PdpQuery.GetObligationsByAuthorRequest.create({ author: createNodeRef(authorId) });
+  const response = await queryClient.getObligationsByAuthor(request);
+  return response.obligations.map(o => ({
+    name: o.name,
+    author: o.author ? transformNode(o.author) : undefined,
+    pml: o.pml
+  }));
+}
+
+// === Operation Queries ===
+
+export async function getResourceAccessRights(): Promise<string[]> {
+  const request = PdpQuery.GetResourceAccessRightsRequest.create({});
+  const response = await queryClient.getResourceAccessRights(request);
+  return response.accessRights;
+}
+
+export async function getResourceOperationSignatures(): Promise<PdpQuery.Signature[]> {
+  const request = PdpQuery.GetResourceOperationSignaturesRequest.create({});
+  const response = await queryClient.getResourceOperationSignatures(request);
+  return response.signatures;
+}
+
+export async function getResourceOperationSignature(name: string): Promise<PdpQuery.Signature> {
+  const request = PdpQuery.GetResourceOperationSignatureRequest.create({ name });
+  const response = await queryClient.getResourceOperationSignature(request);
+  return response.signature!;
+}
+
+export async function getAdminOperationSignatures(): Promise<PdpQuery.Signature[]> {
+  const request = PdpQuery.GetAdminOperationSignaturesRequest.create({});
+  const response = await queryClient.getAdminOperationSignatures(request);
+  return response.signatures;
+}
+
+export async function getAdminOperationSignature(name: string): Promise<PdpQuery.Signature> {
+  const request = PdpQuery.GetAdminOperationSignatureRequest.create({ name });
+  const response = await queryClient.getAdminOperationSignature(request);
+  return response.signature!;
+}
+
+// === Routine Queries ===
+
+export async function getRoutineSignatures(): Promise<PdpQuery.Signature[]> {
+  const request = PdpQuery.GetRoutineSignaturesRequest.create({});
+  const response = await queryClient.getRoutineSignatures(request);
+  return response.signatures;
+}
+
+export async function getRoutineSignature(name: string): Promise<PdpQuery.Signature> {
+  const request = PdpQuery.GetRoutineSignatureRequest.create({ name });
+  const response = await queryClient.getRoutineSignature(request);
+  return response.signature!;
+}
+
+// === Query/Function Queries ===
+
+export async function getQuerySignatures(): Promise<PdpQuery.Signature[]> {
+  const request = PdpQuery.GetQuerySignaturesRequest.create({});
+  const response = await queryClient.getQuerySignatures(request);
+  return response.signatures;
+}
+
+export async function getQuerySignature(name: string): Promise<PdpQuery.Signature> {
+  const request = PdpQuery.GetQuerySignatureRequest.create({ name });
+  const response = await queryClient.getQuerySignature(request);
+  return response.signature!;
+}
+
+export async function getFunctionSignatures(): Promise<PdpQuery.Signature[]> {
+  const request = PdpQuery.GetFunctionSignaturesRequest.create({});
+  const response = await queryClient.getFunctionSignatures(request);
+  return response.signatures;
+}
+
+export async function getFunctionSignature(name: string): Promise<PdpQuery.Signature> {
+  const request = PdpQuery.GetFunctionSignatureRequest.create({ name });
+  const response = await queryClient.getFunctionSignature(request);
+  return response.signature!;
+}
+
+// === Access Control Queries ===
+
+export async function computePrivileges(userId: string, targetId: string): Promise<string[]> {
+  const request = PdpQuery.ComputePrivilegesRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) }),
+    targetCtx: PdpQuery.TargetContext.create({ targetNode: createNodeRef(targetId) })
+  });
+  const response = await queryClient.computePrivileges(request);
+  return response.privileges;
+}
+
+export async function computeDeniedPrivileges(userId: string, targetId: string): Promise<string[]> {
+  const request = PdpQuery.ComputeDeniedPrivilegesRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) }),
+    targetCtx: PdpQuery.TargetContext.create({ targetNode: createNodeRef(targetId) })
+  });
+  const response = await queryClient.computeDeniedPrivileges(request);
+  return response.privileges;
+}
+
+export async function computeCapabilityList(userId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.ComputeCapabilityListRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) })
+  });
+  const response = await queryClient.computeCapabilityList(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+export async function computeACL(targetId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.ComputeACLRequest.create({
+    targetCtx: PdpQuery.TargetContext.create({ targetNode: createNodeRef(targetId) })
+  });
+  const response = await queryClient.computeACL(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+export async function computeDestinationAttributes(userId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.ComputeDestinationAttributesRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) })
+  });
+  const response = await queryClient.computeDestinationAttributes(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+export async function computeSubgraphPrivileges(userId: string, rootId: string): Promise<PdpQuery.SubgraphPrivileges | undefined> {
+  const request = PdpQuery.ComputeSubgraphPrivilegesRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) }),
+    root: createNodeRef(rootId)
+  });
+  const response = await queryClient.computeSubgraphPrivileges(request);
+  return response.subgraphPrivileges;
+}
+
+export async function computeAdjacentAscendantPrivileges(userId: string, rootId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.ComputeAdjacentAscendantPrivilegesRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) }),
+    root: createNodeRef(rootId)
+  });
+  const response = await queryClient.computeAdjacentAscendantPrivileges(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+export async function computeAdjacentDescendantPrivileges(userId: string, rootId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.ComputeAdjacentDescendantPrivilegesRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) }),
+    root: createNodeRef(rootId)
+  });
+  const response = await queryClient.computeAdjacentDescendantPrivileges(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+export async function explain(userId: string, targetId: string): Promise<PdpQuery.ExplainResponse> {
+  const request = PdpQuery.ExplainRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) }),
+    targetCtx: PdpQuery.TargetContext.create({ targetNode: createNodeRef(targetId) })
+  });
+  return queryClient.explain(request);
+}
+
+export async function computePersonalObjectSystem(userId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.ComputePersonalObjectSystemRequest.create({
+    userCtx: PdpQuery.UserContext.create({ userNode: createNodeRef(userId) })
+  });
+  const response = await queryClient.computePersonalObjectSystem(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+// === Self Access Control Queries ===
+
+export async function selfComputePrivileges(targetId: string): Promise<string[]> {
+  const request = PdpQuery.SelfComputePrivilegesRequest.create({
+    targetCtx: PdpQuery.TargetContext.create({ targetNode: createNodeRef(targetId) })
+  });
+  const response = await queryClient.selfComputePrivileges(request);
+  return response.privileges;
+}
+
+export async function selfComputeSubgraphPrivileges(rootId: string): Promise<PdpQuery.SubgraphPrivileges | undefined> {
+  const request = PdpQuery.SelfComputeSubgraphPrivilegesRequest.create({ root: createNodeRef(rootId) });
+  const response = await queryClient.selfComputeSubgraphPrivileges(request);
+  return response.subgraphPrivileges;
+}
+
+export async function selfComputeAdjacentAscendantPrivileges(rootId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.SelfComputeAdjacentAscendantPrivilegesRequest.create({ root: createNodeRef(rootId) });
+  const response = await queryClient.selfComputeAdjacentAscendantPrivileges(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+export async function selfComputeAdjacentDescendantPrivileges(rootId: string): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.SelfComputeAdjacentDescendantPrivilegesRequest.create({ root: createNodeRef(rootId) });
+  const response = await queryClient.selfComputeAdjacentDescendantPrivileges(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+export async function selfComputePersonalObjectSystem(): Promise<NodePrivilegeInfo[]> {
+  const request = PdpQuery.SelfComputePersonalObjectSystemRequest.create({});
+  const response = await queryClient.selfComputePersonalObjectSystem(request);
+  return response.nodePrivileges.map((priv: PdpQuery.NodePrivileges) => ({
+    node: priv.node ? transformNode(priv.node) : undefined,
+    accessRights: priv.arset
+  }));
+}
+
+// === Serialization ===
+
+export async function serialize(format: Model.SerializationFormat): Promise<string> {
+  const request = PdpQuery.SerializeRequest.create({ format });
+  const response = await queryClient.serialize(request);
+  return response.serialized;
+}

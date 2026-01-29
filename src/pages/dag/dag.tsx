@@ -46,7 +46,7 @@ import 'reactflow/dist/style.css';
 
 import { IconCamera, IconJson, IconSitemap, IconSun, IconMoon, IconTrash, IconSettings } from '@tabler/icons-react';
 import { PMIcon } from "@/components/icons/PMIcon";
-import {NodeType} from "@/shared/api/pdp.api";
+import {NodeType} from "@/shared/api/pdp.types";
 import {isValidAssignment, NodeIcon, TreeNode} from "@/features/pmtree/tree-utils";
 import {useTheme} from "@/shared/theme/ThemeContext";
 import {AssociationModal} from "@/pages/dag/AssociationModal";

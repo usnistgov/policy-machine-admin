@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { IconBan, IconCopy, IconInfoSquareRounded, IconPlus, IconTrash } from '@tabler/icons-react';
 import { NodeApi } from 'react-arborist';
 import {
-	ActionIcon,
 	Button,
 	Group,
 	Menu,
@@ -16,7 +15,8 @@ import { notifications } from '@mantine/notifications';
 import { PMTree, TreeFilterConfig } from '@/features/pmtree';
 import { NodeIcon, TreeNode } from '@/features/pmtree/tree-utils';
 import { RightPanel, RightPanelComponent } from '@/pages/dashboard/RightPanel';
-import { AdjudicationService, NodeType } from '@/shared/api/pdp.api';
+import { NodeType } from '@/shared/api/pdp.types';
+import * as AdjudicationService from '@/shared/api/pdp_adjudication.api';
 
 // PMTree now manages its own atoms internally - no need to create them here!
 
@@ -202,7 +202,7 @@ export function Dashboard() {
 				onRightClick: handleNodeRightClick,
 				onSelect: handleSelect,
 			}}
-			showCreatePolicyClass={true}
+			showCreatePolicyClass
 			onCreatePolicyClass={() => handleCreateNodeClick(NodeType.PC)}
 		/>
 	);

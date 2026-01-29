@@ -14,7 +14,8 @@ import {
 } from "@mantine/core";
 import { IconPlus, IconBan, IconSearch } from "@tabler/icons-react";
 import { ProhibitionDetails } from "./ProhibitionDetails";
-import { QueryService, Prohibition } from "@/shared/api/pdp.api";
+import { Prohibition } from "@/shared/api/pdp.types";
+import * as QueryService from "@/shared/api/pdp_query.api";
 import { TreeNode } from "@/features/pmtree/tree-utils";
 
 interface ProhibitionsPanelProps {

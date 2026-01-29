@@ -14,7 +14,9 @@ import {
     Button
 } from "@mantine/core";
 import { IconPlus, IconAutomation, IconSearch, IconTrash } from "@tabler/icons-react";
-import { QueryService, Obligation, AdjudicationService } from "@/shared/api/pdp.api";
+import { Obligation } from "@/shared/api/pdp.types";
+import * as QueryService from "@/shared/api/pdp_query.api";
+import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { PMLEditor } from "@/features/pml/PMLEditor";
 import { AuthService } from "@/lib/auth";
 import { notifications } from "@mantine/notifications";

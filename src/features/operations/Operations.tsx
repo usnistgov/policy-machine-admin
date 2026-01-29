@@ -14,17 +14,13 @@ import {
   Switch,
   Text,
   Textarea,
-  TextInput,
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconFunction, IconPlus, IconRefresh, IconTrash, IconX } from "@tabler/icons-react";
-import {
-  AdjudicationService,
-  ParamType,
-  QueryService,
-  Signature,
-} from "@/shared/api/pdp.api";
+import { ParamType, Signature } from "@/shared/api/pdp.types";
+import * as QueryService from "@/shared/api/pdp_query.api";
+import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { PMLEditor } from "@/features/pml/PMLEditor";
 
 type OperationType = "admin" | "resource" | "query" | "routine" | "function";
@@ -153,28 +149,24 @@ export function Operations({ initialMode = "admin" }: OperationsProps) {
   };
 
   const handleCreateOperation = useCallback(async (pml: string) => {
-    try {
-      // Execute the PML
-      await AdjudicationService.executePML(pml);
+    // Execute the PML
+    await AdjudicationService.executePML(pml);
 
-      // Wait a moment for the backend to process and make the operation available
-      await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait a moment for the backend to process and make the operation available
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Reload signatures to include the newly created operation
-      await loadSignatures();
+    // Reload signatures to include the newly created operation
+    await loadSignatures();
 
-      // Reset creation state after successful reload
-      setIsCreatingNew(false);
-      setAccordionValue(null);
+    // Reset creation state after successful reload
+    setIsCreatingNew(false);
+    setAccordionValue(null);
 
-      notifications.show({
-        color: 'green',
-        title: `${getOperationTypeLabel(mode).slice(0, -1)} Created`,
-        message: `${getOperationTypeLabel(mode).slice(0, -1)} has been created successfully`,
-      });
-    } catch (error) {
-      throw error; // Let PMLEditor handle the error display
-    }
+    notifications.show({
+      color: 'green',
+      title: `${getOperationTypeLabel(mode).slice(0, -1)} Created`,
+      message: `${getOperationTypeLabel(mode).slice(0, -1)} has been created successfully`,
+    });
   }, [mode, loadSignatures]);
 
   return (
@@ -185,18 +177,18 @@ export function Operations({ initialMode = "admin" }: OperationsProps) {
             <Title order={4}>{getOperationTypeLabel(mode)}</Title>
             <Group gap="xs">
               <ActionIcon
-                variant="filled"
-                color="var(--mantine-primary-color-filled)"
-                onClick={loadSignatures}
-                disabled={loading}
+                  variant="filled"
+                  color="var(--mantine-primary-color-filled)"
+                  onClick={loadSignatures}
+                  disabled={loading}
               >
                 <IconRefresh size={20} />
               </ActionIcon>
               <ActionIcon
-                variant="filled"
-                color="var(--mantine-primary-color-filled)"
-                onClick={handleCreateNew}
-                disabled={isCreatingNew}
+                  variant="filled"
+                  color="var(--mantine-primary-color-filled)"
+                  onClick={handleCreateNew}
+                  disabled={isCreatingNew}
               >
                 <IconPlus size={20} />
               </ActionIcon>
@@ -207,61 +199,61 @@ export function Operations({ initialMode = "admin" }: OperationsProps) {
         {/* Content */}
         <Box style={{ flex: 1, overflowY: 'auto', paddingLeft: '16px', paddingRight: '16px' }}>
           {loading ? (
-            <Center style={{ height: '100%' }}>
-              <Loader size="sm" />
-            </Center>
+              <Center style={{ height: '100%' }}>
+                <Loader size="sm" />
+              </Center>
           ) : (
-            <Accordion
-              value={accordionValue}
-              onChange={handleAccordionChange}
-              variant="contained"
-              radius="md"
-              chevronPosition="left"
-            >
-              {/* Create New Operation Accordion Item */}
-              {isCreatingNew && (
-                <Accordion.Item key="create-new" value="create-new">
-                  <Accordion.Control>
-                    <Group gap="xs">
-                      <IconPlus size={16} />
-                      <Text fw={500}>Create New {getOperationTypeLabel(mode).slice(0, -1)}</Text>
-                    </Group>
-                  </Accordion.Control>
-                  <Accordion.Panel>
-                    <PMLEditor
-                      onExecute={handleCreateOperation}
-                      containerHeight={400}
-                      autoFocus={true}
-                    />
-                  </Accordion.Panel>
-                </Accordion.Item>
-              )}
+              <Accordion
+                  value={accordionValue}
+                  onChange={handleAccordionChange}
+                  variant="contained"
+                  radius="md"
+                  chevronPosition="left"
+              >
+                {/* Create New Operation Accordion Item */}
+                {isCreatingNew && (
+                    <Accordion.Item key="create-new" value="create-new">
+                      <Accordion.Control>
+                        <Group gap="xs">
+                          <IconPlus size={16} />
+                          <Text fw={500}>Create New {getOperationTypeLabel(mode).slice(0, -1)}</Text>
+                        </Group>
+                      </Accordion.Control>
+                      <Accordion.Panel>
+                        <PMLEditor
+                            onExecute={handleCreateOperation}
+                            containerHeight={400}
+                            autoFocus
+                        />
+                      </Accordion.Panel>
+                    </Accordion.Item>
+                )}
 
-              {/* Existing Operations */}
-              {signatures.length === 0 && !isCreatingNew ? (
-                <Center style={{ padding: '2rem' }}>
-                  <Text size="sm" c="dimmed">
-                    No {getOperationTypeLabel(mode).toLowerCase()} available.
-                  </Text>
-                </Center>
-              ) : null}
+                {/* Existing Operations */}
+                {signatures.length === 0 && !isCreatingNew ? (
+                    <Center style={{ padding: '2rem' }}>
+                      <Text size="sm" c="dimmed">
+                        No {getOperationTypeLabel(mode).toLowerCase()} available.
+                      </Text>
+                    </Center>
+                ) : null}
 
-              {signatures.map((signature) => (
-                <Accordion.Item key={signature.name} value={signature.name || ""}>
-                  <Accordion.Control>
-                    <Text fw={500}>{signature.name || "(unnamed)"}</Text>
-                  </Accordion.Control>
-                  <Accordion.Panel>
-                    <OperationDetails
-                      signature={signature}
-                      mode={mode}
-                      getOperationTypeLabel={getOperationTypeLabel}
-                      onDelete={loadSignatures}
-                    />
-                  </Accordion.Panel>
-                </Accordion.Item>
-              ))}
-            </Accordion>
+                {signatures.map((signature) => (
+                    <Accordion.Item key={signature.name} value={signature.name || ""}>
+                      <Accordion.Control>
+                        <Text fw={500}>{signature.name || "(unnamed)"}</Text>
+                      </Accordion.Control>
+                      <Accordion.Panel>
+                        <OperationDetails
+                            signature={signature}
+                            mode={mode}
+                            getOperationTypeLabel={getOperationTypeLabel}
+                            onDelete={loadSignatures}
+                        />
+                      </Accordion.Panel>
+                    </Accordion.Item>
+                ))}
+              </Accordion>
           )}
         </Box>
       </Box>
@@ -390,104 +382,91 @@ function OperationDetails({ signature, mode, getOperationTypeLabel, onDelete }: 
   };
 
   return (
-    <Stack gap="sm">
-      {(signature.params?.length ?? 0) > 0 ? (
-        <>
-          <Title order={5}>Parameters</Title>
-          <ScrollArea style={{ maxHeight: 400 }}>
-            <Accordion
-              chevronPosition="left"
-              variant="contained"
-              multiple
-              defaultValue={signature.params?.map((param, index) =>
-                param.name && param.name.length > 0 ? param.name : `param-${index}`
-              )}
-            >
-              {signature.params?.map((param, index) => {
-                const itemValue = param.name && param.name.length > 0 ? param.name : `param-${index}`;
-                const displayName = param.name && param.name.length > 0 ? param.name : `Parameter ${index + 1}`;
-                const typeLabel = formatParamTypeLabel(param.type ?? undefined);
-                const hasReqCaps = param.reqCaps && param.reqCaps.values && param.reqCaps.values.length > 0;
-                return (
-                  <Accordion.Item key={itemValue} value={itemValue}>
-                    <Accordion.Control>
-                      <Stack gap={2}>
-                        <Group gap="xs" align="center">
-                          <Title order={6}>{displayName}</Title>
-                          <Text size="xs" c="dimmed">
-                            ({typeLabel})
+      <Stack gap="sm" style={{ height: '100%', minHeight: 0 }}>
+        {(signature.params?.length ?? 0) > 0 ? (
+            <Box style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <Title order={5} mb="sm">Args</Title>
+              <ScrollArea style={{ flex: 1 }}>
+                <Stack gap="md">
+                  {signature.params?.map((param, index) => {
+                    const displayName = param.name && param.name.length > 0 ? param.name : `Parameter ${index + 1}`;
+                    const typeLabel = formatParamTypeLabel(param.type ?? undefined);
+                    const hasReqCaps = param.reqCaps && param.reqCaps.values && param.reqCaps.values.length > 0;
+                    return (
+                        <Box
+                            key={param.name || `param-${index}`}
+                            style={{
+                              borderBottom: '1px solid var(--mantine-color-gray-3)',
+                              paddingBottom: 'var(--mantine-spacing-md)',
+                            }}
+                        >
+                          <Text fw={600} size="sm" mb={4}>
+                            {displayName} | {typeLabel}
                           </Text>
-                        </Group>
-                        {hasReqCaps && (
-                          <Text size="xs" c="blue" fw={500}>
-                            Required capabilities: {param.reqCaps!.values.join(', ')}
-                          </Text>
-                        )}
-                      </Stack>
-                    </Accordion.Control>
-                    <Accordion.Panel>
-                      <Box>
-                        <ParamField
-                          name={param.name}
-                          type={param.type}
-                          value={formValues[param.name]}
-                          onChange={(value) => handleParamChange(param.name, value)}
-                        />
-                      </Box>
-                    </Accordion.Panel>
-                  </Accordion.Item>
-                );
-              })}
-            </Accordion>
-          </ScrollArea>
-        </>
-      ) : (
-        <Box py="sm">
-          <Text size="sm" c="dimmed">
-            This {getOperationTypeLabel(mode).toLowerCase().replace(/s$/, '')} has no parameters.
-          </Text>
-        </Box>
-      )}
-      <Group justify="flex-end">
-        <Button
-          leftSection={<IconTrash size={16} />}
-          onClick={handleDelete}
-          loading={deleting}
-          disabled={submitting}
-          color="red"
-          variant="outline"
-        >
-          Delete
-        </Button>
-        <Button
-          leftSection={<IconFunction size={16} />}
-          onClick={handleExecute}
-          loading={submitting}
-          disabled={deleting}
-        >
-          Execute
-        </Button>
-      </Group>
+                          {hasReqCaps && (
+                              <Text size="xs" c="blue" fw={500} mb="xs">
+                                Required Capabilities: {param.reqCaps!.values.join(', ')}
+                              </Text>
+                          )}
+                          <ParamField
+                              name=""
+                              type={param.type}
+                              value={formValues[param.name]}
+                              onChange={(value) => handleParamChange(param.name, value)}
+                          />
+                        </Box>
+                    );
+                  })}
+                </Stack>
+              </ScrollArea>
+            </Box>
+        ) : (
+            <Box py="sm">
+              <Text size="sm" c="dimmed">
+                This {getOperationTypeLabel(mode).toLowerCase().replace(/s$/, '')} has no parameters.
+              </Text>
+            </Box>
+        )}
+        <Group justify="flex-end">
+          <Button
+              leftSection={<IconTrash size={16} />}
+              onClick={handleDelete}
+              loading={deleting}
+              disabled={submitting}
+              color="red"
+              variant="outline"
+          >
+            Delete
+          </Button>
+          <Button
+              leftSection={<IconFunction size={16} />}
+              onClick={handleExecute}
+              loading={submitting}
+              disabled={deleting}
+          >
+            Execute
+          </Button>
+        </Group>
 
-      {/* Display return value if present */}
-      {returnValue !== null && returnValue !== undefined && (
-        <Box mt="md" p="md" style={{
-          border: '1px solid var(--mantine-color-gray-3)',
-          borderRadius: '4px',
-          backgroundColor: 'var(--mantine-color-gray-0)'
-        }}>
-          <Title order={6} mb="xs">Return Value</Title>
-          <Code block style={{
-            maxHeight: '300px',
-            overflow: 'auto',
-            fontSize: '12px',
-            whiteSpace: 'pre-wrap'
-          }}>
-            {JSON.stringify(returnValue, null, 2)}
-          </Code>
-        </Box>
-      )}
-    </Stack>
+        {/* Display return value if present */}
+        {returnValue !== null && returnValue !== undefined && (
+            <Box mt="md" p="md" style={{
+              border: '1px solid var(--mantine-color-gray-3)',
+              borderRadius: '4px',
+              backgroundColor: 'var(--mantine-color-gray-0)'
+            }}>
+              <Title order={6} mb="xs">Return Value</Title>
+              <Code block style={{
+                maxHeight: '300px',
+                overflow: 'auto',
+                fontSize: '12px',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {JSON.stringify(returnValue, null, 2)}
+              </Code>
+            </Box>
+        )}
+      </Stack>
   );
 }
 
@@ -507,11 +486,14 @@ function ParamField({ name, type, value, onChange, depth = 0 }: ParamFieldProps)
   if (kind === "string") {
     return (
         <Box style={{ marginLeft: indent }}>
-          <TextInput
+          <Textarea
               label={label}
               value={typeof value === "string" ? value : ""}
               onChange={(event) => onChange(event.currentTarget.value)}
               placeholder="Enter text"
+              autosize
+              minRows={2}
+              maxRows={6}
           />
         </Box>
     );
@@ -563,60 +545,60 @@ function ParamField({ name, type, value, onChange, depth = 0 }: ParamFieldProps)
     const elementType = type?.listType?.elementType;
     const title = label ?? "Items";
     return (
-      <Box style={{ marginLeft: indent }}>
-        <Text fw={500} mb="xs">{title}</Text>
-        {items.length === 0 ? (
-          <Text size="xs" c="dimmed">
-            No items
-          </Text>
-        ) : (
-          <Stack gap="xs">
-            {items.map((item, index) => (
-            <Box
-              key={index}
-              style={{
-                border: "1px solid var(--mantine-color-gray-3)",
-                borderRadius: "4px",
-                padding: "8px",
-                paddingRight: "36px",
-                position: "relative",
-              }}
-            >
-              <ActionIcon
-                size="sm"
-                variant="subtle"
-                onClick={() => onChange(items.filter((_, idx) => idx !== index))}
-                style={{ position: "absolute", top: 6, right: 6 }}
-              >
-                <IconX size={14} color="red" />
-              </ActionIcon>
-              <ParamField
-                name={`Item ${index + 1}`}
-                type={elementType}
-                value={item}
-                  onChange={(childValue) => {
-                    const nextValues = [...items];
-                    nextValues[index] = childValue;
-                    onChange(nextValues);
-                  }}
-                  depth={depth + 1}
-                />
-              </Box>
-            ))}
-          </Stack>
-        )}
-        <Button
-          mt="sm"
-          variant="light"
-          size="xs"
-          leftSection={<IconPlus size={14} />}
-          onClick={() =>
-            onChange([...items, createDefaultValueForParamType(elementType)])
-          }
-        >
-          Add item
-        </Button>
-      </Box>
+        <Box style={{ marginLeft: indent }}>
+          <Text fw={500} mb="xs">{title}</Text>
+          {items.length === 0 ? (
+              <Text size="xs" c="dimmed">
+                No items
+              </Text>
+          ) : (
+              <Stack gap="xs">
+                {items.map((item, index) => (
+                    <Box
+                        key={index}
+                        style={{
+                          border: "1px solid var(--mantine-color-gray-3)",
+                          borderRadius: "4px",
+                          padding: "8px",
+                          paddingRight: "36px",
+                          position: "relative",
+                        }}
+                    >
+                      <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          onClick={() => onChange(items.filter((_, idx) => idx !== index))}
+                          style={{ position: "absolute", top: 6, right: 6 }}
+                      >
+                        <IconX size={14} color="red" />
+                      </ActionIcon>
+                      <ParamField
+                          name={`Item ${index + 1}`}
+                          type={elementType}
+                          value={item}
+                          onChange={(childValue) => {
+                            const nextValues = [...items];
+                            nextValues[index] = childValue;
+                            onChange(nextValues);
+                          }}
+                          depth={depth + 1}
+                      />
+                    </Box>
+                ))}
+              </Stack>
+          )}
+          <Button
+              mt="sm"
+              variant="light"
+              size="xs"
+              leftSection={<IconPlus size={14} />}
+              onClick={() =>
+                  onChange([...items, createDefaultValueForParamType(elementType)])
+              }
+          >
+            Add item
+          </Button>
+        </Box>
     );
   }
 
@@ -632,71 +614,71 @@ function ParamField({ name, type, value, onChange, depth = 0 }: ParamFieldProps)
   };
   const title = label ?? "Entries";
   return (
-    <Box style={{ marginLeft: indent }}>
-      <Text fw={500} mb="xs">{title}</Text>
-      {entries.length === 0 ? (
-        <Text size="xs" c="dimmed">
-          No entries
-        </Text>
-      ) : (
-        <Stack gap="xs">
-          {entries.map((entry, index) => (
-            <Box
-              key={index}
-              style={{
-                border: "1px solid var(--mantine-color-gray-3)",
-                borderRadius: "4px",
-                padding: "8px",
-                paddingRight: "36px",
-                position: "relative",
-              }}
-            >
-              <ActionIcon
-                size="sm"
-                variant="subtle"
-                onClick={() => onChange(entries.filter((_, idx) => idx !== index))}
-                style={{ position: "absolute", top: 6, right: 6 }}
-              >
-                <IconX size={14} color="red" />
-              </ActionIcon>
-              <Stack gap="xs">
-                <ParamField
-                  name="Key"
-                  type={mapType?.keyType}
-                  value={entry.key}
-                  onChange={(newKey) => {
-                    const next = [...entries];
-                    next[index] = { ...entry, key: newKey };
-                    onChange(next);
-                  }}
-                  depth={depth + 1}
-                />
-                <ParamField
-                  name="Value"
-                  type={mapType?.valueType}
-                  value={entry.value}
-                  onChange={(newValue) => {
-                    const next = [...entries];
-                    next[index] = { ...entry, value: newValue };
-                    onChange(next);
-                  }}
-                  depth={depth + 1}
-                />
-              </Stack>
-            </Box>
-          ))}
-        </Stack>
-      )}
-      <Button
-        mt="sm"
-        variant="outline"
-        size="xs"
-        leftSection={<IconPlus size={14} />}
-        onClick={addEntry}
-      >
-        Add entry
-      </Button>
-    </Box>
+      <Box style={{ marginLeft: indent }}>
+        <Text fw={500} mb="xs">{title}</Text>
+        {entries.length === 0 ? (
+            <Text size="xs" c="dimmed">
+              No entries
+            </Text>
+        ) : (
+            <Stack gap="xs">
+              {entries.map((entry, index) => (
+                  <Box
+                      key={index}
+                      style={{
+                        border: "1px solid var(--mantine-color-gray-3)",
+                        borderRadius: "4px",
+                        padding: "8px",
+                        paddingRight: "36px",
+                        position: "relative",
+                      }}
+                  >
+                    <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        onClick={() => onChange(entries.filter((_, idx) => idx !== index))}
+                        style={{ position: "absolute", top: 6, right: 6 }}
+                    >
+                      <IconX size={14} color="red" />
+                    </ActionIcon>
+                    <Stack gap="xs">
+                      <ParamField
+                          name="Key"
+                          type={mapType?.keyType}
+                          value={entry.key}
+                          onChange={(newKey) => {
+                            const next = [...entries];
+                            next[index] = { ...entry, key: newKey };
+                            onChange(next);
+                          }}
+                          depth={depth + 1}
+                      />
+                      <ParamField
+                          name="Value"
+                          type={mapType?.valueType}
+                          value={entry.value}
+                          onChange={(newValue) => {
+                            const next = [...entries];
+                            next[index] = { ...entry, value: newValue };
+                            onChange(next);
+                          }}
+                          depth={depth + 1}
+                      />
+                    </Stack>
+                  </Box>
+              ))}
+            </Stack>
+        )}
+        <Button
+            mt="sm"
+            variant="outline"
+            size="xs"
+            leftSection={<IconPlus size={14} />}
+            onClick={addEntry}
+        >
+          Add entry
+        </Button>
+      </Box>
   );
 }
 

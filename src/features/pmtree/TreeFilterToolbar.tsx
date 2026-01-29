@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActionIcon, Group, Tooltip, useMantineTheme } from '@mantine/core';
 import { AssociationDirection, AssociationIcon, NodeIcon } from '@/features/pmtree/tree-utils';
-import { NodeType } from '@/shared/api/pdp.api';
+import { NodeType } from '@/shared/api/pdp.types';
 import {ToolBarSection} from "@/features/pmtree/ToolBarSection";
 
 export interface TreeFilterConfig {

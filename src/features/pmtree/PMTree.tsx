@@ -9,7 +9,8 @@ import {
     transformNodesToTreeNodes,
     TreeNode,
 } from '@/features/pmtree/tree-utils';
-import { NodeType, QueryService } from '@/shared/api/pdp.api';
+import { NodeType } from '@/shared/api/pdp.types';
+import * as QueryService from '@/shared/api/pdp_query.api';
 import { withCriticalRetry } from '@/lib/retry-utils';
 import { TreeDirection, TreeFilterConfig } from './hooks/usePMTreeOperations';
 import { PMNode } from './PMNode';
@@ -110,7 +111,7 @@ export function PMTree(props: PMTreeProps) {
         setInitialError(null);
 
         try {
-            // Only load POS if no rootNodes prop is provided at all
+            // Only load POS if no rootNodes prop is provided
             const response = await withCriticalRetry(() => QueryService.selfComputePersonalObjectSystem());
             // Extract nodes from the response and transform to TreeNode
             const nodes = response

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Text, SimpleGrid, Group, Title, Button, Checkbox, Divider, Stack } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconArrowBigRightLines } from '@tabler/icons-react';
+import { TreeNode } from '@/features/pmtree/tree-utils';
+import * as QueryService from '@/shared/api/pdp_query.api';
+import * as AdjudicationService from '@/shared/api/pdp_adjudication.api';
 
 interface AssociationModalProps {
 	opened: boolean;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAtom, PrimitiveAtom } from 'jotai';
 import { NodeApi } from 'react-arborist';
-import { NodeType } from '@/shared/api/pdp.api';
+import { NodeType } from '@/shared/api/pdp.types';
 import { TreeNode, updateNodeChildren} from "@/features/pmtree/tree-utils";
 import { notifications } from '@mantine/notifications';
 

@@ -7,7 +7,9 @@ import { AccessRightsSelection } from "@/components/access-rights";
 import { PMTree } from "@/features/pmtree";
 import { fetchAssociationChildren } from "@/features/pmtree/tree-data-fetcher";
 import { AssociationDirection, AssociationIcon, NodeIcon, transformNodesToTreeNodes, TreeNode, truncateMiddle } from "@/features/pmtree/tree-utils";
-import { AdjudicationService, NODE_TYPES, NodePrivilegeInfo, NodeType, QueryService } from "@/shared/api/pdp.api";
+import { NODE_TYPES, NodePrivilegeInfo, NodeType } from "@/shared/api/pdp.types";
+import * as QueryService from "@/shared/api/pdp_query.api";
+import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { AssociationModal } from "./AssociationModal";
 
 // Helper function to transform NodePrivilegeInfo to TreeNode

@@ -2,7 +2,7 @@ import React from 'react';
 import { IconCircleArrowDownLeft, IconCircleArrowUpRight, IconRefresh } from '@tabler/icons-react';
 import { ActionIcon, Button, Divider, Group, Text } from '@mantine/core';
 import { NodeIcon } from '@/features/pmtree/tree-utils';
-import { NodeType } from '@/shared/api/pdp.api';
+import { NodeType } from '@/shared/api/pdp.types';
 import { ToolBarSection } from './ToolBarSection';
 import { TreeFilterToolbar } from './TreeFilterToolbar';
 import { TreeDirection, TreeFilterConfig } from './hooks/usePMTreeOperations';

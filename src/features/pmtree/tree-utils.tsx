@@ -1,5 +1,5 @@
  import React from "react";
-import {Node, NodeType} from "@/shared/api/pdp.api";
+import {Node, NodeType} from "@/shared/api/pdp.types";
 import {useMantineTheme} from "@mantine/core";
 import {
 	IconArrowBigLeftLinesFilled,

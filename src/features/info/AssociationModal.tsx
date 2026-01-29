@@ -23,7 +23,7 @@ import {
 	TreeNode,
 	truncateMiddle,
 } from '@/features/pmtree/tree-utils';
-import { NODE_TYPES, NodeType } from '@/shared/api/pdp.api';
+import { NODE_TYPES, NodeType } from '@/shared/api/pdp.types';
 
 interface AssociationCreationModalProps {
 	opened: boolean;
@@ -39,16 +39,16 @@ interface AssociationCreationModalProps {
 }
 
 export function AssociationModal({
-	opened,
-	onClose,
-	direction,
-	onSubmit,
-	onDelete,
-	resourceOperations,
-	mode,
-	associationNode,
-	rootNode,
-}: AssociationCreationModalProps) {
+	                                 opened,
+	                                 onClose,
+	                                 direction,
+	                                 onSubmit,
+	                                 onDelete,
+	                                 resourceOperations,
+	                                 mode,
+	                                 associationNode,
+	                                 rootNode,
+                                 }: AssociationCreationModalProps) {
 	const theme = useMantineTheme();
 	const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
 	const [selectedAccessRights, setSelectedAccessRights] = useState<string[]>([]);
@@ -79,11 +79,8 @@ export function AssociationModal({
 					if (node.type === NodeType.UA || node.type === NodeType.U) {
 						setSelectedNode(node);
 					}
-				} else {
-					// Allow UA, OA, and O nodes for outgoing associations
-					if (node.type === NodeType.UA || node.type === NodeType.OA || node.type === NodeType.O) {
-						setSelectedNode(node);
-					}
+				} else if (node.type === NodeType.UA || node.type === NodeType.OA || node.type === NodeType.O) {
+					setSelectedNode(node);
 				}
 			} else {
 				setSelectedNode(null);
@@ -108,7 +105,6 @@ export function AssociationModal({
 
 	const submitDisabled = !selectedNode || selectedAccessRights.length === 0;
 	const isCreateMode = mode === 'create';
-	const isEditMode = mode === 'edit';
 
 	// Filter config based on direction
 	const filterConfig = {
@@ -146,8 +142,8 @@ export function AssociationModal({
 					<Group gap="md" align="center" style={{ justifyContent: 'space-between' }}>
 						{/* Source Node */}
 						<Box style={{ flex: 1 }}>
-							<Text size="xs" c="dimmed" mb={4}>
-								Source
+							<Text size="s" mb={4}>
+								Source Node
 							</Text>
 							{sourceNode ? (
 								<Group gap="xs">
@@ -165,7 +161,7 @@ export function AssociationModal({
 
 						{/* Association Icon */}
 						<Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-							<Box style={{ height: '20px' }}></Box>
+							<Box style={{ height: '20px' }} />
 							<AssociationIcon
 								direction={AssociationDirection.Outgoing}
 								size="32"
@@ -175,8 +171,8 @@ export function AssociationModal({
 
 						{/* Target Node */}
 						<Box style={{ flex: 1 }}>
-							<Text size="xs" c="dimmed" mb={4}>
-								Target
+							<Text size="s" mb={4}>
+								Target Node
 							</Text>
 							{targetNode ? (
 								<Group gap="xs">
@@ -210,9 +206,9 @@ export function AssociationModal({
 						>
 							<PMTree
 								direction="ascendants"
-								showReset={true}
-								showTreeFilters={true}
-								showDirection={true}
+								showReset
+								showTreeFilters
+								showDirection
 								showCreatePolicyClass={false}
 								filterConfig={filterConfig}
 								clickHandlers={{
@@ -282,8 +278,8 @@ export function AssociationModal({
 					<Group gap="md" align="center" style={{ justifyContent: 'space-between' }}>
 						{/* Source Node */}
 						<Box style={{ flex: 1 }}>
-							<Text size="xs" c="dimmed" mb={4}>
-								Source
+							<Text size="s" mb={4}>
+								Source Node
 							</Text>
 							{sourceNode && (
 								<Group gap="xs">
@@ -306,8 +302,8 @@ export function AssociationModal({
 
 						{/* Target Node */}
 						<Box style={{ flex: 1 }}>
-							<Text size="xs" c="dimmed" mb={4}>
-								Target
+							<Text size="s" mb={4}>
+								Target Node
 							</Text>
 							{targetNode && (
 								<Group gap="xs">

@@ -1,6 +1,6 @@
 import { NodeApi } from 'react-arborist';
 import { sortTreeNodes, transformNodesToTreeNodes, TreeNode, AssociationDirection } from "@/features/pmtree/tree-utils";
-import { QueryService } from '@/shared/api/pdp.api';
+import * as QueryService from '@/shared/api/pdp_query.api';
 import { TreeDirection, TreeFilterConfig } from './hooks/usePMTreeOperations';
 import { withCriticalRetry } from '@/lib/retry-utils';
 

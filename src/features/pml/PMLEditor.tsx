@@ -3,7 +3,7 @@ import Editor from '@monaco-editor/react';
 import { Button, Group, Text, Alert, LoadingOverlay } from '@mantine/core';
 import { IconPlayerPlay, IconTrash, IconInfoCircle, IconFileUpload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { AdjudicationService } from '@/shared/api/pdp.api';
+import * as AdjudicationService from '@/shared/api/pdp_adjudication.api';
 import { useTheme } from '@/shared/theme/ThemeContext';
 import {
   PML_LANGUAGE_ID,
