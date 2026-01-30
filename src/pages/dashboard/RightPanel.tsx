@@ -14,7 +14,6 @@ import {ResourceOperationIcon} from "@/components/icons/ResourceOperationIcon";
 import {QueryOperationIcon} from "@/components/icons/QueryOperationIcon";
 import {RoutineIcon} from "@/components/icons/RoutineIcon";
 import {FunctionIcon} from "@/components/icons/FunctionIcon";
-import {GraphIcon} from "@/components/icons/GraphIcon";
 
 export enum RightPanelComponent {
 	NODE_INFO = 'NODE_INFO',
@@ -39,11 +38,6 @@ export type RightPanelProps = {
 
 export function RightPanel({component, isExpanded, onComponentClick, selectedNodeForInfo, selectedNodes, onRightPanelClose}: RightPanelProps) {
 	const buttons = [
-		{
-			component: RightPanelComponent.NODE_INFO,
-			icon: <GraphIcon size={24}/>,
-			title: "Node Info"
-		},
 		{
 			component: RightPanelComponent.PROHIBITIONS,
 			icon: <IconBan size={24}/>,

@@ -1,27 +1,33 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Accordion,
   ActionIcon,
   Box,
   Button,
   Center,
-  Code,
+  Code, Divider,
   Group,
   Loader,
+  NavLink,
   NumberInput,
   ScrollArea,
   Stack,
   Switch,
   Text,
   Textarea,
+  TextInput,
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconFunction, IconPlus, IconRefresh, IconTrash, IconX } from "@tabler/icons-react";
+import { IconFunction, IconPlus, IconRefresh, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import { ParamType, Signature } from "@/shared/api/pdp.types";
 import * as QueryService from "@/shared/api/pdp_query.api";
 import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { PMLEditor } from "@/features/pml/PMLEditor";
+import { AdminOperationIcon } from "@/components/icons/AdminOperationIcon";
+import { ResourceOperationIcon } from "@/components/icons/ResourceOperationIcon";
+import { QueryOperationIcon } from "@/components/icons/QueryOperationIcon";
+import { RoutineIcon } from "@/components/icons/RoutineIcon";
+import { FunctionIcon } from "@/components/icons/FunctionIcon";
 
 type OperationType = "admin" | "resource" | "query" | "routine" | "function";
 
@@ -78,11 +84,14 @@ export function Operations({ initialMode = "admin" }: OperationsProps) {
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [accordionValue, setAccordionValue] = useState<string | null>(null);
+  const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
+  const [filterText, setFilterText] = useState("");
 
   // Update mode when initialMode prop changes
   useEffect(() => {
     setMode(initialMode);
+    setSelectedOperation(null);
+    setIsCreatingNew(false);
   }, [initialMode]);
 
   const loadSignatures = useCallback(async () => {
@@ -136,17 +145,26 @@ export function Operations({ initialMode = "admin" }: OperationsProps) {
     }
   }, []);
 
-  const handleCreateNew = () => {
-    setIsCreatingNew(true);
-    setAccordionValue("create-new");
-  };
-
-  const handleAccordionChange = (value: string | null) => {
-    setAccordionValue(value);
-    if (value !== "create-new" && isCreatingNew) {
-      setIsCreatingNew(false);
+  const getOperationIcon = useCallback((type: OperationType, size: number = 16, color?: string) => {
+    switch (type) {
+      case "admin": return <AdminOperationIcon size={size} color={color} />;
+      case "resource": return <ResourceOperationIcon size={size} color={color} />;
+      case "query": return <QueryOperationIcon size={size} color={color} />;
+      case "routine": return <RoutineIcon size={size} color={color} />;
+      case "function": return <FunctionIcon size={size} color={color} />;
+      default: return <IconFunction size={size} />;
     }
-  };
+  }, []);
+
+  const handleCreateNew = useCallback(() => {
+    setIsCreatingNew(true);
+    setSelectedOperation(null);
+  }, []);
+
+  const handleSelectOperation = useCallback((name: string) => {
+    setSelectedOperation(name);
+    setIsCreatingNew(false);
+  }, []);
 
   const handleCreateOperation = useCallback(async (pml: string) => {
     // Execute the PML
@@ -160,101 +178,160 @@ export function Operations({ initialMode = "admin" }: OperationsProps) {
 
     // Reset creation state after successful reload
     setIsCreatingNew(false);
-    setAccordionValue(null);
 
     notifications.show({
       color: 'green',
       title: `${getOperationTypeLabel(mode).slice(0, -1)} Created`,
       message: `${getOperationTypeLabel(mode).slice(0, -1)} has been created successfully`,
     });
-  }, [mode, loadSignatures]);
+  }, [mode, loadSignatures, getOperationTypeLabel]);
+
+  const handleDeleteSuccess = useCallback(() => {
+    setSelectedOperation(null);
+    loadSignatures();
+  }, [loadSignatures]);
+
+  // Filter signatures based on search text
+  const filteredSignatures = useMemo(() => {
+    if (!filterText.trim()) {
+      return signatures;
+    }
+
+    const searchText = filterText.toLowerCase();
+    return signatures.filter(sig =>
+        sig.name?.toLowerCase().includes(searchText)
+    );
+  }, [signatures, filterText]);
+
+  // Get the currently selected signature object
+  const currentSignature = useMemo(() => {
+    if (!selectedOperation) return null;
+    return signatures.find(s => s.name === selectedOperation) || null;
+  }, [signatures, selectedOperation]);
+
+  if (loading) {
+    return (
+        <Center style={{ height: '100%' }}>
+          <Stack align="center" gap="md">
+            <Loader />
+            <Text size="sm" c="dimmed">Loading {getOperationTypeLabel(mode).toLowerCase()}...</Text>
+          </Stack>
+        </Center>
+    );
+  }
 
   return (
       <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <Box p="md" pb="sm">
-          <Group mb="sm">
+          <Group>
             <Title order={4}>{getOperationTypeLabel(mode)}</Title>
-            <Group gap="xs">
-              <ActionIcon
-                  variant="filled"
-                  color="var(--mantine-primary-color-filled)"
-                  onClick={loadSignatures}
-                  disabled={loading}
-              >
-                <IconRefresh size={20} />
-              </ActionIcon>
-              <ActionIcon
-                  variant="filled"
-                  color="var(--mantine-primary-color-filled)"
-                  onClick={handleCreateNew}
-                  disabled={isCreatingNew}
-              >
-                <IconPlus size={20} />
-              </ActionIcon>
-            </Group>
+            <Button
+                variant="filled"
+                color="var(--mantine-primary-color-filled)"
+                onClick={handleCreateNew}
+                disabled={isCreatingNew}
+                rightSection={<IconPlus size={20} />}
+            >
+              Create
+            </Button>
           </Group>
         </Box>
 
-        {/* Content */}
-        <Box style={{ flex: 1, overflowY: 'auto', paddingLeft: '16px', paddingRight: '16px' }}>
-          {loading ? (
-              <Center style={{ height: '100%' }}>
-                <Loader size="sm" />
-              </Center>
-          ) : (
-              <Accordion
-                  value={accordionValue}
-                  onChange={handleAccordionChange}
-                  variant="contained"
-                  radius="md"
-                  chevronPosition="left"
-              >
-                {/* Create New Operation Accordion Item */}
-                {isCreatingNew && (
-                    <Accordion.Item key="create-new" value="create-new">
-                      <Accordion.Control>
-                        <Group gap="xs">
-                          <IconPlus size={16} />
-                          <Text fw={500}>Create New {getOperationTypeLabel(mode).slice(0, -1)}</Text>
-                        </Group>
-                      </Accordion.Control>
-                      <Accordion.Panel>
-                        <PMLEditor
-                            onExecute={handleCreateOperation}
-                            containerHeight={400}
-                            autoFocus
-                        />
-                      </Accordion.Panel>
-                    </Accordion.Item>
-                )}
+        {/* Content - List and Details side by side */}
+        <Box style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+          {/* Left Panel - List */}
+          <Box style={{ width: '250px', borderRight: '1px solid var(--mantine-color-default-border)', display: 'flex', flexDirection: 'column' }}>
+            <Box p="sm">
+              <Group gap="xs">
+                <TextInput
+                    placeholder={`Filter ${getOperationTypeLabel(mode).toLowerCase()}...`}
+                    value={filterText}
+                    onChange={(event) => setFilterText(event.currentTarget.value)}
+                    leftSection={<IconSearch size={16} />}
+                    size="sm"
+                    style={{ flex: 1 }}
+                />
+                <ActionIcon
+                    variant="light"
+                    color="var(--mantine-primary-color-filled)"
+                    onClick={loadSignatures}
+                    disabled={loading}
+                >
+                  <IconRefresh size={20} />
+                </ActionIcon>
+              </Group>
+            </Box>
 
-                {/* Existing Operations */}
-                {signatures.length === 0 && !isCreatingNew ? (
-                    <Center style={{ padding: '2rem' }}>
-                      <Text size="sm" c="dimmed">
-                        No {getOperationTypeLabel(mode).toLowerCase()} available.
-                      </Text>
-                    </Center>
-                ) : null}
+            {/* Operation List */}
+            <Box style={{ flex: 1, overflowY: 'auto' }}>
+              {signatures.length === 0 && !isCreatingNew ? (
+                  <Box p="md">
+                    <Text size="sm" c="dimmed">No {getOperationTypeLabel(mode).toLowerCase()} found.</Text>
+                  </Box>
+              ) : null}
 
-                {signatures.map((signature) => (
-                    <Accordion.Item key={signature.name} value={signature.name || ""}>
-                      <Accordion.Control>
-                        <Text fw={500}>{signature.name || "(unnamed)"}</Text>
-                      </Accordion.Control>
-                      <Accordion.Panel>
-                        <OperationDetails
-                            signature={signature}
-                            mode={mode}
-                            getOperationTypeLabel={getOperationTypeLabel}
-                            onDelete={loadSignatures}
-                        />
-                      </Accordion.Panel>
-                    </Accordion.Item>
-                ))}
-              </Accordion>
-          )}
+              {signatures.length > 0 && filteredSignatures.length === 0 && filterText.trim() ? (
+                  <Box p="md">
+                    <Text size="sm" c="dimmed">No matches found.</Text>
+                  </Box>
+              ) : null}
+
+              {filteredSignatures.map((signature) => (
+                  <NavLink
+                      key={signature.name}
+                      label={signature.name || "(unnamed)"}
+                      leftSection={getOperationIcon(mode)}
+                      active={selectedOperation === signature.name && !isCreatingNew}
+                      onClick={() => handleSelectOperation(signature.name || "")}
+                  />
+              ))}
+            </Box>
+          </Box>
+
+          {/* Right Panel - Details */}
+          <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {isCreatingNew ? (
+                <Box style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '0 10px 10px 10px' }}>
+                  <Group mb="md" justify="space-between">
+                    <Title order={5}>Create New {getOperationTypeLabel(mode).slice(0, -1)}</Title>
+                    <Button variant="default" size="xs" onClick={() => setIsCreatingNew(false)}>
+                      Cancel
+                    </Button>
+                  </Group>
+                  <Box style={{ flex: 1, minHeight: 0 }}>
+                    <PMLEditor
+                        onExecute={handleCreateOperation}
+                        containerHeight="100%"
+                        autoFocus
+                    />
+                  </Box>
+                </Box>
+            ) : currentSignature ? (
+                <Box p="md" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Group mb="md">
+                    {getOperationIcon(mode, 24)}
+                    <Title order={5}>{currentSignature.name}</Title>
+                  </Group>
+                  <Divider />
+                  <Box style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                    <OperationDetails
+                        signature={currentSignature}
+                        mode={mode}
+                        getOperationTypeLabel={getOperationTypeLabel}
+                        onDelete={handleDeleteSuccess}
+                    />
+                  </Box>
+                </Box>
+            ) : (
+                <Center style={{ height: '100%' }}>
+                  <Stack align="center" gap="xs">
+                    {getOperationIcon(mode, 48, "grey")}
+                    <Text c="dimmed" size="sm">Select an operation to view details</Text>
+                  </Stack>
+                </Center>
+            )}
+          </Box>
         </Box>
       </Box>
   );
@@ -385,9 +462,8 @@ function OperationDetails({ signature, mode, getOperationTypeLabel, onDelete }: 
       <Stack gap="sm" style={{ height: '100%', minHeight: 0 }}>
         {(signature.params?.length ?? 0) > 0 ? (
             <Box style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              <Title order={5} mb="sm">Args</Title>
               <ScrollArea style={{ flex: 1 }}>
-                <Stack gap="md">
+                <Stack gap="md" style={{padding: '4px'}}>
                   {signature.params?.map((param, index) => {
                     const displayName = param.name && param.name.length > 0 ? param.name : `Parameter ${index + 1}`;
                     const typeLabel = formatParamTypeLabel(param.type ?? undefined);

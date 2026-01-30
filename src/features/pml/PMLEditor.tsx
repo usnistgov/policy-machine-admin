@@ -21,7 +21,7 @@ interface PMLEditorProps {
   onExecute?: (pml: string) => Promise<void> | void;
   readOnly?: boolean;
   hideButtons?: boolean;
-  containerHeight?: number;
+  containerHeight?: number | string;
   autoFocus?: boolean;
 }
 
@@ -283,6 +283,7 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, onE
             data-editor-container
             style={{
               flex: 1,
+              minHeight: 0,
               border: `1px solid var(--mantine-color-gray-${themeMode === 'dark' ? '7' : '3'})`,
               borderRadius: '8px',
               position: 'relative'
@@ -290,7 +291,7 @@ export function PMLEditor({ title, placeholder, initialValue = '', onChange, onE
         >
           <LoadingOverlay visible={isExecuting} />
           <Editor
-              height={containerHeight && hideButtons ? `${containerHeight}px` : (containerHeight ? `${containerHeight - 120}px` : "100%")}
+              height={typeof containerHeight === 'string' ? containerHeight : (containerHeight && hideButtons ? `${containerHeight}px` : (containerHeight ? `${containerHeight - 120}px` : "100%"))}
               language={PML_LANGUAGE_ID}
               value={code}
               onChange={(value) => {

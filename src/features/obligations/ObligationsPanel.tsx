@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
+    ActionIcon,
     Box,
     Text,
-    Accordion,
     Group,
-    ActionIcon,
     Title,
     Stack,
     Alert,
     Loader,
     Center,
     TextInput,
-    Button
+    Button,
+    NavLink
 } from "@mantine/core";
-import { IconPlus, IconAutomation, IconSearch, IconTrash } from "@tabler/icons-react";
+import {IconPlus, IconSearch, IconTrash, IconCalendarCode, IconRefresh} from "@tabler/icons-react";
 import { Obligation } from "@/shared/api/pdp.types";
 import * as QueryService from "@/shared/api/pdp_query.api";
 import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
@@ -25,7 +25,7 @@ export function ObligationsPanel() {
     const [obligations, setObligations] = useState<Obligation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [accordionValue, setAccordionValue] = useState<string | null>(null);
+    const [selectedObligation, setSelectedObligation] = useState<string | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [filterText, setFilterText] = useState("");
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -50,16 +50,13 @@ export function ObligationsPanel() {
 
     const handleCreateNew = useCallback(() => {
         setIsCreatingNew(true);
-        setAccordionValue("create-new");
+        setSelectedObligation(null);
     }, []);
 
-    const handleAccordionChange = useCallback((value: string | null) => {
-        setAccordionValue(value);
-        // If closing the create new accordion, cancel creation
-        if (value !== "create-new" && isCreatingNew) {
-            setIsCreatingNew(false);
-        }
-    }, [isCreatingNew]);
+    const handleSelectObligation = useCallback((name: string) => {
+        setSelectedObligation(name);
+        setIsCreatingNew(false);
+    }, []);
 
     // Handle creating new obligation
     const handleCreateObligation = useCallback(async (pml: string) => {
@@ -93,10 +90,10 @@ export function ObligationsPanel() {
 
         // Add to local state
         setObligations(prev => [...prev, newObligation]);
-        
-        // Reset creation state
+
+        // Reset creation state and select the new obligation
         setIsCreatingNew(false);
-        setAccordionValue(null);
+        setSelectedObligation(extractedName);
 
         notifications.show({
             color: 'green',
@@ -114,7 +111,7 @@ export function ObligationsPanel() {
             
             // Remove from local state
             setObligations(prev => prev.filter(o => o.name !== obligationName));
-            setAccordionValue(null);
+            setSelectedObligation(null);
 
             notifications.show({
                 color: 'green',
@@ -139,20 +136,16 @@ export function ObligationsPanel() {
         }
 
         const searchText = filterText.toLowerCase();
-        return obligations.filter(obligation => {
-            // Search in obligation name
-            if (obligation.name.toLowerCase().includes(searchText)) {
-                return true;
-            }
-
-            // Search in author name
-            if (obligation.author?.name?.toLowerCase().includes(searchText)) {
-                return true;
-            }
-
-            return false;
-        });
+        return obligations.filter(obligation =>
+            obligation.name.toLowerCase().includes(searchText)
+        );
     }, [obligations, filterText]);
+
+    // Get the currently selected obligation object
+    const currentObligation = useMemo(() => {
+        if (!selectedObligation) {return null;}
+        return obligations.find(o => o.name === selectedObligation) || null;
+    }, [obligations, selectedObligation]);
 
     if (loading) {
         return (
@@ -179,107 +172,125 @@ export function ObligationsPanel() {
         <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <Box p="md" pb="sm">
-                <Group mb="sm">
+                <Group>
                     <Title order={4}>Obligations</Title>
-                    <ActionIcon
+                    <Button
                         variant="filled"
                         color="var(--mantine-primary-color-filled)"
                         onClick={handleCreateNew}
                         disabled={isCreatingNew}
+                        rightSection={<IconPlus size={20} />}
                     >
-                        <IconPlus size={20} />
-                    </ActionIcon>
+                        Create
+                    </Button>
                 </Group>
-                <TextInput
-                    placeholder="Filter by name or author..."
-                    value={filterText}
-                    onChange={(event) => setFilterText(event.currentTarget.value)}
-                    leftSection={<IconSearch size={16} />}
-                    size="sm"
-                />
             </Box>
 
-            {/* Content */}
-            <Box style={{ flex: 1, overflowY: 'auto', paddingLeft: '16px', paddingRight: '16px' }}>
-                {obligations.length === 0 && !isCreatingNew ? (
-                    <Alert variant="light" color="gray" mb="md">
-                        <Text size="sm">No obligations found. Click the + button to create one.</Text>
-                    </Alert>
-                ) : null}
-                
-                {obligations.length > 0 && filteredObligations.length === 0 && filterText.trim() && !isCreatingNew ? (
-                    <Alert variant="light" color="yellow" mb="md">
-                        <Text size="sm">No obligations match your filter "{filterText}".</Text>
-                    </Alert>
-                ) : null}
+            {/* Content - List and Details side by side */}
+            <Box style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+                {/* Left Panel - List */}
+                <Box style={{ width: '250px', borderRight: '1px solid var(--mantine-color-default-border)', display: 'flex', flexDirection: 'column' }}>
+                    <Box p="sm">
+                        <Group gap="xs">
+                            <TextInput
+                                placeholder="Filter obligations..."
+                                value={filterText}
+                                onChange={(event) => setFilterText(event.currentTarget.value)}
+                                leftSection={<IconSearch size={16} />}
+                                size="sm"
+                                style={{ flex: 1 }}
+                            />
+                            <ActionIcon
+                                variant="light"
+                                color="var(--mantine-primary-color-filled)"
+                                onClick={fetchObligations}
+                                disabled={loading}
+                            >
+                                <IconRefresh size={20} />
+                            </ActionIcon>
+                        </Group>
+                    </Box>
 
-                <Accordion
-                    value={accordionValue}
-                    onChange={handleAccordionChange}
-                    variant="contained"
-                    radius="md"
-                    chevronPosition="left"
-                >
-                    {/* Create New Obligation Accordion Item */}
-                    {isCreatingNew && (
-                        <Accordion.Item key="create-new" value="create-new">
-                            <Accordion.Control>
-                                <Group gap="xs">
-                                    <IconPlus size={16} />
-                                    <Text fw={500}>Create New Obligation</Text>
-                                </Group>
-                            </Accordion.Control>
-                            <Accordion.Panel>
+                    {/* Obligation List */}
+                    <Box style={{ flex: 1, overflowY: 'auto' }}>
+                    {obligations.length === 0 && !isCreatingNew ? (
+                        <Box p="md">
+                            <Text size="sm" c="dimmed">No obligations found.</Text>
+                        </Box>
+                    ) : null}
+
+                    {obligations.length > 0 && filteredObligations.length === 0 && filterText.trim() ? (
+                        <Box p="md">
+                            <Text size="sm" c="dimmed">No matches found.</Text>
+                        </Box>
+                    ) : null}
+
+                    {filteredObligations.map((obligation) => (
+                        <NavLink
+                            key={obligation.name}
+                            label={obligation.name}
+                            leftSection={<IconCalendarCode size={16} />}
+                            active={selectedObligation === obligation.name && !isCreatingNew}
+                            onClick={() => handleSelectObligation(obligation.name)}
+                        />
+                    ))}
+                    </Box>
+                </Box>
+
+                {/* Right Panel - Details */}
+                <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {isCreatingNew ? (
+                        <Box style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '0 10px 10px 10px' }}>
+                            <Group mb="md" justify="space-between">
+                                <Title order={5}>Create New Obligation</Title>
+                                <Button variant="default" size="xs" onClick={() => setIsCreatingNew(false)}>
+                                    Cancel
+                                </Button>
+                            </Group>
+                            <Box style={{ flex: 1, minHeight: 0 }}>
                                 <PMLEditor
                                     onExecute={handleCreateObligation}
-                                    containerHeight={400}
-                                    autoFocus={true}
+                                    containerHeight="100%"
+                                    autoFocus
                                 />
-                            </Accordion.Panel>
-                        </Accordion.Item>
+                            </Box>
+                        </Box>
+                    ) : currentObligation ? (
+                        <Box p="md" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Group mb="md" justify="space-between">
+                                <Stack gap={0}>
+                                    <Title order={5}>{currentObligation.name}</Title>
+                                    <Text size="sm" c="dimmed">Author: {currentObligation.author?.name || 'Unknown'}</Text>
+                                </Stack>
+                                <Button
+                                    color="red"
+                                    variant="light"
+                                    size="xs"
+                                    leftSection={<IconTrash size={14} />}
+                                    loading={isDeleting === currentObligation.name}
+                                    onClick={() => handleDeleteObligation(currentObligation.name)}
+                                >
+                                    Delete
+                                </Button>
+                            </Group>
+                            <Box style={{ flex: 1, minHeight: 0 }}>
+                                <PMLEditor
+                                    initialValue={currentObligation.pml}
+                                    readOnly
+                                    hideButtons
+                                    containerHeight="100%"
+                                />
+                            </Box>
+                        </Box>
+                    ) : (
+                        <Center style={{ height: '100%' }}>
+                            <Stack align="center" gap="xs">
+                                <IconCalendarCode size={48} color="gray" />
+                                <Text c="dimmed" size="sm">Select an obligation to view details</Text>
+                            </Stack>
+                        </Center>
                     )}
-
-                    {/* Existing Obligations */}
-                    {filteredObligations.map((obligation) => (
-                        <Accordion.Item key={obligation.name} value={obligation.name}>
-                            <Accordion.Control>
-                                <Group justify="space-between" style={{ width: '100%' }}>
-                                    <Group gap="xs">
-                                        <IconAutomation size={20} color="blue" />
-                                        <Stack gap={0}>
-                                            <Text size="md" fw={600}>{obligation.name}</Text>
-                                            <Text size="s" c="dimmed" style={{ maxWidth: '200px', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                                                Author: {obligation.author?.name || 'Unknown'}
-                                            </Text>
-                                        </Stack>
-                                    </Group>
-                                </Group>
-                            </Accordion.Control>
-                            <Accordion.Panel>
-                                <Box>
-                                    <PMLEditor 
-                                        title="Obligation" 
-                                        initialValue={obligation.pml}
-                                        readOnly
-                                        hideButtons
-                                        containerHeight={400}
-                                    />
-                                    <Group justify="center" mt="md">
-                                        <Button
-                                            color="red"
-                                            variant="filled"
-                                            leftSection={<IconTrash size={16} />}
-                                            loading={isDeleting === obligation.name}
-                                            onClick={() => handleDeleteObligation(obligation.name)}
-                                        >
-                                            Delete Obligation
-                                        </Button>
-                                    </Group>
-                                </Box>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-                    ))}
-                </Accordion>
+                </Box>
             </Box>
         </Box>
     );
