@@ -3,6 +3,7 @@ import { Login } from "@/pages/login/Login";
 import { ProtectedRoute } from "@/ProtectedRoute";
 import {DashboardPage} from "@/pages/dashboard/DashboardPage";
 import {DAG} from "@/pages/dag/dag";
+import {TestPage} from "@/pages/test/TestPage";
 
 const router = createBrowserRouter([
   {
@@ -12,6 +13,10 @@ const router = createBrowserRouter([
   {
     path: '/dag',
     element: <DAG />,
+  },
+  {
+    path: '/test',
+    element: <TestPage />,
   },
   {
     path: '/',

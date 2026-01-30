@@ -3,36 +3,92 @@ import type * as monaco from 'monaco-editor';
 // PML Language Definition
 export const PML_LANGUAGE_ID = 'pml';
 
-// Keywords from the lexer
-export const PML_KEYWORDS = [
-  // Basic keywords
-  'operation', 'check', 'routine', 'function', 'create', 'delete', 'if exists',
-  
-  // Obligation keywords
-  'rule', 'when', 'performs', 'on', 'in', 'do', 'any', 'ascendant of',
-  
-  // Set operations
-  'intersection', 'inter', 'union', 'process',
-  
-  // Assignment and association
-  'set resource operations', 'assign', 'deassign', 'from', 'set properties',
-  'of', 'to', 'associate', 'and', 'with', 'dissociate', 'deny',
-  'prohibition', 'obligation', 'access rights',
-  
+// Keywords from PMLLexer.g4
+export const PML_KEYWORDS = {
+  // Operation definition keywords
+  definitions: ['adminop', 'resourceop', 'routine', 'function', 'query'],
+
+  // Node argument annotation
+  annotations: ['@node'],
+
   // Node types
-  'pc', 'oa', 'ua', 'u', 'o', 'node', 'user', 'PC', 'OA', 'UA', 'U', 'O',
-  
+  nodeTypes: ['node', 'PC', 'OA', 'UA', 'U', 'O', 'pc', 'oa', 'ua', 'u', 'o'],
+
+  // Create/delete keywords
+  crud: ['create', 'delete'],
+
+  // Conditional delete
+  conditionalDelete: ['if exists'],
+
+  // Obligation keywords
+  obligation: ['rule', 'when', 'performs', 'on', 'in', 'do', 'any', 'obligation'],
+
+  // Ascendant
+  ascendant: ['ascendant of'],
+
+  // Set operations
+  setOps: ['intersection', 'inter', 'union'],
+
+  // Process
+  process: ['process'],
+
+  // Resource access rights
+  resourceAccess: ['set resource access rights', 'access rights'],
+
+  // Assignment keywords
+  assignment: ['assign', 'deassign', 'from', 'to'],
+
+  // Properties
+  properties: ['set properties', 'of'],
+
+  // Association keywords
+  association: ['associate', 'and', 'with', 'dissociate'],
+
+  // Prohibition/deny
+  prohibition: ['deny', 'prohibition'],
+
+  // User keyword
+  user: ['user'],
+
   // Control flow
-  'break', 'default', 'map', 'else', 'const', 'if', 'range', 'continue',
-  'foreach', 'return', 'var',
-  
-  // Types
-  'string', 'bool', 'void', 'array', 'nil', 'true', 'false'
+  control: ['break', 'default', 'else', 'if', 'range', 'continue', 'foreach', 'return'],
+
+  // Variable declaration
+  variable: ['var', 'const'],
+
+  // Check statement
+  check: ['check'],
+
+  // Data types
+  types: ['string', 'bool', 'void', 'array', 'map', 'any', 'int64'],
+
+  // Literals
+  literals: ['nil', 'true', 'false'],
+};
+
+// Flattened keywords array for Monarch
+export const PML_KEYWORDS_FLAT = [
+  ...PML_KEYWORDS.definitions,
+  ...PML_KEYWORDS.nodeTypes,
+  ...PML_KEYWORDS.crud,
+  ...PML_KEYWORDS.obligation,
+  ...PML_KEYWORDS.setOps,
+  ...PML_KEYWORDS.process,
+  ...PML_KEYWORDS.assignment,
+  ...PML_KEYWORDS.association,
+  ...PML_KEYWORDS.prohibition,
+  ...PML_KEYWORDS.user,
+  ...PML_KEYWORDS.control,
+  ...PML_KEYWORDS.variable,
+  ...PML_KEYWORDS.check,
+  ...PML_KEYWORDS.types,
+  ...PML_KEYWORDS.literals,
 ];
 
-// Operators from the lexer
+// Operators from PMLLexer.g4
 export const PML_OPERATORS = [
-  '=', '==', '!=', '||', '&&', '!', '+', ':=', '(', ')', '{', '}', '[', ']',
+  '=', ':=', '==', '!=', '||', '&&', '!', '+',
+  '(', ')', '{', '}', '[', ']',
   ',', ';', ':', '.'
 ];
 
@@ -61,45 +117,85 @@ export const PML_LANGUAGE_CONFIG: monaco.languages.LanguageConfiguration = {
   ]
 };
 
-// Tokenizer rules
+// Tokenizer rules based on PMLLexer.g4
 export const PML_MONARCH_LANGUAGE: monaco.languages.IMonarchLanguage = {
-  keywords: PML_KEYWORDS,
+  keywords: PML_KEYWORDS_FLAT,
   operators: PML_OPERATORS,
-  
+
   tokenizer: {
     root: [
-      // Keywords
-      [/\b(operation|check|routine|function)\b/, 'keyword.declaration'],
-      [/\b(create|delete|assign|deassign|associate|dissociate)\b/, 'keyword.operation'],
+      // Multi-word keywords (must come before single words)
+      [/\bset resource access rights\b/, 'keyword.compound'],
+      [/\baccess rights\b/, 'keyword.compound'],
+      [/\bset properties\b/, 'keyword.compound'],
+      [/\bif exists\b/, 'keyword.compound'],
+      [/\bascendant of\b/, 'keyword.compound'],
+      [/\bany user\b/, 'keyword.compound'],
+      [/\bany operation\b/, 'keyword.compound'],
+
+      // Node argument annotation (use @@ to match literal @)
+      [/@@node/, 'annotation'],
+
+      // Operation definition keywords
+      [/\b(adminop|resourceop|routine|function|query)\b/, 'keyword.declaration'],
+
+      // CRUD operations
+      [/\b(create|delete)\b/, 'keyword.operation'],
+
+      // Check statement
+      [/\bcheck\b/, 'keyword.check'],
+
+      // Assignment/association operations
+      [/\b(assign|deassign|associate|dissociate)\b/, 'keyword.operation'],
+
+      // Control flow
       [/\b(if|else|foreach|return|break|continue)\b/, 'keyword.control'],
+
+      // Obligation keywords
       [/\b(rule|when|performs|on|in|do|obligation|prohibition)\b/, 'keyword.obligation'],
-      
-      // Node type keywords with specific colors
+
+      // Set operations
+      [/\b(intersection|inter|union)\b/, 'keyword.setop'],
+
+      // Deny keyword
+      [/\bdeny\b/, 'keyword.deny'],
+
+      // Node type keywords with specific colors (case-insensitive matching for PC, OA, UA)
+      [/\bPC\b/, 'keyword.type.pc'],
       [/\bpc\b/, 'keyword.type.pc'],
+      [/\bUA\b/, 'keyword.type.ua'],
       [/\bua\b/, 'keyword.type.ua'],
+      [/\bOA\b/, 'keyword.type.oa'],
       [/\boa\b/, 'keyword.type.oa'],
+      [/\bU\b/, 'keyword.type.u'],
       [/\bu\b/, 'keyword.type.u'],
+      [/\bO\b/, 'keyword.type.o'],
       [/\bo\b/, 'keyword.type.o'],
-      [/\bPC\b/, 'keyword.type.PC'],
-      [/\bUA\b/, 'keyword.type.UA'],
-      [/\bOA\b/, 'keyword.type.OA'],
-      [/\bU\b/, 'keyword.type.U'],
-      [/\bO\b/, 'keyword.type.O'],
       [/\b(node|user|process)\b/, 'keyword.type'],
-      
-      [/\b(string|bool|void|array|map|any)\b/, 'keyword.datatype'],
+
+      // Data types
+      [/\b(string|bool|void|array|map|any|int64)\b/, 'keyword.datatype'],
+
+      // Boolean and nil literals
       [/\b(true|false|nil)\b/, 'constant.language'],
+
+      // Variable keywords
       [/\b(var|const)\b/, 'keyword.variable'],
-      [/\b(intersection|inter|union|access rights|set resource operations|set properties|if exists|ascendant of)\b/, 'keyword.compound'],
-      
+
+      // Other keywords
+      [/\b(from|to|of|and|with|any|default|range)\b/, 'keyword'],
+
       // Comments
       [/\/\/.*$/, 'comment'],
       [/\/\*/, 'comment', '@comment'],
-      
+
       // Strings
       [/"([^"\\]|\\.)*$/, 'string.invalid'],
       [/"/, 'string', '@string'],
-      
+
+      // Numbers (int64)
+      [/-?[0-9]+/, 'number'],
+
       // Identifiers
       [/[a-zA-Z_][a-zA-Z0-9_]*/, {
         cases: {
@@ -107,31 +203,31 @@ export const PML_MONARCH_LANGUAGE: monaco.languages.IMonarchLanguage = {
           '@default': 'identifier'
         }
       }],
-      
+
       // Operators and punctuation
       [/:=/, 'operator.assignment'],
       [/==|!=/, 'operator.comparison'],
       [/\|\||&&/, 'operator.logical'],
       [/[=+!]/, 'operator'],
-      [/\{/, 'delimiter.curly.open'],
-      [/\}/, 'delimiter.curly.close'],
-      [/\(/, 'delimiter.parenthesis.open'],
-      [/\)/, 'delimiter.parenthesis.close'],
-      [/\[/, 'delimiter.bracket.open'],
-      [/\]/, 'delimiter.bracket.close'],
+      [/\{/, 'delimiter.curly'],
+      [/\}/, 'delimiter.curly'],
+      [/\(/, 'delimiter.parenthesis'],
+      [/\)/, 'delimiter.parenthesis'],
+      [/\[/, 'delimiter.bracket'],
+      [/\]/, 'delimiter.bracket'],
       [/[;,:]/, 'delimiter'],
       [/\./, 'delimiter.dot'],
-      
+
       // Whitespace
       [/\s+/, 'white']
     ],
-    
+
     comment: [
       [/[^\/*]+/, 'comment'],
       [/\*\//, 'comment', '@pop'],
       [/[\/*]/, 'comment']
     ],
-    
+
     string: [
       [/[^\\"]+/, 'string'],
       [/\\./, 'string.escape'],
@@ -140,21 +236,15 @@ export const PML_MONARCH_LANGUAGE: monaco.languages.IMonarchLanguage = {
   }
 };
 
-// Mantine color values (approximated to hex)
-const MANTINE_COLORS = {
-  green9: '#2b8a3e',   // theme.colors.green[9] - dark green for PC
-  red6: '#e03131',     // theme.colors.red[6] - medium red for UA
-  blue6: '#228be6',    // theme.colors.blue[6] - medium blue for OA
-  red3: '#ffa8a8',     // theme.colors.red[3] - light red for U
-  blue3: '#a5b4fc',    // theme.colors.blue[3] - light blue for O
-};
-
 // Theme colors for PML
 export const PML_THEME: monaco.editor.IStandaloneThemeData = {
   base: 'vs',
   inherit: true,
   rules: [
-    // Regular keywords use the same blue color
+    // Annotations
+    { token: 'annotation', foreground: '9B59B6', fontStyle: 'bold' },
+
+    // Keywords
     { token: 'keyword.declaration', foreground: '0066CC', fontStyle: 'bold' },
     { token: 'keyword.operation', foreground: '0066CC', fontStyle: 'bold' },
     { token: 'keyword.control', foreground: '0066CC', fontStyle: 'bold' },
@@ -162,34 +252,43 @@ export const PML_THEME: monaco.editor.IStandaloneThemeData = {
     { token: 'keyword.type', foreground: '0066CC', fontStyle: 'bold' },
     { token: 'keyword.datatype', foreground: '0066CC', fontStyle: 'bold' },
     { token: 'keyword.compound', foreground: '0066CC', fontStyle: 'bold' },
-    
+    { token: 'keyword.variable', foreground: '0066CC', fontStyle: 'bold' },
+    { token: 'keyword.check', foreground: 'D35400', fontStyle: 'bold' },
+    { token: 'keyword.setop', foreground: '8E44AD' },
+    { token: 'keyword.deny', foreground: 'C0392B', fontStyle: 'bold' },
+    { token: 'keyword', foreground: '0066CC' },
+
     // Node type keywords with specific colors matching getTypeColor
     { token: 'keyword.type.pc', foreground: '2b8a3e', fontStyle: 'bold' }, // Green[9] - PC
     { token: 'keyword.type.ua', foreground: 'e03131', fontStyle: 'bold' }, // Red[6] - UA
     { token: 'keyword.type.oa', foreground: '228be6', fontStyle: 'bold' }, // Blue[6] - OA
-    { token: 'keyword.type.u', foreground: 'ffa8a8', fontStyle: 'bold' },  // Red[3] - U
-    { token: 'keyword.type.o', foreground: 'a5b4fc', fontStyle: 'bold' },  // Blue[3] - O
-    { token: 'keyword.type.PC', foreground: '2b8a3e', fontStyle: 'bold' }, // Green[9] - PC
-    { token: 'keyword.type.UA', foreground: 'e03131', fontStyle: 'bold' }, // Red[6] - UA
-    { token: 'keyword.type.OA', foreground: '228be6', fontStyle: 'bold' }, // Blue[6] - OA
-    { token: 'keyword.type.U', foreground: 'ffa8a8', fontStyle: 'bold' },  // Red[3] - U
-    { token: 'keyword.type.O', foreground: 'a5b4fc', fontStyle: 'bold' },  // Blue[3] - O
-    
+    { token: 'keyword.type.u', foreground: 'c92a2a', fontStyle: 'bold' },  // Red[8] - U
+    { token: 'keyword.type.o', foreground: '1864ab', fontStyle: 'bold' },  // Blue[8] - O
+
+    // Literals
     { token: 'constant.language', foreground: '008080', fontStyle: 'bold' },
+    { token: 'number', foreground: '098658' },
+
+    // Strings
     { token: 'string', foreground: 'A31515' },
+    { token: 'string.escape', foreground: 'EE0000' },
+    { token: 'string.invalid', foreground: 'FF0000' },
+
+    // Comments
     { token: 'comment', foreground: '008000', fontStyle: 'italic' },
+
+    // Operators and delimiters
     { token: 'operator', foreground: '000000' },
     { token: 'operator.assignment', foreground: '000000' },
     { token: 'operator.comparison', foreground: '000000' },
     { token: 'operator.logical', foreground: '000000' },
     { token: 'delimiter', foreground: '000000' },
     { token: 'delimiter.bracket', foreground: '000000' },
-    { token: 'delimiter.curly.open', foreground: '000000' },
-    { token: 'delimiter.curly.close', foreground: '000000' },
-    { token: 'delimiter.parenthesis.open', foreground: '000000' },
-    { token: 'delimiter.parenthesis.close', foreground: '000000' },
-    { token: 'delimiter.bracket.open', foreground: '000000' },
-    { token: 'delimiter.bracket.close', foreground: '000000' },
+    { token: 'delimiter.curly', foreground: '000000' },
+    { token: 'delimiter.parenthesis', foreground: '000000' },
+    { token: 'delimiter.dot', foreground: '000000' },
+
+    // Identifiers
     { token: 'identifier', foreground: '000000' }
   ],
   colors: {

@@ -61,7 +61,8 @@ export function TreeFilterToolbar({ filters, onFiltersChange }: TreeFilterToolba
                     onClick={() => handleNodeTypeToggle(nodeType)}
                     style={{
                         flexShrink: 0,
-                        backgroundColor: filters.nodeTypes.includes(nodeType) ? 'lightgrey' : 'transparent',
+                        borderColor: filters.nodeTypes.includes(nodeType) ? 'var(--mantine-primary-color-filled)' : 'lightgrey',
+                        borderWidth: filters.nodeTypes.includes(nodeType) ? '2px' : '1px',
                     }}
                 >
                     <NodeIcon type={nodeType} size="20px" fontSize="14px" />
@@ -76,7 +77,8 @@ export function TreeFilterToolbar({ filters, onFiltersChange }: TreeFilterToolba
                     onClick={() => handleAssociationDirectionToggle(AssociationDirection.Outgoing)}
                     style={{
                         flexShrink: 0,
-                        backgroundColor: filters.showOutgoingAssociations ? 'lightgrey' : 'transparent',
+                        borderColor: filters.showOutgoingAssociations ? 'var(--mantine-primary-color-filled)' : 'lightgrey',
+                        borderWidth: filters.showOutgoingAssociations ? '2px' : '1px',
                     }}
                 >
                     <AssociationIcon
@@ -94,7 +96,8 @@ export function TreeFilterToolbar({ filters, onFiltersChange }: TreeFilterToolba
                     onClick={() => handleAssociationDirectionToggle(AssociationDirection.Incoming)}
                     style={{
                         flexShrink: 0,
-                        backgroundColor: filters.showIncomingAssociations ? 'lightgrey' : 'transparent',
+                        borderColor: filters.showIncomingAssociations ? 'var(--mantine-primary-color-filled)' : 'lightgrey',
+                        borderWidth: filters.showIncomingAssociations ? '2px' : '1px',
                     }}
                 >
                     <AssociationIcon
