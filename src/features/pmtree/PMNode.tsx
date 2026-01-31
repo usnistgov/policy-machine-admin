@@ -15,7 +15,8 @@ import { useTheme } from "@/shared/theme/ThemeContext";
 import {
 	INDENT_NUM,
 	NodeIcon,
-	AssociationIcon,
+	IncomingAssociationIcon,
+	OutgoingAssociationIcon,
 	shouldShowExpansionIcon,
 	truncateMiddle, TreeNode
 } from "@/features/pmtree/tree-utils";
@@ -116,9 +117,14 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 
 		return (
 			<div style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1, minWidth: 0, whiteSpace: 'nowrap' }}>
-				{isAssociation && associationType && (
-					<AssociationIcon 
-						direction={associationType}
+				{isAssociation && associationType === 'outgoing' && (
+					<OutgoingAssociationIcon
+						color={theme.colors.green[9]}
+						size="14px"
+					/>
+				)}
+				{isAssociation && associationType === 'incoming' && (
+					<IncomingAssociationIcon
 						color={theme.colors.green[9]}
 						size="14px"
 					/>
@@ -126,7 +132,6 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 				<NodeIcon
 					type={node.data.type}
 					size="18px"
-					fontSize="12px"
 				/>
 				<Tooltip label={node.data.name} position="top" disabled={!shouldShowTooltip}>
 					<span style={{

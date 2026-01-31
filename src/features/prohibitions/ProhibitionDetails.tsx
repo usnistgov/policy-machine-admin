@@ -288,7 +288,7 @@ export function ProhibitionDetails({
                 backgroundColor: isEditing ? 'var(--mantine-color-gray-1)' : 'white'
               }}>
                 <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-                  <NodeIcon type={subject.type} size="18px" fontSize="14px" />
+                  <NodeIcon type={subject.type} size="18px" />
                   <Text
                     size="sm"
                     style={{
@@ -377,7 +377,7 @@ export function ProhibitionDetails({
                   backgroundColor: isEditing ? 'var(--mantine-color-gray-1)' : 'white'
                 }}>
                   <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-                    <NodeIcon type={cc.node.type} size="18px" fontSize="14px" />
+                    <NodeIcon type={cc.node.type} size="18px" />
                     <Text size="sm" style={{ flex: 1 }}>
                       {cc.node.name}
                     </Text>

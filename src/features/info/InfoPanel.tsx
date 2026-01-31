@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { IconArrowLeftCircle, IconPlus, IconSquareRoundedMinus, IconX } from "@tabler/icons-react";
+import {IconArrowRightCircle, IconSquareRoundedMinus, IconX} from "@tabler/icons-react";
 import { NodeApi } from "react-arborist";
-import { ActionIcon, Alert, Box, Button, Divider, Group, ScrollArea, Stack, Text, Title, useMantineTheme } from "@mantine/core";
+import { ActionIcon, Alert, Box, Button, Divider, Group, Stack, Text, useMantineTheme } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { AccessRightsSelection } from "@/components/access-rights";
 import { PMTree } from "@/features/pmtree";
 import { fetchAssociationChildren } from "@/features/pmtree/tree-data-fetcher";
-import { AssociationDirection, AssociationIcon, NodeIcon, transformNodesToTreeNodes, TreeNode, truncateMiddle } from "@/features/pmtree/tree-utils";
+import { AssociationDirection, IncomingAssociationIcon, OutgoingAssociationIcon, NodeIcon, transformNodesToTreeNodes, TreeNode } from "@/features/pmtree/tree-utils";
 import { NODE_TYPES, NodePrivilegeInfo, NodeType } from "@/shared/api/pdp.types";
 import * as QueryService from "@/shared/api/pdp_query.api";
 import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
@@ -25,6 +24,7 @@ function transformNodePrivilegeInfoToTreeNodes(privileges: NodePrivilegeInfo[]):
 export interface InfoPanelProps {
 	rootNode: TreeNode;
 	selectedNodes?: TreeNode[];
+	onClose?: () => void;
 }
 
 export function InfoPanel(props: InfoPanelProps) {
@@ -49,6 +49,12 @@ export function InfoPanel(props: InfoPanelProps) {
 
 	// Association tree state
 	const [selectedAssociationDirection, setSelectedAssociationDirection] = useState<AssociationDirection>(AssociationDirection.Incoming);
+
+	// Reset assignment mode when a different node is opened
+	useEffect(() => {
+		setIsAssignmentMode(false);
+		setAssignmentTargets([]);
+	}, [props.rootNode.pmId]);
 
 	// Handle selection in descendants tree
 	const handleDescendantSelection = useCallback((nodeApi: any[]) => {
@@ -291,7 +297,7 @@ export function InfoPanel(props: InfoPanelProps) {
 			fetchAssociationChildren(
 				props.rootNode.pmId,
 				{
-					nodeTypes: NODE_TYPES,
+					nodeTypes: [NodeType.UA, NodeType.OA, NodeType.U, NodeType.O],
 					showIncomingAssociations: true,
 					showOutgoingAssociations: true,
 				},
@@ -353,69 +359,116 @@ export function InfoPanel(props: InfoPanelProps) {
 		}
 	}, [handleEditAssociation]);
 
-	const associationNodesForDirection = useMemo(
+	/*const associationNodesForDirection = useMemo(
 		() => associationRootNodes.filter(node => node.associationDetails?.type === selectedAssociationDirection),
 		[associationRootNodes, selectedAssociationDirection]
-	);
+	);*/
 
 	// Memoize tree props to prevent unnecessary re-renders
 	const associationTreeProps = useMemo(() => ({
 		direction: "ascendants" as const,
-		rootNodes: associationNodesForDirection,
+		rootNodes: associationRootNodes,
 		showReset: true,
 		showTreeFilters: true,
 		showDirection: true,
 		showCreatePolicyClass: false,
 		filterConfig: {
-			nodeTypes: NODE_TYPES,
-			showIncomingAssociations: false,
-			showOutgoingAssociations: false,
+			nodeTypes: [NodeType.UA, NodeType.OA, NodeType.U, NodeType.O],
+			showIncomingAssociations: true,
+			showOutgoingAssociations: true,
 		},
 		clickHandlers: {
 			onSelect: handleAssociationSelected
 		}
-	}), [associationNodesForDirection, handleAssociationSelected]);
+	}), [associationRootNodes, handleAssociationSelected]);
 
-	const showAssociationEmptyState = associationNodesForDirection.length === 0;
+	const showAssociationEmptyState = associationRootNodes.length === 0;
 
 	return (
-		<Stack gap="md" style={{ padding: "0 16px 16px 16px", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-			<Box>
-				<Stack gap="sm">
-					<Group>
-						<NodeIcon type={props.rootNode.type} size="40px" fontSize="28px" />
-						<Stack gap={0}>
-							<Title order={3}>{props.rootNode.name}</Title>
-							<Text size="sm" c="dimmed">ID: {props.rootNode.pmId}</Text>
-						</Stack>
-					</Group>
-					{/* TODO <Box>
-						<Text size="sm" fw={500} mb="xs">Properties:</Text>
-						{renderProperties()}
-					</Box>*/}
-				</Stack>
-			</Box>
+		<Stack gap="xs" style={{ padding: "12px 12px", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--mantine-color-gray-0)" }}>
+			{/* Compact Header - Icon spans both rows */}
+			<Group gap="sm" wrap="nowrap" justify="space-between">
+				<Group gap="sm" align="center" wrap="nowrap">
+					<NodeIcon type={props.rootNode.type} size="40px" />
+					<Stack gap={0}>
+						<Text fw={600} size="md" lh={1.2}>{props.rootNode.name}</Text>
+						<Text size="xs" c="dimmed">ID: {props.rootNode.pmId}</Text>
+					</Stack>
+					<Divider orientation="vertical" />
+					{props.rootNode.type !== "PC" && !isAssignmentMode && (
+						<Button
+							size="xs"
+							leftSection={<IconArrowRightCircle size={14} />}
+							onClick={() => handleStartAssignment()}>
+							Assign To
+						</Button>
+					)}
+					{(() => {
+						const nodeType = props.rootNode.type;
+						const canHaveIncoming = nodeType === NodeType.O || nodeType === NodeType.OA || nodeType === NodeType.UA;
+						const canHaveOutgoing = nodeType === NodeType.UA;
+						return (
+							<>
+								{canHaveIncoming && (
+									<Button
+										size="xs"
+										leftSection={<IncomingAssociationIcon size="14px" color="currentColor" />}
+										onClick={() => handleStartAssociation(AssociationDirection.Incoming)}>
+										Create Incoming Association
+									</Button>
+								)}
+								{canHaveOutgoing && (
+									<Button
+										size="xs"
+										leftSection={<OutgoingAssociationIcon size="14px" color="currentColor" />}
+										onClick={() => handleStartAssociation(AssociationDirection.Outgoing)}>
+										Create Outgoing Association
+									</Button>
+								)}
+							</>
+						);
+					})()}
+				</Group>
+				{props.onClose && (
+					<ActionIcon
+						variant="subtle"
+						color="gray"
+						onClick={props.onClose}
+						aria-label="Close panel"
+					>
+						<IconX size={18} />
+					</ActionIcon>
+				)}
+			</Group>
+			<Divider orientation="horizontal" />
 
-			{/* Content sections */}
-			<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', minHeight: 0, overflow: 'auto' }}>
+			{/* Content sections - horizontal layout for descendants and associations */}
+			<Box style={{ flex: 1, display: 'flex', flexDirection: 'row', gap: '8px', minHeight: 0, overflow: 'hidden' }}>
 				{/* Descendants Tree / Assignment Panel */}
 				{props.rootNode.type !== "PC" && (
-					<Box style={{ flex: 0.4, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+					<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
 						{!isAssignmentMode ? (
 							<>
-								<Group gap="xs" align="baseline" mb="xs">
-									<Title order={4}>Descendants</Title>
-									<Divider orientation="vertical" />
-									<Text size="sm" c="dimmed">Select a node from the tree to deassign</Text>
+								<Group gap="xs" align="center" mb={4}>
+									<Text size="sm" fw={600}>Descendants</Text>
+									{isSelectedNodeRoot && selectedDescendantNode && (
+										<Button
+											size="xs"
+											leftSection={<IconX size={14} />}
+											color="red"
+											onClick={handleDeassignSelected} >
+											Deassign
+										</Button>
+									)}
 								</Group>
 								<Box style={{ flex: 1, backgroundColor: theme.other.intellijContentBg, border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 									<PMTree
 										key={`descendants-${descendantsNodes.length}-${descendantsNodes.map(n => n.id).join('-')}`}
 										direction="descendants"
 										rootNodes={descendantsNodes}
-										showReset={false}
-										showTreeFilters={false}
-										showDirection={false}
+										showReset
+										showTreeFilters
+										showDirection
 										filterConfig={{
 											nodeTypes: NODE_TYPES,
 											showIncomingAssociations: false,
@@ -426,61 +479,43 @@ export function InfoPanel(props: InfoPanelProps) {
 										}}
 									/>
 								</Box>
-
-								{/* Action Buttons */}
-								<Group justify="center" mt="sm" mb="sm" gap="xs">
-									<Button
-										leftSection={<IconArrowLeftCircle />}
-										onClick={() => handleStartAssignment()}>
-										Assign To
-									</Button>
-
-									{isSelectedNodeRoot && selectedDescendantNode && (
-										<Button
-											leftSection={<IconX />}
-											color="red"
-											onClick={handleDeassignSelected} >
-											Deassign From
-										</Button>
-									)}
-								</Group>
 							</>
 						) : (
 							<>
-								<Title order={4} mb="sm">Assign To</Title>
+								<Text size="sm" fw={600} mb={4}>Assign To</Text>
 								<Box style={{
 									flex: 1,
 									border: '1px solid var(--mantine-color-gray-3)',
 									borderRadius: '4px',
-									padding: '12px',
+									padding: '8px',
 									backgroundColor: 'var(--mantine-color-gray-0)',
 									overflow: 'auto'
 								}}>
 									{assignmentTargets.length === 0 && (
-										<Alert variant="light" color="blue" mb="sm">
-											<Text size="sm">Select nodes from the tree on the left</Text>
+										<Alert variant="light" color="blue" p="xs">
+											<Text size="xs">Select nodes from tree</Text>
 										</Alert>
 									)}
 									{assignmentTargets.length > 0 ? (
-										<Stack gap={0}>
+										<Stack gap={2}>
 											{assignmentTargets.map((node) => (
 												<Group key={node.id} justify="space-between" style={{
-													padding: '8px 12px',
+													padding: '4px 8px',
 													border: '1px solid var(--mantine-color-gray-2)',
 													borderRadius: '4px',
 													backgroundColor: 'white'
 												}}>
 													<Group gap="xs">
-														<NodeIcon type={node.type} size="18px" fontSize="14px" />
-														<Text size="sm">{node.name}</Text>
+														<NodeIcon type={node.type} size="14px" />
+														<Text size="xs">{node.name}</Text>
 													</Group>
 													<ActionIcon
-														size="sm"
+														size="xs"
 														variant="subtle"
 														color="red"
 														onClick={() => handleRemoveAssignmentTarget(node)}
 													>
-														<IconSquareRoundedMinus size={16} />
+														<IconSquareRoundedMinus size={12} />
 													</ActionIcon>
 												</Group>
 											))}
@@ -489,30 +524,18 @@ export function InfoPanel(props: InfoPanelProps) {
 								</Box>
 
 								{/* Submit/Cancel Buttons */}
-								<Group justify="center" mt="sm" mb="sm" gap="xs">
-									<ActionIcon
-										variant="filled"
-										size="md"
-										onClick={handleSubmitAssignment}
-										style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-									>
-										<Text size="sm" style={{ color: 'white' }}>Submit</Text>
-									</ActionIcon>
-									<ActionIcon
-										variant="outline"
-										size="md"
-										onClick={handleCancelAssignment}
-										style={{ width: 'auto', paddingLeft: '12px', paddingRight: '12px' }}
-									>
-										<Text size="sm">Cancel</Text>
-									</ActionIcon>
+								<Group justify="center" mt={4} gap="xs">
+									<Button size="xs" onClick={handleSubmitAssignment}>
+										Submit
+									</Button>
+									<Button size="xs" variant="outline" onClick={handleCancelAssignment}>
+										Cancel
+									</Button>
 								</Group>
 							</>
 						)}
 					</Box>
 				)}
-
-				<Divider orientation="horizontal" />
 
 				{/* Associations Tabs */}
 				{(() => {
@@ -521,32 +544,11 @@ export function InfoPanel(props: InfoPanelProps) {
 					const canHaveOutgoing = nodeType === NodeType.UA;
 					const showAssociations = canHaveIncoming || canHaveOutgoing;
 
-					if (!showAssociations) return null;
+					if (!showAssociations) {return null;}
 
 					return (
-						<Box style={{ flex: 0.6, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-							<Group gap="xs" align="baseline" mb="xs">
-								<Title order={4} mb={0}>Associations</Title>
-								<Button.Group>
-									{canHaveIncoming && (
-										<Button
-											variant={selectedAssociationDirection === AssociationDirection.Incoming ? "filled" : "default"}
-											onClick={() => setSelectedAssociationDirection(AssociationDirection.Incoming)}
-										>
-											Incoming
-										</Button>
-									)}
-									{canHaveOutgoing && (
-										<Button
-											variant={selectedAssociationDirection === AssociationDirection.Outgoing ? "filled" : "default"}
-											onClick={() => setSelectedAssociationDirection(AssociationDirection.Outgoing)}
-										>
-											Outgoing
-										</Button>
-									)}
-								</Button.Group>
-							</Group>
-
+						<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+							<Text size="sm" fw={600} mb={4}>Associations</Text>
 							<Box
 								style={{
 									flex: 1,
@@ -562,25 +564,14 @@ export function InfoPanel(props: InfoPanelProps) {
 							>
 								<Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
 									{showAssociationEmptyState ? (
-										<Alert variant="light" color="gray">
-											<Text size="sm" c="dimmed">No {selectedAssociationDirection} associations</Text>
+										<Alert variant="light" color="gray" p="xs">
+											<Text size="xs" c="dimmed">No associations</Text>
 										</Alert>
 									) : (
 										<PMTree {...associationTreeProps} />
 									)}
 								</Box>
 							</Box>
-
-							{((selectedAssociationDirection === AssociationDirection.Incoming && canHaveIncoming) ||
-								(selectedAssociationDirection === AssociationDirection.Outgoing && canHaveOutgoing)) && (
-									<Group justify="center" style={{ paddingTop: '12px' }}>
-										<Button
-											leftSection={<IconPlus />}
-											onClick={() => handleStartAssociation(selectedAssociationDirection)}>
-											Create
-										</Button>
-									</Group>
-								)}
 						</Box>
 					);
 				})()}

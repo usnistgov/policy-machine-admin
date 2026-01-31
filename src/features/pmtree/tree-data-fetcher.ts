@@ -58,6 +58,7 @@ export const fetchAssociationChildren = async (
     parentNodeId: string
 ): Promise<TreeNode[]> => {
   const associationNodes: TreeNode[] = [];
+  const shouldApplyTypeFilter = filterConfig?.nodeTypes && filterConfig.nodeTypes.length > 0;
 
   try {
     // Fetch outgoing associations only if enabled
@@ -67,6 +68,10 @@ export const fetchAssociationChildren = async (
         const outgoingAssociations = await QueryService.getAssociationsWithSource(parentPmId);
         for (const assoc of outgoingAssociations) {
           if (assoc.target) {
+            // Apply node type filter if specified
+            if (shouldApplyTypeFilter && !filterConfig.nodeTypes.includes(assoc.target.type)) {
+              continue;
+            }
             associationNodes.push({
               id: crypto.randomUUID(),
               pmId: assoc.target.id,
@@ -95,7 +100,10 @@ export const fetchAssociationChildren = async (
         const incomingAssociations = await QueryService.getAssociationsWithTarget(parentPmId);
         for (const assoc of incomingAssociations) {
           if (assoc.ua) {
-            // Association nodes are not filtered by node type - they show regardless of type filters
+            // Apply node type filter if specified
+            if (shouldApplyTypeFilter && !filterConfig.nodeTypes.includes(assoc.ua.type)) {
+              continue;
+            }
             associationNodes.push({
               id: crypto.randomUUID(),
               pmId: assoc.ua.id,

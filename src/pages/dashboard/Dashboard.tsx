@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { IconBan, IconCopy, IconInfoSquareRounded, IconPlus, IconTrash } from '@tabler/icons-react';
 import { NodeApi } from 'react-arborist';
 import {
+	Box,
 	Button,
 	Group,
 	Menu,
@@ -12,6 +13,7 @@ import {
 	useMantineTheme,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
+import { InfoPanel } from '@/features/info/InfoPanel';
 import { PMTree, TreeFilterConfig } from '@/features/pmtree';
 import { NodeIcon, TreeNode } from '@/features/pmtree/tree-utils';
 import { RightPanel, RightPanelComponent } from '@/pages/dashboard/RightPanel';
@@ -50,8 +52,6 @@ export function Dashboard() {
 	const handleInfoClick = () => {
 		if (rightClickedNode) {
 			setSelectedNodeForInfo(rightClickedNode);
-			setRightPanelComponent(RightPanelComponent.NODE_INFO);
-			setRightPanelExpanded(true);
 		}
 		setContextMenuOpened(false);
 	};
@@ -192,19 +192,44 @@ export function Dashboard() {
 	};
 
 	const left = (
-		<PMTree
-			style={{
-				width: '100%',
-			}}
-			direction="ascendants"
-			filterConfig={treeFilters}
-			clickHandlers={{
-				onRightClick: handleNodeRightClick,
-				onSelect: handleSelect,
-			}}
-			showCreatePolicyClass
-			onCreatePolicyClass={() => handleCreateNodeClick(NodeType.PC)}
-		/>
+		<Box style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+			<Box style={{ flex: selectedNodeForInfo ? 0.6 : 1, minHeight: 0, overflow: 'hidden' }}>
+				<PMTree
+					style={{
+						width: '100%',
+						height: '100%',
+					}}
+					direction="ascendants"
+					filterConfig={treeFilters}
+					clickHandlers={{
+						onRightClick: handleNodeRightClick,
+						onSelect: handleSelect,
+					}}
+					showCreatePolicyClass
+					onCreatePolicyClass={() => handleCreateNodeClick(NodeType.PC)}
+				/>
+			</Box>
+
+			{selectedNodeForInfo && (
+				<Box
+					style={{
+						flex: 0.5,
+						minHeight: 0,
+						width: '100%',
+						borderTop: '1px solid var(--mantine-color-gray-3)',
+						overflow: 'hidden',
+						display: 'flex',
+						flexDirection: 'column',
+					}}
+				>
+					<InfoPanel
+						rootNode={selectedNodeForInfo}
+						selectedNodes={selectedNodes}
+						onClose={() => setSelectedNodeForInfo(null)}
+					/>
+				</Box>
+			)}
+		</Box>
 	);
 
 	const right = (
@@ -278,7 +303,7 @@ export function Dashboard() {
 								{getValidChildNodeTypes(rightClickedNode.type as NodeType).map((nodeType) => (
 									<Menu.Item
 										key={nodeType}
-										leftSection={<NodeIcon type={nodeType} size="16px" fontSize="12px" />}
+										leftSection={<NodeIcon type={nodeType} size="16px" />}
 										rightSection={<IconPlus size={16} />}
 										onClick={() => handleCreateNodeClick(nodeType)}
 									>
@@ -351,7 +376,6 @@ export function Dashboard() {
 								<NodeIcon
 									type={rightClickedNode.type}
 									size="18px"
-									fontSize="12px"
 									style={{ flexShrink: 0 }}
 								/>
 								<Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>
@@ -375,7 +399,7 @@ export function Dashboard() {
 						data-autofocus
 						required
 						leftSection={
-							nodeTypeToCreate && <NodeIcon type={nodeTypeToCreate} size="20px" fontSize="14px" />
+							nodeTypeToCreate && <NodeIcon type={nodeTypeToCreate} size="20px" />
 						}
 					/>
 

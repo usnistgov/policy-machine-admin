@@ -1,57 +1,44 @@
  import React from "react";
 import {Node, NodeType} from "@/shared/api/pdp.types";
 import {useMantineTheme} from "@mantine/core";
-import {
-	IconArrowBigLeftLinesFilled,
-	IconArrowBigRightLinesFilled
-} from "@tabler/icons-react";
+
+// Re-export association icons from the icons directory
+export { IncomingAssociationIcon } from "@/components/icons/IncomingAssociationIcon";
+export { OutgoingAssociationIcon } from "@/components/icons/OutgoingAssociationIcon";
 
 // Constants
 export const INDENT_NUM = 24;
 
 // Types
-export type NodeIconProps = {
-	type: string,
-	size?: string,
-	fontSize?: string,
-	style?: React.CSSProperties,
-}
-
 export enum AssociationDirection {
 	Outgoing = 'outgoing',
 	Incoming = 'incoming',
 }
 
-// Components
-export function AssociationIcon({direction, size = '14px', color = "white"}: {direction: AssociationDirection, size?: string, color?: string}) {
-	return (
-		<span style={{
-			display: 'inline-flex',
-			alignItems: 'center',
-		}}>
-			{direction === 'outgoing' ? (
-				<IconArrowBigRightLinesFilled
-					size={size} 
-					color={color}
-					stroke={2}
-					style={{ 
-					}}
-				/>
-			) : (
-				<IconArrowBigLeftLinesFilled
-					size={size} 
-					color={color}
-					stroke={2}
-					style={{ 
-					}}
-				/>
-			)}
-		</span>
-	);
+export type NodeIconProps = {
+	type: string,
+	size?: string | number,
+	style?: React.CSSProperties,
 }
 
-export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIconProps) {
+function calculateFontSize(size: string | number): string {
+	// Parse size and calculate proportional fontSize (~65%)
+	if (typeof size === 'number') {
+		return `${Math.round(size * 0.65)}px`;
+	}
+	const match = size.match(/^([\d.]+)(.*)$/);
+	if (match) {
+		const value = parseFloat(match[1]);
+		const unit = match[2] || 'px';
+		return `${Math.round(value * 0.65)}${unit}`;
+	}
+	return '11px'; // fallback
+}
+
+export function NodeIcon({type, size = '16px', style}: NodeIconProps) {
 	const color = getTypeColor(type);
+	const sizeStr = typeof size === 'number' ? `${size}px` : size;
+	const fontSize = calculateFontSize(size);
 
 	return (
 		<span
@@ -60,15 +47,15 @@ export function NodeIcon({type, size = '16px', fontSize = '11px', style}: NodeIc
 				color,
 				fontSize,
 				fontWeight: 'bold',
-				width: size,
-				height: size,
+				width: sizeStr,
+				height: sizeStr,
 				display: 'inline-flex',
 				textAlign: 'center',
 				justifyContent: 'center',
 				alignItems: 'center',
 				overflow: 'hidden',
 				whiteSpace: 'nowrap',
-				minWidth: size,
+				minWidth: sizeStr,
 				flexShrink: 0,
 				...style,
 			}}

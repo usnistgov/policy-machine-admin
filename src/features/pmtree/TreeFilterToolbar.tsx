@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActionIcon, Group, Tooltip, useMantineTheme } from '@mantine/core';
-import { AssociationDirection, AssociationIcon, NodeIcon } from '@/features/pmtree/tree-utils';
+import { ActionIcon, Tooltip, useMantineTheme } from '@mantine/core';
+import { AssociationDirection, IncomingAssociationIcon, OutgoingAssociationIcon, NodeIcon } from '@/features/pmtree/tree-utils';
 import { NodeType } from '@/shared/api/pdp.types';
 import {ToolBarSection} from "@/features/pmtree/ToolBarSection";
 
@@ -65,7 +65,7 @@ export function TreeFilterToolbar({ filters, onFiltersChange }: TreeFilterToolba
                         borderWidth: filters.nodeTypes.includes(nodeType) ? '2px' : '1px',
                     }}
                 >
-                    <NodeIcon type={nodeType} size="20px" fontSize="14px" />
+                    <NodeIcon type={nodeType} size="20px" />
                 </ActionIcon>
             ))}
 
@@ -81,9 +81,8 @@ export function TreeFilterToolbar({ filters, onFiltersChange }: TreeFilterToolba
                         borderWidth: filters.showOutgoingAssociations ? '2px' : '1px',
                     }}
                 >
-                    <AssociationIcon
-                        direction={AssociationDirection.Outgoing}
-                        size="14px"
+                    <OutgoingAssociationIcon
+                        size="20px"
                         color={theme.colors.green[9]}
                     />
                 </ActionIcon>
@@ -100,9 +99,8 @@ export function TreeFilterToolbar({ filters, onFiltersChange }: TreeFilterToolba
                         borderWidth: filters.showIncomingAssociations ? '2px' : '1px',
                     }}
                 >
-                    <AssociationIcon
-                        direction={AssociationDirection.Incoming}
-                        size="14px"
+                    <IncomingAssociationIcon
+                        size="20px"
                         color={theme.colors.green[9]}
                     />
                 </ActionIcon>

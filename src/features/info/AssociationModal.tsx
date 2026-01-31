@@ -18,7 +18,7 @@ import { AccessRightsSelection } from '@/components/access-rights';
 import { PMTree } from '@/features/pmtree';
 import {
 	AssociationDirection,
-	AssociationIcon,
+	OutgoingAssociationIcon,
 	NodeIcon,
 	TreeNode,
 	truncateMiddle,
@@ -147,7 +147,7 @@ export function AssociationModal({
 							</Text>
 							{sourceNode ? (
 								<Group gap="xs">
-									<NodeIcon type={sourceNode.type} size="30px" fontSize="22px" />
+									<NodeIcon type={sourceNode.type} size="30px" />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(sourceNode.name)}
 									</Text>
@@ -162,8 +162,7 @@ export function AssociationModal({
 						{/* Association Icon */}
 						<Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 							<Box style={{ height: '20px' }} />
-							<AssociationIcon
-								direction={AssociationDirection.Outgoing}
+							<OutgoingAssociationIcon
 								size="32"
 								color={theme.colors.green[9]}
 							/>
@@ -176,7 +175,7 @@ export function AssociationModal({
 							</Text>
 							{targetNode ? (
 								<Group gap="xs">
-									<NodeIcon type={targetNode.type} size="30px" fontSize="22px" />
+									<NodeIcon type={targetNode.type} size="30px" />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(targetNode.name)}
 									</Text>
@@ -283,7 +282,7 @@ export function AssociationModal({
 							</Text>
 							{sourceNode && (
 								<Group gap="xs">
-									<NodeIcon type={sourceNode.type} size="30px" fontSize="22px" />
+									<NodeIcon type={sourceNode.type} size="30px" />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(sourceNode.name)}
 									</Text>
@@ -294,8 +293,7 @@ export function AssociationModal({
 						{/* Association Icon */}
 						<Box style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 							<Text size="xs" c="dimmed" mb={4} />
-							<AssociationIcon
-								direction={AssociationDirection.Outgoing}
+							<OutgoingAssociationIcon
 								size="32"
 								color={theme.colors.green[9]} />
 						</Box>
@@ -307,7 +305,7 @@ export function AssociationModal({
 							</Text>
 							{targetNode && (
 								<Group gap="xs">
-									<NodeIcon type={targetNode.type} size="30px" fontSize="22px" />
+									<NodeIcon type={targetNode.type} size="30px" />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(targetNode.name)}
 									</Text>

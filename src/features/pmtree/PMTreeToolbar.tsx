@@ -86,7 +86,7 @@ export function PMTreeToolbar({
                                 size="md"
                                 onClick={onCreatePolicyClass}
                             >
-                                <NodeIcon type={NodeType.PC} size="20px" fontSize="14px" />
+                                <NodeIcon type={NodeType.PC} size="20px" />
                             </ActionIcon>
                         </ToolBarSection>
                         <Divider orientation="vertical" />

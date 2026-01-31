@@ -186,8 +186,26 @@ export function PMTree(props: PMTreeProps) {
     const handleReset = useCallback(() => {
         // Reload data
         if (props.rootNodes !== undefined) {
-            // If using external rootNodes, just reset to original
-            setTreeData(props.rootNodes);
+            // If using external rootNodes, apply current filters and reset
+            let filteredNodes = props.rootNodes;
+
+            // Apply node type filter
+            if (internalFilters.nodeTypes.length > 0) {
+                filteredNodes = filteredNodes.filter(node =>
+                    internalFilters.nodeTypes.includes(node.type as NodeType)
+                );
+            }
+
+            // Apply association direction filters
+            filteredNodes = filteredNodes.filter(node => {
+                if (!node.isAssociation) return true;
+                const direction = node.associationDetails?.type;
+                if (direction === 'incoming' && !internalFilters.showIncomingAssociations) return false;
+                if (direction === 'outgoing' && !internalFilters.showOutgoingAssociations) return false;
+                return true;
+            });
+
+            setTreeData(filteredNodes);
         } else {
             // Reload POS nodes from server
             loadPOSNodes();
@@ -195,7 +213,7 @@ export function PMTree(props: PMTreeProps) {
 
         // Close all nodes in the tree
         treeApi?.closeAll();
-    }, [props.rootNodes, setTreeData, loadPOSNodes, treeApi]);
+    }, [props.rootNodes, setTreeData, loadPOSNodes, treeApi, internalFilters]);
 
     const internalToolbar = showAnyToolbar && (
         <PMTreeToolbar

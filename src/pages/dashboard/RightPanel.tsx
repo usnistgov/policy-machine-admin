@@ -2,10 +2,8 @@ import { ActionIcon, Center, Stack } from "@mantine/core";
 import {
 	IconBan,
 	IconCalendarCode,
-	IconInfoSquareRounded
 } from "@tabler/icons-react";
 import React from "react";
-import {InfoPanel} from "@/features/info/InfoPanel";
 import {ProhibitionsPanel, ProhibitionDetails} from "@/features/prohibitions";
 import {ObligationsPanel} from "@/features/obligations/ObligationsPanel";
 import { Operations } from "@/features/operations";
@@ -94,8 +92,7 @@ export function RightPanel({component, isExpanded, onComponentClick, selectedNod
 					>
 						{React.cloneElement(icon, {
 							color: component === btnComponent ? "white" : "var(--mantine-primary-color-filled)",
-							...(icon.type !== IconInfoSquareRounded &&
-								icon.type !== IconBan &&
+							...(icon.type !== IconBan &&
 								icon.type !== IconCalendarCode && {
 								filled: component === btnComponent,
 								fillColor: "var(--mantine-primary-color-filled)"
@@ -150,17 +147,6 @@ export function RightPanel({component, isExpanded, onComponentClick, selectedNod
 
 function renderComponent(component: RightPanelComponent | null, selectedNodeForInfo: any, selectedNodes: any[], onRightPanelClose?: () => void) {
 	switch (component) {
-		case RightPanelComponent.NODE_INFO:
-			return selectedNodeForInfo ? (
-				<InfoPanel 
-					rootNode={selectedNodeForInfo} 
-					selectedNodes={selectedNodes || []}
-				/>
-			) : (
-				<Center style={{ height: '100%' }}>
-					Right click and select "info" on a node
-				</Center>
-			);
 		case RightPanelComponent.PROHIBITIONS:
 			return <ProhibitionsPanel selectedNodes={selectedNodes}/>;
 		case RightPanelComponent.CREATE_PROHIBITION:
