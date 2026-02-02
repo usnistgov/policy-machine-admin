@@ -89,17 +89,13 @@ function consolidateSelections(root: AccessRight, selectedRights: string[]): str
 
 	function consolidateNode(node: AccessRight): boolean {
 		if (!node.children || node.children.length === 0) {
-			// Leaf node - just return if it's selected
 			return result.includes(node.ar);
 		}
 
-		// First, recursively consolidate children
 		const childrenEffectivelySelected = node.children.map(child => consolidateNode(child));
 
-		// If all children are effectively selected, consolidate to this node
 		if (childrenEffectivelySelected.every(selected => selected)) {
-			// Remove all descendant ARs and add this node's AR
-			const descendantArs = getAllAccessRights(node).slice(1); // All except this node
+			const descendantArs = getAllAccessRights(node).slice(1);
 			result = result.filter(ar => !descendantArs.includes(ar));
 			if (!result.includes(node.ar)) {
 				result.push(node.ar);
@@ -261,17 +257,12 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 		let newRights: string[];
 
 		if (isCurrentlySelected) {
-			// Deselecting
 			if (isDirectlySelected) {
-				// Simply remove this node
 				newRights = selectedRights.filter(r => r !== node.ar);
 			} else if (hasSelectedAncestor) {
-				// Need to remove the ancestor and add siblings
 				const ancestor = findSelectedAncestor(node.ar, accessRightTree, selectedRights);
 				if (ancestor) {
-					// Remove the ancestor, add all its children except the path to this node
 					const filteredRights = selectedRights.filter(r => r !== ancestor.ar);
-					// Find siblings at each level from ancestor to the target node
 					const siblingsToAdd = findDirectSiblingsToAdd(node.ar, ancestor);
 					newRights = [...filteredRights, ...siblingsToAdd];
 				} else {
@@ -281,14 +272,11 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 				newRights = selectedRights;
 			}
 		} else {
-			// Selecting - just add this node's ar
-			// First, remove any children that might be explicitly selected (cleanup)
 			const childRights = node.children ? getAllAccessRights(node).slice(1) : [];
 			const cleanedRights = selectedRights.filter(r => !childRights.includes(r));
 			newRights = [...cleanedRights, node.ar];
 		}
 
-		// Consolidate: if all children of any parent are now selected, replace with parent
 		const consolidated = consolidateSelections(accessRightTree, newRights);
 		onRightsChange(consolidated);
 	}, [readOnly, selectedRights, accessRightTree, onRightsChange]);
@@ -363,7 +351,7 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 						onChange={() => handleToggle(node)}
 						disabled={readOnly}
 						styles={{
-							label: { fontSize: '14px', cursor: readOnly ? 'default' : 'pointer' },
+							label: { fontSize: '14px', fontWeight: hasChildren ? 600 : 400, cursor: readOnly ? 'default' : 'pointer' },
 							input: { cursor: readOnly ? 'default' : 'pointer' },
 						}}
 					/>
@@ -437,11 +425,9 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 
 // Helper to find which siblings to add when deselecting a node that was selected via ancestor
 function findDirectSiblingsToAdd(targetAr: string, ancestor: AccessRight): string[] {
-	// Find the path from ancestor to target
 	const path = findPathToNode(targetAr, ancestor);
 	if (!path || path.length === 0) {return [];}
 
-	// For each level in the path, we need to add the siblings
 	const result: string[] = [];
 
 	function collectSiblings(currentNode: AccessRight, pathIndex: number): void {
@@ -451,12 +437,10 @@ function findDirectSiblingsToAdd(targetAr: string, ancestor: AccessRight): strin
 
 		for (const child of currentNode.children) {
 			if (child.ar === nextInPath) {
-				// This is on the path, continue deeper if not the target
 				if (child.ar !== targetAr && pathIndex < path.length - 1) {
 					collectSiblings(child, pathIndex + 1);
 				}
 			} else {
-				// This is a sibling, add it
 				result.push(child.ar);
 			}
 		}
@@ -466,18 +450,18 @@ function findDirectSiblingsToAdd(targetAr: string, ancestor: AccessRight): strin
 	return result;
 }
 
-// Find the path from a node to a target (returns array of ar strings)
+// Find the path from a node to a target (returns array of ar strings representing the route down)
 function findPathToNode(targetAr: string, node: AccessRight): string[] | null {
 	if (node.ar === targetAr) {
-		return [targetAr];
+		return []; // Found target, return empty (we'll build path on the way back up)
 	}
 
 	if (!node.children) {return null;}
 
 	for (const child of node.children) {
 		const childPath = findPathToNode(targetAr, child);
-		if (childPath) {
-			return [child.ar, ...childPath.slice(1)];
+		if (childPath !== null) {
+			return [child.ar, ...childPath];
 		}
 	}
 

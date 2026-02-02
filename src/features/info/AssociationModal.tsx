@@ -129,7 +129,7 @@ export function AssociationModal({
 			size={isCreateMode ? '90%' : '50%'}
 			styles={{
 				body: {
-					height: isCreateMode ? '80vh' : 'auto',
+					height: isCreateMode ? '80vh' : '70vh',
 					display: 'flex',
 					flexDirection: 'column',
 				},
@@ -219,6 +219,7 @@ export function AssociationModal({
 						{/* Right side - Access Rights */}
 						<Box
 							style={{
+								minHeight: 0,
 								flex: 1,
 								minWidth: 0,
 								display: 'flex',
@@ -229,52 +230,20 @@ export function AssociationModal({
 								backgroundColor: 'var(--mantine-color-gray-0)',
 							}}
 						>
-							<Box
-								style={{ padding: '12px', borderBottom: '1px solid var(--mantine-color-gray-3)' }}
-							>
-								<Title order={4}>Access Rights</Title>
-								{selectedNode ? (
-									<>
-										{/* Selected Access Rights Pills */}
-										{selectedAccessRights.length > 0 && (
-											<Pill.Group mt="sm">
-												{selectedAccessRights.map((right) => (
-													<Pill
-														key={right}
-														size="sm"
-														withRemoveButton
-														onRemove={() => {
-															setSelectedAccessRights((prev) => prev.filter((r) => r !== right));
-														}}
-													>
-														{right}
-													</Pill>
-												))}
-											</Pill.Group>
-										)}
-									</>
-								) : (
-									<Alert variant="light" color="blue" icon={<IconInfoCircle />}>
-										Select a node from the tree to select access rights
-									</Alert>
-								)}
-							</Box>
-							<Box style={{ flex: 1, minHeight: 0 }}>
-								<AccessRightsSelection
-									selectedRights={selectedAccessRights}
-									onRightsChange={setSelectedAccessRights}
-									resourceAccessRights={resourceOperations}
-									readOnly={!selectedNode}
-								/>
-							</Box>
+							<AccessRightsSelection
+								selectedRights={selectedAccessRights}
+								onRightsChange={setSelectedAccessRights}
+								resourceAccessRights={resourceOperations}
+								readOnly={!selectedNode}
+							/>
 						</Box>
 					</Box>
 				</Stack>
 			) : (
 				// Edit mode: Source, Target, and Access Rights stacked vertically
-				<Stack gap="md" style={{ minHeight: 0 }}>
+				<Stack gap="md" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
 					{/* Source and Target Nodes side by side */}
-					<Group gap="md" align="center" style={{ justifyContent: 'space-between' }}>
+					<Group gap="md" align="center" style={{ justifyContent: 'space-between', flexShrink: 0 }}>
 						{/* Source Node */}
 						<Box style={{ flex: 1 }}>
 							<Text size="s" mb={4}>
@@ -317,18 +286,22 @@ export function AssociationModal({
 					{/* Access Rights */}
 					<Box
 						style={{
-							flex: 1,
 							minHeight: 0,
+							flex: 1,
+							minWidth: 0,
+							display: 'flex',
+							flexDirection: 'column',
 							border: '1px solid var(--mantine-color-gray-3)',
 							borderRadius: '4px',
 							overflow: 'hidden',
+							backgroundColor: 'var(--mantine-color-gray-0)',
 						}}
 					>
 						<AccessRightsSelection
 							selectedRights={selectedAccessRights}
 							onRightsChange={setSelectedAccessRights}
 							resourceAccessRights={resourceOperations}
-							readOnly={false}
+							readOnly={!selectedNode}
 						/>
 					</Box>
 				</Stack>

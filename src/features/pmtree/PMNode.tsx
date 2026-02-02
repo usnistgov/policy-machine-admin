@@ -18,7 +18,7 @@ import {
 	IncomingAssociationIcon,
 	OutgoingAssociationIcon,
 	shouldShowExpansionIcon,
-	truncateMiddle, TreeNode
+	truncateMiddle, TreeNode, getTypeColor
 } from "@/features/pmtree/tree-utils";
 
 export interface PMNodeProps extends NodeRendererProps<TreeNode> {

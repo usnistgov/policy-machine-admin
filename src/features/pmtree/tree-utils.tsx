@@ -27,7 +27,7 @@ function calculateFontSize(size: number): string {
 
 export function NodeIcon({type, size = 16, style}: NodeIconProps) {
 	const color = getTypeColor(type);
-	const sizeStr = typeof size === 'number' ? `${size}px` : size;
+	const sizeStr = `${size}px`;
 	const fontSize = calculateFontSize(size);
 
 	return (

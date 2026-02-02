@@ -448,17 +448,17 @@ export function InfoPanel(props: InfoPanelProps) {
 					<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
 						{!isAssignmentMode ? (
 							<>
-								<Group gap="xs" align="center" mb={4}>
-									<Text size="sm" fw={600}>Descendants</Text>
-									{isSelectedNodeRoot && selectedDescendantNode && (
-										<Button
-											size="xs"
-											leftSection={<IconX size={14} />}
-											color="red"
-											onClick={handleDeassignSelected} >
-											Deassign
-										</Button>
-									)}
+								<Group gap="xs" align="center" mb={8}>
+									<Text size="md" fw={600}>Descendants</Text>
+									<Button
+										size="xs"
+										leftSection={<IconX size={14} />}
+										color="red"
+										onClick={handleDeassignSelected}
+										style={{ visibility: isSelectedNodeRoot && selectedDescendantNode ? 'visible' : 'hidden' }}
+									>
+										Deassign
+									</Button>
 								</Group>
 								<Box style={{ flex: 1, backgroundColor: theme.other.intellijContentBg, border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 									<PMTree
@@ -547,7 +547,16 @@ export function InfoPanel(props: InfoPanelProps) {
 
 					return (
 						<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-							<Text size="sm" fw={600} mb={4}>Associations</Text>
+							<Group gap="xs" align="center" mb={8}>
+								<Text size="md" fw={600}>Associations</Text>
+								<Button
+									size="xs"
+									leftSection={<IconX size={14} />}
+									color="red"
+									onClick={handleDeassignSelected}
+									style={{ visibility: 'hidden' }}
+								/>
+							</Group>
 							<Box
 								style={{
 									flex: 1,
