@@ -145,7 +145,7 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 	];
 
 	return (
-		<div style={{ height: '100%', padding: '8px', overflowY: 'auto' }}>
+		<div style={{ height: '100%', overflowY: 'auto' }}>
 			<Stack gap="0">
 				{allSections.map(({ name, rights }) =>
 					renderSection(name, rights)

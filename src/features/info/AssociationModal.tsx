@@ -126,7 +126,7 @@ export function AssociationModal({
 			opened={opened}
 			onClose={onClose}
 			title={modalTitle}
-			size={isCreateMode ? '90%' : 'lg'}
+			size={isCreateMode ? '90%' : '50%'}
 			styles={{
 				body: {
 					height: isCreateMode ? '80vh' : 'auto',
@@ -147,7 +147,7 @@ export function AssociationModal({
 							</Text>
 							{sourceNode ? (
 								<Group gap="xs">
-									<NodeIcon type={sourceNode.type} size="30px" />
+									<NodeIcon type={sourceNode.type} size={30} />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(sourceNode.name)}
 									</Text>
@@ -175,7 +175,7 @@ export function AssociationModal({
 							</Text>
 							{targetNode ? (
 								<Group gap="xs">
-									<NodeIcon type={targetNode.type} size="30px" />
+									<NodeIcon type={targetNode.type} size={30} />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(targetNode.name)}
 									</Text>
@@ -282,7 +282,7 @@ export function AssociationModal({
 							</Text>
 							{sourceNode && (
 								<Group gap="xs">
-									<NodeIcon type={sourceNode.type} size="30px" />
+									<NodeIcon type={sourceNode.type} size={30} />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(sourceNode.name)}
 									</Text>
@@ -305,7 +305,7 @@ export function AssociationModal({
 							</Text>
 							{targetNode && (
 								<Group gap="xs">
-									<NodeIcon type={targetNode.type} size="30px" />
+									<NodeIcon type={targetNode.type} size={30} />
 									<Text size="lg" fw={500}>
 										{truncateMiddle(targetNode.name)}
 									</Text>
@@ -321,7 +321,6 @@ export function AssociationModal({
 							borderRadius: '4px',
 							overflow: 'hidden',
 							backgroundColor: 'var(--mantine-color-gray-0)',
-							maxHeight: '600px',
 						}}
 					>
 						<Box style={{ padding: '12px', borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
@@ -344,7 +343,7 @@ export function AssociationModal({
 								</Pill.Group>
 							)}
 						</Box>
-						<ScrollArea style={{ height: '350px' }}>
+						<ScrollArea style={{ height: '60vh' }}>
 							<AccessRightsSelection
 								selectedRights={selectedAccessRights}
 								onRightsChange={setSelectedAccessRights}

@@ -65,7 +65,7 @@ export function TreeFilterToolbar({ filters, onFiltersChange }: TreeFilterToolba
                         borderWidth: filters.nodeTypes.includes(nodeType) ? '2px' : '1px',
                     }}
                 >
-                    <NodeIcon type={nodeType} size="20px" />
+                    <NodeIcon type={nodeType} size={20} />
                 </ActionIcon>
             ))}
 

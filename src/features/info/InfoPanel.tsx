@@ -385,11 +385,11 @@ export function InfoPanel(props: InfoPanelProps) {
 	const showAssociationEmptyState = associationRootNodes.length === 0;
 
 	return (
-		<Stack gap="xs" style={{ padding: "12px 12px", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--mantine-color-gray-0)" }}>
+		<Stack gap="xs" style={{ padding: "20px 20px", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--mantine-color-gray-0)" }}>
 			{/* Compact Header - Icon spans both rows */}
 			<Group gap="sm" wrap="nowrap" justify="space-between">
 				<Group gap="sm" align="center" wrap="nowrap">
-					<NodeIcon type={props.rootNode.type} size="40px" />
+					<NodeIcon type={props.rootNode.type} size={40} />
 					<Stack gap={0}>
 						<Text fw={600} size="md" lh={1.2}>{props.rootNode.name}</Text>
 						<Text size="xs" c="dimmed">ID: {props.rootNode.pmId}</Text>
@@ -397,8 +397,7 @@ export function InfoPanel(props: InfoPanelProps) {
 					<Divider orientation="vertical" />
 					{props.rootNode.type !== "PC" && !isAssignmentMode && (
 						<Button
-							size="xs"
-							leftSection={<IconArrowRightCircle size={14} />}
+							leftSection={<IconArrowRightCircle size={18} />}
 							onClick={() => handleStartAssignment()}>
 							Assign To
 						</Button>
@@ -411,16 +410,16 @@ export function InfoPanel(props: InfoPanelProps) {
 							<>
 								{canHaveIncoming && (
 									<Button
-										size="xs"
-										leftSection={<IncomingAssociationIcon size="14px" color="currentColor" />}
+										color={theme.colors.green[9]}
+										leftSection={<IncomingAssociationIcon size="18px" color="currentColor" />}
 										onClick={() => handleStartAssociation(AssociationDirection.Incoming)}>
 										Create Incoming Association
 									</Button>
 								)}
 								{canHaveOutgoing && (
 									<Button
-										size="xs"
-										leftSection={<OutgoingAssociationIcon size="14px" color="currentColor" />}
+										color={theme.colors.green[9]}
+										leftSection={<OutgoingAssociationIcon size="18px" color="currentColor" />}
 										onClick={() => handleStartAssociation(AssociationDirection.Outgoing)}>
 										Create Outgoing Association
 									</Button>
@@ -506,7 +505,7 @@ export function InfoPanel(props: InfoPanelProps) {
 													backgroundColor: 'white'
 												}}>
 													<Group gap="xs">
-														<NodeIcon type={node.type} size="14px" />
+														<NodeIcon type={node.type} size={14} />
 														<Text size="xs">{node.name}</Text>
 													</Group>
 													<ActionIcon

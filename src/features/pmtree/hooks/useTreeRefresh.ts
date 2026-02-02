@@ -1,9 +1,10 @@
 import { PrimitiveAtom, useAtom } from 'jotai';
-import { TreeApi, NodeApi } from 'react-arborist';
-import {TreeNode, updateNodeChildren} from '@/features/pmtree/tree-utils';
-import { TreeDirection, TreeFilterConfig } from './usePMTreeOperations';
-import { fetchAllFilteredChildren } from '../tree-data-fetcher';
+import { NodeApi, TreeApi } from 'react-arborist';
+import { TreeNode, updateNodeChildren } from '@/features/pmtree/tree-utils';
 import { NodeType } from '@/shared/api/pdp.types';
+import { fetchAllFilteredChildren } from '../tree-data-fetcher';
+import { TreeDirection, TreeFilterConfig } from './usePMTreeOperations';
+
 
 /**
  * Hook for refreshing tree nodes with filtered data while preserving expansion state
@@ -28,11 +29,11 @@ export function useTreeRefresh(
 
     try {
       // Fetch new filtered children - fresh data from API
-      const newFilteredChildren = await fetchAllFilteredChildren(node, {
+      const newFilteredChildren = await fetchAllFilteredChildren({
         direction,
         filterConfig,
         parentNodeId: node.data.id,
-        parentPmId: node.data.pmId
+        parentPmId: node.data.pmId,
       });
 
       // Replace children completely with fresh filtered data

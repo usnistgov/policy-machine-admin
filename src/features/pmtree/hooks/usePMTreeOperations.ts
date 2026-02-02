@@ -1,9 +1,10 @@
 import React from 'react';
-import { useAtom, PrimitiveAtom } from 'jotai';
+import { PrimitiveAtom, useAtom } from 'jotai';
 import { NodeApi } from 'react-arborist';
-import { NodeType } from '@/shared/api/pdp.types';
-import { TreeNode, updateNodeChildren} from "@/features/pmtree/tree-utils";
 import { notifications } from '@mantine/notifications';
+import { TreeNode, updateNodeChildren } from "@/features/pmtree/tree-utils";
+import { NodeType } from '@/shared/api/pdp.types';
+
 
 export type TreeDirection = 'descendants' | 'ascendants';
 
@@ -30,12 +31,12 @@ export function usePMTreeOperations(
 			showIncomingAssociations: true
 		};
 
-		const allChildren = await fetchAllFilteredChildren(node, {
-			direction,
-			filterConfig: effectiveFilterConfig,
-			parentNodeId: node.data.id,
-			parentPmId: node.data.pmId!
-		});
+		const allChildren = await fetchAllFilteredChildren({
+      direction,
+      filterConfig: effectiveFilterConfig,
+      parentNodeId: node.data.id,
+      parentPmId: node.data.pmId!,
+    });
 
 		// Update tree data
 		const updatedTreeData = updateNodeChildren(treeData, node.data.id, allChildren);

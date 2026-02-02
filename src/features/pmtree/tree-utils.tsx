@@ -17,25 +17,15 @@ export enum AssociationDirection {
 
 export type NodeIconProps = {
 	type: string,
-	size?: string | number,
+	size?: number,
 	style?: React.CSSProperties,
 }
 
-function calculateFontSize(size: string | number): string {
-	// Parse size and calculate proportional fontSize (~65%)
-	if (typeof size === 'number') {
-		return `${Math.round(size * 0.65)}px`;
-	}
-	const match = size.match(/^([\d.]+)(.*)$/);
-	if (match) {
-		const value = parseFloat(match[1]);
-		const unit = match[2] || 'px';
-		return `${Math.round(value * 0.65)}${unit}`;
-	}
-	return '11px'; // fallback
+function calculateFontSize(size: number): string {
+	return `${Math.round(size * 0.65)}px`;
 }
 
-export function NodeIcon({type, size = '16px', style}: NodeIconProps) {
+export function NodeIcon({type, size = 16, style}: NodeIconProps) {
 	const color = getTypeColor(type);
 	const sizeStr = typeof size === 'number' ? `${size}px` : size;
 	const fontSize = calculateFontSize(size);

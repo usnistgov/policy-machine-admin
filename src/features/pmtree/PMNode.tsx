@@ -120,18 +120,18 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 				{isAssociation && associationType === 'outgoing' && (
 					<OutgoingAssociationIcon
 						color={theme.colors.green[9]}
-						size="14px"
+						size="20px"
 					/>
 				)}
 				{isAssociation && associationType === 'incoming' && (
 					<IncomingAssociationIcon
 						color={theme.colors.green[9]}
-						size="14px"
+						size="20px"
 					/>
 				)}
 				<NodeIcon
 					type={node.data.type}
-					size="18px"
+					size={20}
 				/>
 				<Tooltip label={node.data.name} position="top" disabled={!shouldShowTooltip}>
 					<span style={{

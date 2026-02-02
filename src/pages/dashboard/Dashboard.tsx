@@ -303,7 +303,7 @@ export function Dashboard() {
 								{getValidChildNodeTypes(rightClickedNode.type as NodeType).map((nodeType) => (
 									<Menu.Item
 										key={nodeType}
-										leftSection={<NodeIcon type={nodeType} size="16px" />}
+										leftSection={<NodeIcon type={nodeType} size={16} />}
 										rightSection={<IconPlus size={16} />}
 										onClick={() => handleCreateNodeClick(nodeType)}
 									>
@@ -375,7 +375,7 @@ export function Dashboard() {
 							<Group gap="xs" wrap="nowrap">
 								<NodeIcon
 									type={rightClickedNode.type}
-									size="18px"
+									size={18}
 									style={{ flexShrink: 0 }}
 								/>
 								<Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>
@@ -399,7 +399,7 @@ export function Dashboard() {
 						data-autofocus
 						required
 						leftSection={
-							nodeTypeToCreate && <NodeIcon type={nodeTypeToCreate} size="20px" />
+							nodeTypeToCreate && <NodeIcon type={nodeTypeToCreate} size={20} />
 						}
 					/>
 

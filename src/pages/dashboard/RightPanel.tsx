@@ -132,7 +132,7 @@ export function RightPanel({component, isExpanded, onComponentClick, selectedNod
 				flex: 1,
 				backgroundColor: "var(--mantine-color-gray-0)",
 				padding: "4px",
-				borderLeft: "1px solid var(--mantine-color-gray-3)",
+				borderLeft: "3px solid var(--mantine-color-gray-4)",
 				minWidth: 0,
 				overflow: 'hidden'
 			}}>

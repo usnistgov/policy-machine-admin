@@ -1,8 +1,6 @@
-import { NodeApi } from 'react-arborist';
-import { sortTreeNodes, transformNodesToTreeNodes, TreeNode, AssociationDirection } from "@/features/pmtree/tree-utils";
+import { AssociationDirection, sortTreeNodes, transformNodesToTreeNodes, TreeNode } from "@/features/pmtree/tree-utils";
 import * as QueryService from '@/shared/api/pdp_query.api';
 import { TreeDirection, TreeFilterConfig } from './hooks/usePMTreeOperations';
-import { withCriticalRetry } from '@/lib/retry-utils';
 
 
 /**
@@ -19,7 +17,7 @@ export interface FetchChildrenOptions {
 /**
  * Fetches and transforms regular node children based on direction and filters
  */
-export const fetchRegularChildren = async (
+export const fetchNodeChildren = async (
     parentPmId: string,
     direction: TreeDirection,
     filterConfig: TreeFilterConfig,
@@ -58,7 +56,6 @@ export const fetchAssociationChildren = async (
     parentNodeId: string
 ): Promise<TreeNode[]> => {
   const associationNodes: TreeNode[] = [];
-  const shouldApplyTypeFilter = filterConfig?.nodeTypes && filterConfig.nodeTypes.length > 0;
 
   try {
     // Fetch outgoing associations only if enabled
@@ -68,10 +65,6 @@ export const fetchAssociationChildren = async (
         const outgoingAssociations = await QueryService.getAssociationsWithSource(parentPmId);
         for (const assoc of outgoingAssociations) {
           if (assoc.target) {
-            // Apply node type filter if specified
-            if (shouldApplyTypeFilter && !filterConfig.nodeTypes.includes(assoc.target.type)) {
-              continue;
-            }
             associationNodes.push({
               id: crypto.randomUUID(),
               pmId: assoc.target.id,
@@ -100,10 +93,6 @@ export const fetchAssociationChildren = async (
         const incomingAssociations = await QueryService.getAssociationsWithTarget(parentPmId);
         for (const assoc of incomingAssociations) {
           if (assoc.ua) {
-            // Apply node type filter if specified
-            if (shouldApplyTypeFilter && !filterConfig.nodeTypes.includes(assoc.ua.type)) {
-              continue;
-            }
             associationNodes.push({
               id: crypto.randomUUID(),
               pmId: assoc.ua.id,
@@ -135,16 +124,13 @@ export const fetchAssociationChildren = async (
 /**
  * Fetches all children (regular + associations) for a node with given filter config
  */
-export const fetchAllFilteredChildren = async (
-    node: NodeApi<TreeNode>,
-    options: FetchChildrenOptions
-): Promise<TreeNode[]> => {
+export const fetchAllFilteredChildren = async (options: FetchChildrenOptions): Promise<TreeNode[]> => {
   const { direction, filterConfig, parentNodeId, parentPmId } = options;
 
   // Fetch regular children and associations with graceful error handling
   const results = await Promise.allSettled([
-    fetchRegularChildren(parentPmId, direction, filterConfig, parentNodeId),
-    fetchAssociationChildren(parentPmId, filterConfig, parentNodeId)
+    fetchNodeChildren(parentPmId, direction, filterConfig, parentNodeId),
+    fetchAssociationChildren(parentPmId, filterConfig, parentNodeId),
   ]);
 
   // Extract successful results
@@ -155,9 +141,11 @@ export const fetchAllFilteredChildren = async (
   if (results[0].status === 'rejected') {
     console.error('Failed to fetch regular children:', results[0].reason);
     // Re-throw for regular children as they are critical
-    throw new Error(`Failed to load node children: ${results[0].reason?.message || 'Unknown error'}`);
+    throw new Error(
+      `Failed to load node children: ${results[0].reason?.message || 'Unknown error'}`
+    );
   }
-  
+
   if (results[1].status === 'rejected') {
     console.warn('Failed to fetch associations (continuing without them):', results[1].reason);
     // Don't throw for associations - they're supplementary
