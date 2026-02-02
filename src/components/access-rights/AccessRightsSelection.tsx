@@ -13,11 +13,11 @@ class AccessRight {
 }
 
 // Get all access right strings in the tree (including non-leaf nodes)
-function getAllRights(node: AccessRight): string[] {
+function getAllAccessRights(node: AccessRight): string[] {
 	const rights = [node.ar];
 	if (node.children) {
 		node.children.forEach(child => {
-			rights.push(...getAllRights(child));
+			rights.push(...getAllAccessRights(child));
 		});
 	}
 	return rights;
@@ -37,7 +37,7 @@ function getAllExpandableRights(node: AccessRight): string[] {
 
 // Check if any ancestor of the target is selected
 function isAncestorSelected(targetAr: string, node: AccessRight, selectedRights: string[]): boolean {
-	if (!node.children) return false;
+	if (!node.children) {return false;}
 
 	for (const child of node.children) {
 		if (child.ar === targetAr) {
@@ -56,8 +56,8 @@ function isAncestorSelected(targetAr: string, node: AccessRight, selectedRights:
 
 // Check if a node contains the target
 function containsNode(targetAr: string, node: AccessRight): boolean {
-	if (node.ar === targetAr) return true;
-	if (!node.children) return false;
+	if (node.ar === targetAr) {return true;}
+	if (!node.children) {return false;}
 	return node.children.some(child => containsNode(targetAr, child));
 }
 
@@ -73,11 +73,11 @@ function findSelectedAncestor(targetAr: string, node: AccessRight, selectedRight
 		return null;
 	}
 
-	if (!node.children) return null;
+	if (!node.children) {return null;}
 
 	for (const child of node.children) {
 		const result = findSelectedAncestor(targetAr, child, selectedRights, [...path, node]);
-		if (result) return result;
+		if (result) {return result;}
 	}
 	return null;
 }
@@ -99,7 +99,7 @@ function consolidateSelections(root: AccessRight, selectedRights: string[]): str
 		// If all children are effectively selected, consolidate to this node
 		if (childrenEffectivelySelected.every(selected => selected)) {
 			// Remove all descendant ARs and add this node's AR
-			const descendantArs = getAllRights(node).slice(1); // All except this node
+			const descendantArs = getAllAccessRights(node).slice(1); // All except this node
 			result = result.filter(ar => !descendantArs.includes(ar));
 			if (!result.includes(node.ar)) {
 				result.push(node.ar);
@@ -252,7 +252,7 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 	}, []);
 
 	const handleToggle = useCallback((node: AccessRight) => {
-		if (readOnly) return;
+		if (readOnly) {return;}
 
 		const isDirectlySelected = selectedRights.includes(node.ar);
 		const hasSelectedAncestor = isAncestorSelected(node.ar, accessRightTree, selectedRights);
@@ -283,7 +283,7 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 		} else {
 			// Selecting - just add this node's ar
 			// First, remove any children that might be explicitly selected (cleanup)
-			const childRights = node.children ? getAllRights(node).slice(1) : [];
+			const childRights = node.children ? getAllAccessRights(node).slice(1) : [];
 			const cleanedRights = selectedRights.filter(r => !childRights.includes(r));
 			newRights = [...cleanedRights, node.ar];
 		}
@@ -304,7 +304,7 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 
 		// Check if any descendants are selected
 		if (node.children) {
-			const allDescendants = getAllRights(node).slice(1);
+			const allDescendants = getAllAccessRights(node).slice(1);
 			const hasSelectedDescendant = allDescendants.some(ar => selectedRights.includes(ar));
 			if (hasSelectedDescendant) {
 				return { checked: false, indeterminate: true };
@@ -439,13 +439,13 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 function findDirectSiblingsToAdd(targetAr: string, ancestor: AccessRight): string[] {
 	// Find the path from ancestor to target
 	const path = findPathToNode(targetAr, ancestor);
-	if (!path || path.length === 0) return [];
+	if (!path || path.length === 0) {return [];}
 
 	// For each level in the path, we need to add the siblings
 	const result: string[] = [];
 
 	function collectSiblings(currentNode: AccessRight, pathIndex: number): void {
-		if (!currentNode.children || !path) return;
+		if (!currentNode.children || !path) {return;}
 
 		const nextInPath = path[pathIndex];
 
@@ -472,7 +472,7 @@ function findPathToNode(targetAr: string, node: AccessRight): string[] | null {
 		return [targetAr];
 	}
 
-	if (!node.children) return null;
+	if (!node.children) {return null;}
 
 	for (const child of node.children) {
 		const childPath = findPathToNode(targetAr, child);
