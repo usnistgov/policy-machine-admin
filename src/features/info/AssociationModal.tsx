@@ -259,14 +259,14 @@ export function AssociationModal({
 									</Alert>
 								)}
 							</Box>
-							<ScrollArea style={{ flex: 1 }}>
+							<Box style={{ flex: 1, minHeight: 0 }}>
 								<AccessRightsSelection
 									selectedRights={selectedAccessRights}
 									onRightsChange={setSelectedAccessRights}
-									resourceOperations={resourceOperations}
+									resourceAccessRights={resourceOperations}
 									readOnly={!selectedNode}
 								/>
-							</ScrollArea>
+							</Box>
 						</Box>
 					</Box>
 				</Stack>
@@ -317,40 +317,19 @@ export function AssociationModal({
 					{/* Access Rights */}
 					<Box
 						style={{
+							flex: 1,
+							minHeight: 0,
 							border: '1px solid var(--mantine-color-gray-3)',
 							borderRadius: '4px',
 							overflow: 'hidden',
-							backgroundColor: 'var(--mantine-color-gray-0)',
 						}}
 					>
-						<Box style={{ padding: '12px', borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
-							<Title order={4}>Access Rights</Title>
-							{/* Selected Access Rights Pills */}
-							{selectedAccessRights.length > 0 && (
-								<Pill.Group mt="sm">
-									{selectedAccessRights.map((right) => (
-										<Pill
-											key={right}
-											size="sm"
-											withRemoveButton
-											onRemove={() => {
-												setSelectedAccessRights((prev) => prev.filter((r) => r !== right));
-											}}
-										>
-											{right}
-										</Pill>
-									))}
-								</Pill.Group>
-							)}
-						</Box>
-						<ScrollArea style={{ height: '60vh' }}>
-							<AccessRightsSelection
-								selectedRights={selectedAccessRights}
-								onRightsChange={setSelectedAccessRights}
-								resourceOperations={resourceOperations}
-								readOnly={false}
-							/>
-						</ScrollArea>
+						<AccessRightsSelection
+							selectedRights={selectedAccessRights}
+							onRightsChange={setSelectedAccessRights}
+							resourceAccessRights={resourceOperations}
+							readOnly={false}
+						/>
 					</Box>
 				</Stack>
 			)}

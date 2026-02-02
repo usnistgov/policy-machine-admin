@@ -331,11 +331,11 @@ export function ProhibitionDetails({
         {/* Access Rights */}
         <Box>
           <Text size="sm" fw={500} mb="xs">Access Rights *</Text>
-          <Box style={{ height: '200px', border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px' }}>
+          <Box style={{ height: '250px', border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', overflow: 'hidden' }}>
             <AccessRightsSelection
               selectedRights={selectedAccessRights}
               onRightsChange={setSelectedAccessRights}
-              resourceOperations={resourceOperations}
+              resourceAccessRights={resourceOperations}
               readOnly={isEditing}
             />
           </Box>
