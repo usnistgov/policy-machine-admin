@@ -1,14 +1,14 @@
 import React from "react";
 
-export interface IncomingAssociationIconProps {
+export interface AscendantIconProps {
 	size?: string;
 	color?: string;
 }
 
-export function IncomingAssociationIcon({
+export function AscendantIcon({
 	size = '14px',
 	color = 'currentColor'
-}: IncomingAssociationIconProps) {
+}: AscendantIconProps) {
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -24,8 +24,7 @@ export function IncomingAssociationIcon({
 						d="M12 2.5a1.5 1.5 0 0 0 -1.3 0.75l-8.5 14.25a1.5 1.5 0 0 0 1.3 2.25h17a1.5 1.5 0 0 0 1.3 -2.25l-8.5 -14.25a1.5 1.5 0 0 0 -1.3 -0.75z"/>
 				</g>
 			</g>
-			<rect x="14" y="8" width="3" height="8" />
-			<rect x="20" y="8" width="3" height="8" />
+			<rect x="10" y="8" width="14" height="8" />
 		</svg>
 	);
 }

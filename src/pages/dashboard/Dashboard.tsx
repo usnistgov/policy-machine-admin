@@ -236,7 +236,7 @@ export function Dashboard() {
 		<div
 			style={{
 				height: '100%',
-				width: rightPanelExpanded ? '50%' : '40px',
+				width: rightPanelExpanded ? '60%' : '40px',
 				flexShrink: 0,
 			}}
 		>

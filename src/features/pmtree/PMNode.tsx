@@ -77,14 +77,14 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 			// Add vertical lines for each level except the current node
 			for (let i = 0; i < depth; i++) {
 				// Position the line to align with parent nodes
-				const left = i * INDENT_NUM + 22;
+				const left = i * INDENT_NUM + 10;
 
 				lines.push(
 					<div
 						key={`guideline-${node.data.id}-${i}`}
 						className={classes.guideLine}
 						style={{
-							left: `${left + 12}px`,
+							left: `${left}px`,
 							top: 0,
 							height: '100%'
 						}}
@@ -98,7 +98,7 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 					key={`horizontal-${node.data.id}`}
 					className={classes.horizontalLine}
 					style={{
-						left: `${(depth - 1) * INDENT_NUM + 34}px`,
+						left: `${(depth - 1) * INDENT_NUM + 12}px`,
 						width: `${14}px`,
 						top: 'calc(50% - 0.5px)'
 					}}
@@ -148,8 +148,6 @@ export function PMNode({ node, style, tree, clickHandlers, direction, treeDataAt
 			</div>
 		);
 	};
-
-	const mantineTheme = useMantineTheme();
 
 	return (
 		<>

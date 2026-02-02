@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {IconArrowRightCircle, IconSquareRoundedMinus, IconX} from "@tabler/icons-react";
+import {
+	IconArrowBigRight,
+	IconArrowBigRightFilled,
+	IconArrowRightCircle,
+	IconPlus,
+	IconSquareRoundedMinus,
+	IconX
+} from "@tabler/icons-react";
 import { NodeApi } from "react-arborist";
-import { ActionIcon, Alert, Box, Button, Divider, Group, Stack, Text, useMantineTheme } from "@mantine/core";
+import {ActionIcon, Alert, Box, Button, Divider, Group, Stack, Text, Tooltip, useMantineTheme} from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { PMTree } from "@/features/pmtree";
 import { fetchAssociationChildren } from "@/features/pmtree/tree-data-fetcher";
@@ -10,6 +17,8 @@ import { NODE_TYPES, NodePrivilegeInfo, NodeType } from "@/shared/api/pdp.types"
 import * as QueryService from "@/shared/api/pdp_query.api";
 import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { AssociationModal } from "./AssociationModal";
+import {AscendantIcon} from "@/components/icons/AscendantIcon";
+import {DescendantIcon} from "@/components/icons/DescendantIcon";
 
 // Helper function to transform NodePrivilegeInfo to TreeNode
 function transformNodePrivilegeInfoToTreeNodes(privileges: NodePrivilegeInfo[]): TreeNode[] {
@@ -396,11 +405,13 @@ export function InfoPanel(props: InfoPanelProps) {
 					</Stack>
 					<Divider orientation="vertical" />
 					{props.rootNode.type !== "PC" && !isAssignmentMode && (
-						<Button
-							leftSection={<IconArrowRightCircle size={18} />}
-							onClick={() => handleStartAssignment()}>
-							Assign To
-						</Button>
+						<Tooltip label="Assign To">
+							<Button
+								leftSection={<IconPlus size={18} />}
+								onClick={() => handleStartAssignment()}>
+								<DescendantIcon size="18px" />
+							</Button>
+						</Tooltip>
 					)}
 					{(() => {
 						const nodeType = props.rootNode.type;
@@ -409,20 +420,24 @@ export function InfoPanel(props: InfoPanelProps) {
 						return (
 							<>
 								{canHaveIncoming && (
-									<Button
-										color={theme.colors.green[9]}
-										leftSection={<IncomingAssociationIcon size="18px" color="currentColor" />}
-										onClick={() => handleStartAssociation(AssociationDirection.Incoming)}>
-										Create Incoming Association
-									</Button>
+									<Tooltip label="Create INCOMING association">
+										<Button
+											color={theme.colors.green[9]}
+											leftSection={<IconPlus size="18px" color="currentColor" />}
+											onClick={() => handleStartAssociation(AssociationDirection.Incoming)}>
+											<IncomingAssociationIcon size="18px" color="currentColor" />
+										</Button>
+									</Tooltip>
 								)}
 								{canHaveOutgoing && (
+									<Tooltip label="Create OUTGOING association">
 									<Button
 										color={theme.colors.green[9]}
-										leftSection={<OutgoingAssociationIcon size="18px" color="currentColor" />}
+										leftSection={<IconPlus size="18px" color="currentColor" />}
 										onClick={() => handleStartAssociation(AssociationDirection.Outgoing)}>
-										Create Outgoing Association
+										<OutgoingAssociationIcon size="18px" color="currentColor" />
 									</Button>
+									</Tooltip>
 								)}
 							</>
 						);

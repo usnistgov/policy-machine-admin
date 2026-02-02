@@ -2,17 +2,12 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { Login } from "@/pages/login/Login";
 import { ProtectedRoute } from "@/ProtectedRoute";
 import {DashboardPage} from "@/pages/dashboard/DashboardPage";
-import {DAG} from "@/pages/dag/dag";
 import {TestPage} from "@/pages/test/TestPage";
 
 const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />,
-  },
-  {
-    path: '/dag',
-    element: <DAG />,
   },
   {
     path: '/test',

@@ -188,7 +188,7 @@ export function ProhibitionsPanel({ selectedNodes }: ProhibitionsPanelProps) {
                             <NavLink
                                 key={prohibition.name}
                                 label={prohibition.name}
-                                leftSection={<IconBan size={16} color="red" />}
+                                leftSection={<IconBan size={16} />}
                                 active={selectedProhibition === prohibition.name && !isCreatingNew}
                                 onClick={() => handleSelectProhibition(prohibition.name)}
                             />

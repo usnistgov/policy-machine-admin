@@ -4,6 +4,8 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  // Expose PM_ prefixed env vars to the client (instead of default VITE_)
+  envPrefix: 'PM_',
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
     alias: {

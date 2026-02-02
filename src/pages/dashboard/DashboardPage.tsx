@@ -1,15 +1,11 @@
-import {ActionIcon, AppShell, Group, Title, Tooltip, useMantineTheme} from "@mantine/core";
+import {AppShell, Group, Title, useMantineTheme} from "@mantine/core";
 import {PMIcon} from "@/components/icons/PMIcon";
-import {NavBar} from "@/components/navbar/NavBar";
-import {IconMoon, IconSun} from "@tabler/icons-react";
 import {UserMenu} from "@/features/user-menu/UserMenu";
 import React from "react";
-import {useTheme} from "@/shared/theme/ThemeContext";
 import {Dashboard} from "@/pages/dashboard/Dashboard";
 
 export function DashboardPage() {
 	const mantineTheme = useMantineTheme();
-	const { themeMode, toggleTheme } = useTheme();
 
 	return (
 		<AppShell

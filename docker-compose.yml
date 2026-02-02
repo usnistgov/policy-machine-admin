@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "${FRONTEND_PORT:-4173}:4173"
+    depends_on:
+      - grpc-proxy
+    networks:
+      - pm-network
+
+  grpc-proxy:
+    image: envoyproxy/envoy:v1.31-latest
+    platform: linux/arm64
+    ports:
+      - "${GRPC_PROXY_PORT:-8888}:8888"
+    volumes:
+      - ./grpc-proxy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    command: >
+      /usr/local/bin/envoy
+        -c /etc/envoy/envoy.yaml
+        --service-node grpc-web-proxy
+        --service-cluster grpc-web-to-grpc
+        --log-level info
+    environment:
+      - GRPC_BACKEND_HOST=host.docker.internal
+      - GRPC_BACKEND_PORT=50052
+    restart: unless-stopped
+
+networks:
+  pm-network:
