@@ -38,22 +38,31 @@ export function ProhibitionDetails({
   const [name, setName] = useState(initialProhibition?.name || "");
   const [subject, setSubject] = useState<TreeNode | null>(null);
   const [selectedAccessRights, setSelectedAccessRights] = useState<string[]>(initialProhibition?.accessRights || []);
-  const [intersection, setIntersection] = useState(initialProhibition?.intersection || false);
-  const [containerConditions, setContainerConditions] = useState<Array<{ node: TreeNode; isComplement: boolean }>>(
-      initialProhibition?.containerConditions.map(cc => ({
-        node: {
-          id: cc.container?.id || "",
-          name: cc.container?.name || "",
-          type: cc.container?.type as NodeType || NodeType.ANY,
-          pmId: cc.container?.id || ""
-        },
-        isComplement: cc.complement
+  const [isConjunctive, setIsConjunctive] = useState(initialProhibition?.isConjunctive || false);
+  const [inclusionSet, setInclusionSet] = useState<TreeNode[]>(
+      initialProhibition?.inclusionSet.map(node => ({
+        id: node.id,
+        name: node.name,
+        type: node.type as NodeType,
+        pmId: node.id
+      })) || []
+  );
+  const [exclusionSet, setExclusionSet] = useState<TreeNode[]>(
+      initialProhibition?.exclusionSet.map(node => ({
+        id: node.id,
+        name: node.name,
+        type: node.type as NodeType,
+        pmId: node.id
       })) || []
   );
 
+  // Check if this is a process prohibition (read-only, delete only)
+  const isProcessProhibition = Boolean(initialProhibition?.subject?.process);
+
   // Selection modes
   const [isSelectingSubject, setIsSelectingSubject] = useState(false);
-  const [isSelectingContainer, setIsSelectingContainer] = useState(false);
+  const [isSelectingInclusion, setIsSelectingInclusion] = useState(false);
+  const [isSelectingExclusion, setIsSelectingExclusion] = useState(false);
 
   // Resource operations
   const [resourceOperations, setResourceOperations] = useState<string[]>([]);
@@ -88,22 +97,31 @@ export function ProhibitionDetails({
     }
   }, [selectedNodes, isSelectingSubject]);
 
-  // Handle container condition selection from tree
+  // Handle inclusion set selection from tree
   useEffect(() => {
-    if (isSelectingContainer && selectedNodes && selectedNodes.length > 0) {
-      const newContainers = selectedNodes.filter(node =>
-          !containerConditions.some(cc => cc.node.pmId === node.pmId)
+    if (isSelectingInclusion && selectedNodes && selectedNodes.length > 0) {
+      const newNodes = selectedNodes.filter(node =>
+          !inclusionSet.some(n => n.pmId === node.pmId)
       );
 
-      if (newContainers.length > 0) {
-        setContainerConditions(prev => [
-          ...prev,
-          ...newContainers.map(node => ({ node, isComplement: false }))
-        ]);
+      if (newNodes.length > 0) {
+        setInclusionSet(prev => [...prev, ...newNodes]);
       }
-      // Keep selection mode open - don't automatically exit
     }
-  }, [selectedNodes, isSelectingContainer, containerConditions]);
+  }, [selectedNodes, isSelectingInclusion, inclusionSet]);
+
+  // Handle exclusion set selection from tree
+  useEffect(() => {
+    if (isSelectingExclusion && selectedNodes && selectedNodes.length > 0) {
+      const newNodes = selectedNodes.filter(node =>
+          !exclusionSet.some(n => n.pmId === node.pmId)
+      );
+
+      if (newNodes.length > 0) {
+        setExclusionSet(prev => [...prev, ...newNodes]);
+      }
+    }
+  }, [selectedNodes, isSelectingExclusion, exclusionSet]);
 
   // Fetch resource operations
   useEffect(() => {
@@ -122,16 +140,12 @@ export function ProhibitionDetails({
     setSubject(null);
   }, []);
 
-  const handleRemoveContainerCondition = useCallback((nodeToRemove: TreeNode) => {
-    setContainerConditions(prev => prev.filter(cc => cc.node.id !== nodeToRemove.id));
+  const handleRemoveFromInclusionSet = useCallback((nodeToRemove: TreeNode) => {
+    setInclusionSet(prev => prev.filter(n => n.id !== nodeToRemove.id));
   }, []);
 
-  const handleToggleContainerComplement = useCallback((nodeId: string) => {
-    setContainerConditions(prev => prev.map(cc =>
-        cc.node.id === nodeId
-            ? { ...cc, isComplement: !cc.isComplement }
-            : cc
-    ));
+  const handleRemoveFromExclusionSet = useCallback((nodeToRemove: TreeNode) => {
+    setExclusionSet(prev => prev.filter(n => n.id !== nodeToRemove.id));
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -165,11 +179,6 @@ export function ProhibitionDetails({
     setIsSubmitting(true);
 
     try {
-      const containerConditionsForApi = containerConditions.map(cc => ({
-        containerId: cc.node.pmId || cc.node.id,
-        complement: cc.isComplement
-      }));
-
       const prohibitionData: Prohibition = {
         name,
         subject: {
@@ -181,15 +190,18 @@ export function ProhibitionDetails({
           }
         },
         accessRights: selectedAccessRights,
-        intersection,
-        containerConditions: containerConditions.map(cc => ({
-          container: {
-            id: cc.node.pmId || cc.node.id,
-            name: cc.node.name,
-            type: cc.node.type as NodeType,
-            properties: {}
-          },
-          complement: cc.isComplement
+        isConjunctive,
+        inclusionSet: inclusionSet.map(n => ({
+          id: n.pmId || n.id,
+          name: n.name,
+          type: n.type as NodeType,
+          properties: {}
+        })),
+        exclusionSet: exclusionSet.map(n => ({
+          id: n.pmId || n.id,
+          name: n.name,
+          type: n.type as NodeType,
+          properties: {}
         }))
       };
 
@@ -199,8 +211,9 @@ export function ProhibitionDetails({
             subject.pmId || subject.id,
             undefined, // No process support for now
             selectedAccessRights,
-            intersection,
-            containerConditionsForApi
+            isConjunctive,
+            inclusionSet.map(n => n.pmId || n.id),
+            exclusionSet.map(n => n.pmId || n.id)
         );
         notifications.show({
           color: 'green',
@@ -209,7 +222,8 @@ export function ProhibitionDetails({
         });
         // Reset selection modes
         setIsSelectingSubject(false);
-        setIsSelectingContainer(false);
+        setIsSelectingInclusion(false);
+        setIsSelectingExclusion(false);
         onSuccess(prohibitionData, 'create');
       }
     } catch (error) {
@@ -221,7 +235,7 @@ export function ProhibitionDetails({
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, subject, selectedAccessRights, intersection, containerConditions, isEditing, onSuccess]);
+  }, [name, subject, selectedAccessRights, isConjunctive, inclusionSet, exclusionSet, isEditing, onSuccess]);
 
   const handleDelete = useCallback(async () => {
     if (!initialProhibition?.name) {return;}
@@ -237,7 +251,8 @@ export function ProhibitionDetails({
       });
       // Reset selection modes
       setIsSelectingSubject(false);
-      setIsSelectingContainer(false);
+      setIsSelectingInclusion(false);
+      setIsSelectingExclusion(false);
       onSuccess(undefined, 'delete');
     } catch (error) {
       notifications.show({
@@ -253,69 +268,115 @@ export function ProhibitionDetails({
   return (
       <Box p="md">
         <Stack gap="md">
+          {/* Process Prohibition Alert */}
+          {isProcessProhibition && (
+              <Alert variant="light" color="yellow">
+                <Text size="sm">
+                  This is a process prohibition and can only be deleted, not edited.
+                </Text>
+              </Alert>
+          )}
+
           {/* Name Field */}
           <TextInput
               label="Name"
               required
               value={name}
               onChange={(event) => setName(event.currentTarget.value)}
-              disabled={isEditing} // Name cannot be changed when editing
+              disabled={isEditing || isProcessProhibition} // Name cannot be changed when editing or for process prohibitions
           />
 
           {/* Subject Selection */}
           <Box>
             <Text size="sm" fw={500} mb="xs">Subject *</Text>
             <Box style={{}}>
-              {!subject && !isSelectingSubject && !isEditing && (
-                  <Alert variant="light" color="blue" mb="sm">
-                    <Text size="sm">
-                      Select a U or UA node from the tree on the left, or click "Select Subject" button
-                    </Text>
-                  </Alert>
-              )}
-              {isSelectingSubject && !isEditing && (
-                  <Alert variant="light" color="orange" mb="sm">
-                    <Text size="sm">
-                      Selecting subject... Click on a U or UA node in the tree to the left
-                    </Text>
-                  </Alert>
-              )}
-              {subject && (
-                  <Group justify="space-between" style={{
-                    padding: '8px 12px',
-                    border: '1px solid var(--mantine-color-gray-2)',
-                    borderRadius: '4px',
-                    backgroundColor: isEditing ? 'var(--mantine-color-gray-1)' : 'white'
-                  }}>
-                    <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-                      <NodeIcon type={subject.type} size={18} />
-                      <Text
-                          size="sm"
-                          style={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            flex: 1
-                          }}
-                      >
-                        {subject.name}
-                      </Text>
+              {/* Process Prohibition - show user ID and process (read-only) */}
+              {isProcessProhibition && initialProhibition?.subject && (
+                  <Stack gap="xs">
+                    <Group justify="space-between" style={{
+                      padding: '8px 12px',
+                      border: '1px solid var(--mantine-color-gray-2)',
+                      borderRadius: '4px',
+                      backgroundColor: 'var(--mantine-color-gray-1)'
+                    }}>
+                      <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                        <Text size="xs" c="dimmed" fw={500}>User ID:</Text>
+                        <Text size="sm" style={{ flex: 1 }}>
+                          {initialProhibition.subject.node?.id || 'N/A'}
+                        </Text>
+                      </Group>
                     </Group>
-                    {!isEditing && (
-                        <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            color="red"
-                            onClick={handleRemoveSubject}
-                        >
-                          <IconSquareRoundedMinus size={16} />
-                        </ActionIcon>
+                    <Group justify="space-between" style={{
+                      padding: '8px 12px',
+                      border: '1px solid var(--mantine-color-gray-2)',
+                      borderRadius: '4px',
+                      backgroundColor: 'var(--mantine-color-gray-1)'
+                    }}>
+                      <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                        <Text size="xs" c="dimmed" fw={500}>Process:</Text>
+                        <Text size="sm" style={{ flex: 1 }}>
+                          {initialProhibition.subject.process}
+                        </Text>
+                      </Group>
+                    </Group>
+                  </Stack>
+              )}
+
+              {/* Node Prohibition - normal subject selection */}
+              {!isProcessProhibition && (
+                  <>
+                    {!subject && !isSelectingSubject && !isEditing && (
+                        <Alert variant="light" color="blue" mb="sm">
+                          <Text size="sm">
+                            Select a U or UA node from the tree on the left, or click "Select Subject" button
+                          </Text>
+                        </Alert>
                     )}
-                  </Group>
+                    {isSelectingSubject && !isEditing && (
+                        <Alert variant="light" color="orange" mb="sm">
+                          <Text size="sm">
+                            Selecting subject... Click on a U or UA node in the tree to the left
+                          </Text>
+                        </Alert>
+                    )}
+                    {subject && (
+                        <Group justify="space-between" style={{
+                          padding: '8px 12px',
+                          border: '1px solid var(--mantine-color-gray-2)',
+                          borderRadius: '4px',
+                          backgroundColor: isEditing ? 'var(--mantine-color-gray-1)' : 'white'
+                        }}>
+                          <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                            <NodeIcon type={subject.type} size={18} />
+                            <Text
+                                size="sm"
+                                style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  flex: 1
+                                }}
+                            >
+                              {subject.name}
+                            </Text>
+                          </Group>
+                          {!isEditing && (
+                              <ActionIcon
+                                  size="sm"
+                                  variant="subtle"
+                                  color="red"
+                                  onClick={handleRemoveSubject}
+                              >
+                                <IconSquareRoundedMinus size={16} />
+                              </ActionIcon>
+                          )}
+                        </Group>
+                    )}
+                  </>
               )}
             </Box>
 
-            {!subject && !isEditing && (
+            {!subject && !isEditing && !isProcessProhibition && (
                 <Group justify="flex-start" mt="xs">
                   <Button
                       variant="light"
@@ -336,65 +397,58 @@ export function ProhibitionDetails({
                   selectedRights={selectedAccessRights}
                   onRightsChange={setSelectedAccessRights}
                   resourceAccessRights={resourceOperations}
-                  readOnly={isEditing}
+                  readOnly={isEditing || isProcessProhibition}
               />
             </Box>
           </Box>
 
-          {/* Intersection Checkbox */}
+          {/* Conjunctive Checkbox */}
           <Checkbox
-              label="Intersection"
-              checked={intersection}
-              onChange={(event) => setIntersection(event.currentTarget.checked)}
-              disabled={isEditing}
+              label="Conjunctive (intersection mode)"
+              checked={isConjunctive}
+              onChange={(event) => setIsConjunctive(event.currentTarget.checked)}
+              disabled={isEditing || isProcessProhibition}
           />
 
-          {/* Container Conditions */}
+          {/* Inclusion Set */}
           <Box>
-            <Text size="sm" fw={500} mb="xs">Container Conditions</Text>
-            {isSelectingContainer && !isEditing && (
+            <Text size="sm" fw={500} mb="xs">Inclusion Set</Text>
+            {isSelectingInclusion && !isEditing && !isProcessProhibition && (
                 <Alert variant="light" color="orange" mb="sm">
                   <Text size="sm">
-                    Selecting container... Click on nodes in the left tree to add container conditions
+                    Selecting... Click on nodes in the left tree to add to inclusion set
                   </Text>
                 </Alert>
             )}
             <Box style={{
-              maxHeight: "200px",
+              maxHeight: "150px",
               overflow: "auto",
             }}>
-              {containerConditions.length === 0 && !isSelectingContainer && (
+              {inclusionSet.length === 0 && !isSelectingInclusion && (
                   <Alert variant="light" color="gray" mb="sm">
-                    <Text size="sm">No container conditions defined</Text>
+                    <Text size="sm">No nodes in inclusion set</Text>
                   </Alert>
               )}
               <Stack gap="xs">
-                {containerConditions.map((cc) => (
-                    <Group key={cc.node.id} justify="space-between" style={{
+                {inclusionSet.map((node) => (
+                    <Group key={node.id} justify="space-between" style={{
                       padding: '8px 12px',
                       border: '1px solid var(--mantine-color-gray-2)',
                       borderRadius: '4px',
-                      backgroundColor: isEditing ? 'var(--mantine-color-gray-1)' : 'white'
+                      backgroundColor: (isEditing || isProcessProhibition) ? 'var(--mantine-color-gray-1)' : 'white'
                     }}>
                       <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-                        <NodeIcon type={cc.node.type} size={18} />
+                        <NodeIcon type={node.type} size={18} />
                         <Text size="sm" style={{ flex: 1 }}>
-                          {cc.node.name}
+                          {node.name}
                         </Text>
-                        <Checkbox
-                            label="Complement"
-                            size="xs"
-                            checked={cc.isComplement}
-                            onChange={() => handleToggleContainerComplement(cc.node.id)}
-                            disabled={isEditing}
-                        />
                       </Group>
-                      {!isEditing && (
+                      {!isEditing && !isProcessProhibition && (
                           <ActionIcon
                               size="sm"
                               variant="subtle"
                               color="red"
-                              onClick={() => handleRemoveContainerCondition(cc.node)}
+                              onClick={() => handleRemoveFromInclusionSet(node)}
                           >
                             <IconSquareRoundedMinus size={16} />
                           </ActionIcon>
@@ -404,22 +458,94 @@ export function ProhibitionDetails({
               </Stack>
             </Box>
 
-            {!isEditing && (
+            {!isEditing && !isProcessProhibition && (
                 <Group justify="flex-start" mt="xs">
-                  {!isSelectingContainer ? (
+                  {!isSelectingInclusion ? (
                       <Button
                           variant="light"
                           size="xs"
                           leftSection={<IconPlus size={14} />}
-                          onClick={() => setIsSelectingContainer(true)}
+                          onClick={() => { setIsSelectingInclusion(true); setIsSelectingExclusion(false); }}
                       >
-                        Add Container
+                        Add to Inclusion
                       </Button>
                   ) : (
                       <Button
                           variant="outline"
                           size="xs"
-                          onClick={() => setIsSelectingContainer(false)}
+                          onClick={() => setIsSelectingInclusion(false)}
+                      >
+                        Stop Selecting
+                      </Button>
+                  )}
+                </Group>
+            )}
+          </Box>
+
+          {/* Exclusion Set */}
+          <Box>
+            <Text size="sm" fw={500} mb="xs">Exclusion Set</Text>
+            {isSelectingExclusion && !isEditing && !isProcessProhibition && (
+                <Alert variant="light" color="orange" mb="sm">
+                  <Text size="sm">
+                    Selecting... Click on nodes in the left tree to add to exclusion set
+                  </Text>
+                </Alert>
+            )}
+            <Box style={{
+              maxHeight: "150px",
+              overflow: "auto",
+            }}>
+              {exclusionSet.length === 0 && !isSelectingExclusion && (
+                  <Alert variant="light" color="gray" mb="sm">
+                    <Text size="sm">No nodes in exclusion set</Text>
+                  </Alert>
+              )}
+              <Stack gap="xs">
+                {exclusionSet.map((node) => (
+                    <Group key={node.id} justify="space-between" style={{
+                      padding: '8px 12px',
+                      border: '1px solid var(--mantine-color-gray-2)',
+                      borderRadius: '4px',
+                      backgroundColor: (isEditing || isProcessProhibition) ? 'var(--mantine-color-gray-1)' : 'white'
+                    }}>
+                      <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                        <NodeIcon type={node.type} size={18} />
+                        <Text size="sm" style={{ flex: 1 }}>
+                          {node.name}
+                        </Text>
+                      </Group>
+                      {!isEditing && !isProcessProhibition && (
+                          <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="red"
+                              onClick={() => handleRemoveFromExclusionSet(node)}
+                          >
+                            <IconSquareRoundedMinus size={16} />
+                          </ActionIcon>
+                      )}
+                    </Group>
+                ))}
+              </Stack>
+            </Box>
+
+            {!isEditing && !isProcessProhibition && (
+                <Group justify="flex-start" mt="xs">
+                  {!isSelectingExclusion ? (
+                      <Button
+                          variant="light"
+                          size="xs"
+                          leftSection={<IconPlus size={14} />}
+                          onClick={() => { setIsSelectingExclusion(true); setIsSelectingInclusion(false); }}
+                      >
+                        Add to Exclusion
+                      </Button>
+                  ) : (
+                      <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => setIsSelectingExclusion(false)}
                       >
                         Stop Selecting
                       </Button>
@@ -432,7 +558,7 @@ export function ProhibitionDetails({
 
           {/* Action Buttons */}
           <Group justify="center" gap="md">
-            {isEditing ? (
+            {(isEditing || isProcessProhibition) ? (
                 <>
                   <Button
                       color="red"

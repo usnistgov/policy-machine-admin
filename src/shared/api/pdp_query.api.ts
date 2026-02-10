@@ -4,6 +4,17 @@ import * as PdpQuery from '@/generated/grpc/v1/pdp_query';
 import { NodeType, PMNode, Association, Prohibition, Obligation, NodePrivilegeInfo } from './pdp.types';
 import { rpc, createNodeRef, transformNode, transformAssociation } from './pdp.utils';
 
+function transformProhibition(p: Model.Prohibition): Prohibition {
+  return {
+    name: p.name,
+    subject: p.node ? { node: transformNode(p.node), process: p.process } : undefined,
+    accessRights: p.arset,
+    isConjunctive: p.isConjunctive,
+    inclusionSet: (p.inclusionSet || []).map(transformNode),
+    exclusionSet: (p.exclusionSet || []).map(transformNode)
+  };
+}
+
 const queryClient = new PolicyQueryServiceClientImpl(rpc);
 
 // === Node Queries ===
@@ -116,92 +127,31 @@ export async function getAssociationsWithTarget(nodeId: string): Promise<Associa
 export async function getProhibitions(): Promise<Prohibition[]> {
   const request = PdpQuery.GetProhibitionsRequest.create({});
   const response = await queryClient.getProhibitions(request);
-  return response.prohibitions.map(p => ({
-    name: p.name,
-    subject: p.node ? {
-      node: p.node ? transformNode(p.node) : undefined,
-      process: p.process
-    } : undefined,
-    accessRights: p.arset,
-    intersection: p.intersection,
-    containerConditions: p.containerConditions.map(cc => ({
-      container: cc.container ? transformNode(cc.container) : undefined,
-      complement: cc.complement
-    }))
-  }));
+  return response.prohibitions.map(transformProhibition);
 }
 
 export async function getProhibitionsBySubject(subjectId: string): Promise<Prohibition[]> {
   const request = PdpQuery.GetProhibitionsBySubjectRequest.create({ node: createNodeRef(subjectId) });
   const response = await queryClient.getProhibitionsBySubject(request);
-  return response.prohibitions.map(p => ({
-    name: p.name,
-    subject: p.node ? {
-      node: p.node ? transformNode(p.node) : undefined,
-      process: p.process
-    } : undefined,
-    accessRights: p.arset,
-    intersection: p.intersection,
-    containerConditions: p.containerConditions.map(cc => ({
-      container: cc.container ? transformNode(cc.container) : undefined,
-      complement: cc.complement
-    }))
-  }));
+  return response.prohibitions.map(transformProhibition);
 }
 
 export async function getProhibition(name: string): Promise<Prohibition> {
   const request = PdpQuery.GetProhibitionRequest.create({ name });
   const response = await queryClient.getProhibition(request);
-  const p = response.prohibition!;
-  return {
-    name: p.name,
-    subject: p.node ? {
-      node: p.node ? transformNode(p.node) : undefined,
-      process: p.process
-    } : undefined,
-    accessRights: p.arset,
-    intersection: p.intersection,
-    containerConditions: p.containerConditions.map(cc => ({
-      container: cc.container ? transformNode(cc.container) : undefined,
-      complement: cc.complement
-    }))
-  };
+  return transformProhibition(response.prohibition!);
 }
 
 export async function getInheritedProhibitions(nodeId: string): Promise<Prohibition[]> {
   const request = PdpQuery.GetInheritedProhibitionsRequest.create({ subject: createNodeRef(nodeId) });
   const response = await queryClient.getInheritedProhibitions(request);
-  return response.prohibitions.map(p => ({
-    name: p.name,
-    subject: p.node ? {
-      node: p.node ? transformNode(p.node) : undefined,
-      process: p.process
-    } : undefined,
-    accessRights: p.arset,
-    intersection: p.intersection,
-    containerConditions: p.containerConditions.map(cc => ({
-      container: cc.container ? transformNode(cc.container) : undefined,
-      complement: cc.complement
-    }))
-  }));
+  return response.prohibitions.map(transformProhibition);
 }
 
 export async function getProhibitionsWithContainer(containerId: string): Promise<Prohibition[]> {
   const request = PdpQuery.GetProhibitionsWithContainerRequest.create({ container: createNodeRef(containerId) });
   const response = await queryClient.getProhibitionsWithContainer(request);
-  return response.prohibitions.map(p => ({
-    name: p.name,
-    subject: p.node ? {
-      node: p.node ? transformNode(p.node) : undefined,
-      process: p.process
-    } : undefined,
-    accessRights: p.arset,
-    intersection: p.intersection,
-    containerConditions: p.containerConditions.map(cc => ({
-      container: cc.container ? transformNode(cc.container) : undefined,
-      complement: cc.complement
-    }))
-  }));
+  return response.prohibitions.map(transformProhibition);
 }
 
 // === Obligation Queries ===

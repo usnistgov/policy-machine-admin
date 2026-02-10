@@ -126,7 +126,7 @@ export function AssociationModal({
 			opened={opened}
 			onClose={onClose}
 			title={modalTitle}
-			size={isCreateMode ? '90%' : '50%'}
+			size={isCreateMode ? '90%' : '60%'}
 			styles={{
 				body: {
 					height: isCreateMode ? '80vh' : '70vh',
@@ -153,9 +153,9 @@ export function AssociationModal({
 									</Text>
 								</Group>
 							) : (
-								<Text size="sm" c="dimmed" fs="italic">
-									Select from tree below
-								</Text>
+								<Alert variant="light" color="blue" p="xs" icon={<IconInfoCircle />}>
+									<Text size="sm">Select from tree below</Text>
+								</Alert>
 							)}
 						</Box>
 
@@ -181,9 +181,9 @@ export function AssociationModal({
 									</Text>
 								</Group>
 							) : (
-								<Text size="sm" c="dimmed" fs="italic">
-									Select from tree below
-								</Text>
+								<Alert variant="light" color="blue" p="xs" icon={<IconInfoCircle />}>
+									<Text size="sm">Select from tree below</Text>
+								</Alert>
 							)}
 						</Box>
 					</Group>

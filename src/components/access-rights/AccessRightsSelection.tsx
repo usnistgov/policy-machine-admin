@@ -114,75 +114,59 @@ export function buildAccessRightsTree(resourceAccessRights: string[]): AccessRig
 	return new AccessRight(
 		"*",
 		[
-			new AccessRight("*r", resourceAccessRights.map(r => new AccessRight(r))),
+			new AccessRight("resource:*", resourceAccessRights.map(r => new AccessRight(r))),
 			new AccessRight(
-				"*a",
+				"admin:*",
 				[
-					new AccessRight("*a:graph", [
-						new AccessRight("create_policy_class"),
-						new AccessRight("create_object"),
-						new AccessRight("create_object_attribute"),
-						new AccessRight("create_user_attribute"),
-						new AccessRight("create_user"),
-						new AccessRight("set_node_properties"),
-						new AccessRight("delete_policy_class"),
-						new AccessRight("delete_object"),
-						new AccessRight("delete_object_attribute"),
-						new AccessRight("delete_user_attribute"),
-						new AccessRight("delete_user"),
-						new AccessRight("delete_object_from"),
-						new AccessRight("delete_object_attribute_from"),
-						new AccessRight("delete_user_attribute_from"),
-						new AccessRight("delete_user_from"),
-						new AccessRight("assign"),
-						new AccessRight("assign_to"),
-						new AccessRight("deassign"),
-						new AccessRight("deassign_from"),
-						new AccessRight("associate"),
-						new AccessRight("associate_to"),
-						new AccessRight("dissociate"),
-						new AccessRight("dissociate_from"),
-					]),
-					new AccessRight("*a:prohibition", [
-						new AccessRight("create_prohibition"),
-						new AccessRight("create_process_prohibition"),
-						new AccessRight("create_prohibition_with_complement_container"),
-						new AccessRight("delete_process_prohibition"),
-						new AccessRight("delete_prohibition"),
-						new AccessRight("delete_prohibition_with_complement_container"),
-					]),
-					new AccessRight("*a:obligation", [
-						new AccessRight("create_obligation"),
-						new AccessRight("delete_obligation"),
-					]),
-					new AccessRight("*a:operation", [
-						new AccessRight("set_resource_access_rights"),
-						new AccessRight("create_operation"),
-						new AccessRight("delete_operation"),
-					]),
-					new AccessRight("reset"),
-					new AccessRight("serialize"),
-					new AccessRight("deserialize"),
-					new AccessRight("*q", [
-						new AccessRight("*q:graph", [
-							new AccessRight("query_policy_classes"),
-							new AccessRight("query_assignments"),
-							new AccessRight("query_subgraph"),
-							new AccessRight("query_associations"),
+					new AccessRight("admin:graph:*", [
+						new AccessRight("admin:graph:node:*", [
+							new AccessRight("admin:graph:node:create"),
+							new AccessRight("admin:graph:node:delete"),
+							new AccessRight("admin:graph:node:update"),
+							new AccessRight("admin:graph:node:pc:list"),
 						]),
-						new AccessRight("*q:prohibition", [
-							new AccessRight("query_prohibitions"),
-							new AccessRight("query_process_prohibitions"),
+						new AccessRight("admin:graph:assignment:*", [
+							new AccessRight("admin:graph:assignment:ascendant:create"),
+							new AccessRight("admin:graph:assignment:ascendant:delete"),
+							new AccessRight("admin:graph:assignment:descendant:create"),
+							new AccessRight("admin:graph:assignment:descendant:delete"),
+							new AccessRight("admin:graph:assignment:list"),
 						]),
-						new AccessRight("*q:obligation", [
-							new AccessRight("query_obligations"),
+						new AccessRight("admin:graph:association:*", [
+							new AccessRight("admin:graph:association:ua:create"),
+							new AccessRight("admin:graph:association:target:create"),
+							new AccessRight("admin:graph:association:ua:delete"),
+							new AccessRight("admin:graph:association:target:delete"),
+							new AccessRight("admin:graph:association:list"),
 						]),
-						new AccessRight("*q:operation", [
-							new AccessRight("query_resource_access_rights"),
-							new AccessRight("query_operations"),
-						]),
-						new AccessRight("query_access"),
+						new AccessRight("admin:graph:subgraph:list"),
 					]),
+					new AccessRight("admin:prohibition:*", [
+						new AccessRight("admin:prohibition:subject:create"),
+						new AccessRight("admin:prohibition:inclusion:create"),
+						new AccessRight("admin:prohibition:exclusion:create"),
+						new AccessRight("admin:prohibition:subject:delete"),
+						new AccessRight("admin:prohibition:inclusion:delete"),
+						new AccessRight("admin:prohibition:exclusion:delete"),
+						new AccessRight("admin:prohibition:list"),
+					]),
+					new AccessRight("admin:obligation:*", [
+						new AccessRight("admin:obligation:create"),
+						new AccessRight("admin:obligation:delete"),
+						new AccessRight("admin:obligation:list"),
+					]),
+					new AccessRight("admin:operation:*", [
+						new AccessRight("admin:operation:create"),
+						new AccessRight("admin:operation:delete"),
+						new AccessRight("admin:operation:list"),
+					]),
+					new AccessRight("admin:policy:*", [
+						new AccessRight("admin:policy:reset"),
+						new AccessRight("admin:policy:serialize"),
+						new AccessRight("admin:policy:deserialize"),
+					]),
+					new AccessRight("admin:policy:resource_access_rights:update"),
+					new AccessRight("admin:access:query"),
 				]
 			)
 		]
@@ -206,11 +190,11 @@ export function AccessRightsSelection({ selectedRights, onRightsChange, resource
 
 	// Extract admin and resource subtrees
 	const adminTree = useMemo(() => {
-		return accessRightTree.children?.find(c => c.ar === '*a') || null;
+		return accessRightTree.children?.find(c => c.ar === 'admin:*') || null;
 	}, [accessRightTree]);
 
 	const resourceTree = useMemo(() => {
-		return accessRightTree.children?.find(c => c.ar === '*r') || null;
+		return accessRightTree.children?.find(c => c.ar === 'resource:*') || null;
 	}, [accessRightTree]);
 
 	// Default expand all nodes

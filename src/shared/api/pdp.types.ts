@@ -34,11 +34,9 @@ export interface Prohibition {
     process?: string;
   };
   accessRights: string[];
-  intersection: boolean;
-  containerConditions: {
-    container?: PMNode;
-    complement: boolean;
-  }[];
+  isConjunctive: boolean;
+  inclusionSet: PMNode[];
+  exclusionSet: PMNode[];
 }
 
 export interface Obligation {

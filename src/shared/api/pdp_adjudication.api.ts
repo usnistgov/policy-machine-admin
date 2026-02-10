@@ -8,7 +8,8 @@ import {
   CreateObjectAttributeCmd,
   CreateObjectCmd,
   CreatePolicyClassCmd,
-  CreateProhibitionCmd,
+  CreateNodeProhibitionCmd,
+  CreateProcessProhibitionCmd,
   CreateUserAttributeCmd,
   CreateUserCmd,
   DeassignCmd,
@@ -22,6 +23,7 @@ import {
   DeleteOperationCmd,
   DeserializeCmd
 } from '@/generated/grpc/v1/cmd';
+import { NodeRefList } from '@/generated/grpc/v1/model';
 import { rpc, createNodeRef, argsToValueMap } from './pdp.utils';
 
 const adjudicationClient = new AdminAdjudicationServiceClientImpl(rpc);
@@ -245,23 +247,41 @@ export async function createProhibition(
   subjectNodeId: string | undefined,
   subjectProcess: string | undefined,
   accessRights: string[],
-  intersection: boolean,
-  containerConditions: Array<{ containerId: string; complement: boolean }>
+  isConjunctive: boolean,
+  inclusionSetIds: string[],
+  exclusionSetIds: string[]
 ): Promise<PdpAdjudication.AdjudicateRoutineResponse> {
-  const cmd = CreateProhibitionCmd.create({
-    name,
-    node: subjectNodeId ? createNodeRef(subjectNodeId) : undefined,
-    process: subjectProcess,
-    arset: accessRights,
-    intersection,
-    containerConditions: containerConditions.map(cc => ({
-      container: createNodeRef(cc.containerId),
-      complement: cc.complement
-    }))
+  const inclusionSet = NodeRefList.create({
+    nodes: inclusionSetIds.map(id => createNodeRef(id))
   });
-  const adminCmd = AdminOperationCommand.create({
-    createProhibitionCmd: cmd,
+  const exclusionSet = NodeRefList.create({
+    nodes: exclusionSetIds.map(id => createNodeRef(id))
   });
+
+  let adminCmd: AdminOperationCommand;
+
+  if (subjectProcess) {
+    const cmd = CreateProcessProhibitionCmd.create({
+      name,
+      node: subjectNodeId ? createNodeRef(subjectNodeId) : undefined,
+      process: subjectProcess,
+      arset: accessRights,
+      isConjunctive,
+      inclusionSet,
+      exclusionSet
+    });
+    adminCmd = AdminOperationCommand.create({ createProcessProhibitionCmd: cmd });
+  } else {
+    const cmd = CreateNodeProhibitionCmd.create({
+      name,
+      node: subjectNodeId ? createNodeRef(subjectNodeId) : undefined,
+      arset: accessRights,
+      isConjunctive,
+      inclusionSet,
+      exclusionSet
+    });
+    adminCmd = AdminOperationCommand.create({ createNodeProhibitionCmd: cmd });
+  }
 
   return adjudicateRoutine([adminCmd]);
 }

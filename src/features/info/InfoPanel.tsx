@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-	IconArrowBigRight,
-	IconArrowBigRightFilled,
-	IconArrowRightCircle,
 	IconPlus,
 	IconSquareRoundedMinus,
 	IconX
@@ -17,8 +14,6 @@ import { NODE_TYPES, NodePrivilegeInfo, NodeType } from "@/shared/api/pdp.types"
 import * as QueryService from "@/shared/api/pdp_query.api";
 import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { AssociationModal } from "./AssociationModal";
-import {AscendantIcon} from "@/components/icons/AscendantIcon";
-import {DescendantIcon} from "@/components/icons/DescendantIcon";
 
 // Helper function to transform NodePrivilegeInfo to TreeNode
 function transformNodePrivilegeInfoToTreeNodes(privileges: NodePrivilegeInfo[]): TreeNode[] {
@@ -367,12 +362,7 @@ export function InfoPanel(props: InfoPanelProps) {
 			handleEditAssociation(selectedNode);
 		}
 	}, [handleEditAssociation]);
-
-	/*const associationNodesForDirection = useMemo(
-		() => associationRootNodes.filter(node => node.associationDetails?.type === selectedAssociationDirection),
-		[associationRootNodes, selectedAssociationDirection]
-	);*/
-
+	
 	// Memoize tree props to prevent unnecessary re-renders
 	const associationTreeProps = useMemo(() => ({
 		direction: "ascendants" as const,
@@ -394,7 +384,7 @@ export function InfoPanel(props: InfoPanelProps) {
 	const showAssociationEmptyState = associationRootNodes.length === 0;
 
 	return (
-		<Stack gap="xs" style={{ padding: "20px 20px", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--mantine-color-gray-0)" }}>
+		<Stack gap="xs" style={{ padding: "10px 20px 20px 20px", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--mantine-color-gray-0)" }}>
 			{/* Compact Header - Icon spans both rows */}
 			<Group gap="sm" wrap="nowrap" justify="space-between">
 				<Group gap="sm" align="center" wrap="nowrap">
@@ -403,45 +393,6 @@ export function InfoPanel(props: InfoPanelProps) {
 						<Text fw={600} size="md" lh={1.2}>{props.rootNode.name}</Text>
 						<Text size="xs" c="dimmed">ID: {props.rootNode.pmId}</Text>
 					</Stack>
-					<Divider orientation="vertical" />
-					{props.rootNode.type !== "PC" && !isAssignmentMode && (
-						<Tooltip label="Assign To">
-							<Button
-								leftSection={<IconPlus size={18} />}
-								onClick={() => handleStartAssignment()}>
-								<DescendantIcon size="18px" />
-							</Button>
-						</Tooltip>
-					)}
-					{(() => {
-						const nodeType = props.rootNode.type;
-						const canHaveIncoming = nodeType === NodeType.O || nodeType === NodeType.OA || nodeType === NodeType.UA;
-						const canHaveOutgoing = nodeType === NodeType.UA;
-						return (
-							<>
-								{canHaveIncoming && (
-									<Tooltip label="Create INCOMING association">
-										<Button
-											color={theme.colors.green[9]}
-											leftSection={<IconPlus size="18px" color="currentColor" />}
-											onClick={() => handleStartAssociation(AssociationDirection.Incoming)}>
-											<IncomingAssociationIcon size="18px" color="currentColor" />
-										</Button>
-									</Tooltip>
-								)}
-								{canHaveOutgoing && (
-									<Tooltip label="Create OUTGOING association">
-									<Button
-										color={theme.colors.green[9]}
-										leftSection={<IconPlus size="18px" color="currentColor" />}
-										onClick={() => handleStartAssociation(AssociationDirection.Outgoing)}>
-										<OutgoingAssociationIcon size="18px" color="currentColor" />
-									</Button>
-									</Tooltip>
-								)}
-							</>
-						);
-					})()}
 				</Group>
 				{props.onClose && (
 					<ActionIcon
@@ -465,6 +416,15 @@ export function InfoPanel(props: InfoPanelProps) {
 							<>
 								<Group gap="xs" align="center" mb={8}>
 									<Text size="md" fw={600}>Descendants</Text>
+									{!isAssignmentMode && (
+										<Tooltip label="Assign To">
+											<ActionIcon
+												variant="filled"
+												onClick={() => handleStartAssignment()}>
+												<IconPlus size={40} />
+											</ActionIcon>
+										</Tooltip>
+									)}
 									<Button
 										size="xs"
 										leftSection={<IconX size={14} />}
@@ -475,7 +435,7 @@ export function InfoPanel(props: InfoPanelProps) {
 										Deassign
 									</Button>
 								</Group>
-								<Box style={{ flex: 1, backgroundColor: theme.other.intellijContentBg, border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+								<Box style={{ flex: 1, backgroundColor: theme.other.intellijContentBg, border: '1px solid var(--mantine-color-gray-3)', borderRadius: '4px', minHeight: 0, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 									<PMTree
 										key={`descendants-${descendantsNodes.length}-${descendantsNodes.map(n => n.id).join('-')}`}
 										direction="descendants"
@@ -564,13 +524,26 @@ export function InfoPanel(props: InfoPanelProps) {
 						<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
 							<Group gap="xs" align="center" mb={8}>
 								<Text size="md" fw={600}>Associations</Text>
-								<Button
-									size="xs"
-									leftSection={<IconX size={14} />}
-									color="red"
-									onClick={handleDeassignSelected}
-									style={{ visibility: 'hidden' }}
-								/>
+								{canHaveIncoming && (
+									<Tooltip label="Create INCOMING association">
+										<ActionIcon
+											variant="filled"
+											color={theme.colors.green[9]}
+											onClick={() => handleStartAssociation(AssociationDirection.Incoming)}>
+											<IncomingAssociationIcon size="20px" />
+										</ActionIcon>
+									</Tooltip>
+								)}
+								{canHaveOutgoing && (
+									<Tooltip label="Create OUTGOING association">
+										<ActionIcon
+											variant="filled"
+											color={theme.colors.green[9]}
+											onClick={() => handleStartAssociation(AssociationDirection.Outgoing)}>
+											<OutgoingAssociationIcon size="20px" />
+										</ActionIcon>
+									</Tooltip>
+								)}
 							</Group>
 							<Box
 								style={{

@@ -52,6 +52,7 @@ export function PMTreeToolbar({
         <Group
             gap="md"
             justify="space-between"
+            wrap="nowrap"
             style={{
                 borderBottom: '1px solid var(--mantine-color-gray-3)',
                 padding: '2px 8px',

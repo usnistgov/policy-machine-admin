@@ -225,9 +225,13 @@ export function getProhibitionCompletions(monaco: typeof import('monaco-editor')
     {
       label: 'create prohibition',
       kind: monaco.languages.CompletionItemKind.Function,
-      insertText: 'create prohibition "${1:name}"\ndeny UA "${2:subject}"\naccess rights ["${3:read}"]\non intersection of {$\{4:containers}}',
+      insertText: `create $\{1|conj,disj|} $\{2|node,process|} prohibition "$\{3:name}"
+deny "$\{4:subject}"
+arset [$\{5:"read"}]
+include [$\{6}]
+exclude [$\{7}]`,
       insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation: 'Create prohibition'
+      documentation: 'Create prohibition with inclusion/exclusion sets'
     },
   ];
 }
@@ -292,15 +296,22 @@ export function getLiteralCompletions(monaco: typeof import('monaco-editor')): B
   ];
 }
 
-// Completion items for @node annotation
+// Completion items for annotations
 export function getAnnotationCompletions(monaco: typeof import('monaco-editor')): BaseCompletionItem[] {
   return [
     {
-      label: 'node annotation',
+      label: '@node',
       kind: monaco.languages.CompletionItemKind.Property,
-      insertText: `@node("$\{2:reqcap}")`,
+      insertText: `@node("$\{1:reqcap}")`,
       insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation: 'Node argument annotation'
+    },
+    {
+      label: '@reqcap',
+      kind: monaco.languages.CompletionItemKind.Property,
+      insertText: `@reqcap({ $\{1:param}: ["$\{2:accessRight}"] })`,
+      insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+      documentation: 'Required capability annotation for operation parameters'
     },
   ];
 }

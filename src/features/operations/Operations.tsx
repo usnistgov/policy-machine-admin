@@ -20,6 +20,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconFunction, IconPlus, IconRefresh, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import { ParamType, Signature } from "@/shared/api/pdp.types";
+import { Param } from "@/generated/grpc/v1/pdp_query";
 import * as QueryService from "@/shared/api/pdp_query.api";
 import * as AdjudicationService from "@/shared/api/pdp_adjudication.api";
 import { PMLEditor } from "@/features/pml/PMLEditor";
@@ -73,6 +74,35 @@ function unwrapValue(value: any): any {
 
   // If no oneof field is set or recognized, return the value as-is
   return value;
+}
+
+// Helper function to extract param type from the oneof pattern
+function getParamType(param: Param): ParamType | undefined {
+  if (param.formalParam?.type) {
+    return param.formalParam.type;
+  }
+  // For nodeId/nodeName params, create synthetic type labels
+  if (param.nodeIdFormalParam) {
+    return { longType: {} };  // node IDs are longs
+  }
+  if (param.nodeIdListFormalParam) {
+    return { listType: { elementType: { longType: {} } } };
+  }
+  if (param.nodeNameFormalParam) {
+    return { stringType: {} };  // node names are strings
+  }
+  if (param.nodeNameListFormalParam) {
+    return { listType: { elementType: { stringType: {} } } };
+  }
+  return undefined;
+}
+
+function getParamKindLabel(param: Param): string {
+  if (param.nodeIdFormalParam) return "Node ID";
+  if (param.nodeIdListFormalParam) return "Node ID List";
+  if (param.nodeNameFormalParam) return "Node Name";
+  if (param.nodeNameListFormalParam) return "Node Name List";
+  return formatParamTypeLabel(param.formalParam?.type);
 }
 
 interface OperationsProps {
@@ -353,7 +383,7 @@ function OperationDetails({ signature, mode, getOperationTypeLabel, onDelete }: 
   useEffect(() => {
     const nextValues: Record<string, any> = {};
     for (const param of signature.params ?? []) {
-      nextValues[param.name] = createDefaultValueForParamType(param.type);
+      nextValues[param.name] = createDefaultValueForParamType(getParamType(param));
     }
     setFormValues(nextValues);
     setReturnValue(null); // Clear return value when signature changes
@@ -380,7 +410,7 @@ function OperationDetails({ signature, mode, getOperationTypeLabel, onDelete }: 
     for (const param of signature.params ?? []) {
       const conversion = convertValueForSubmission(
           param.name,
-          param.type,
+          getParamType(param),
           formValues[param.name],
       );
       if (conversion.error) {
@@ -466,8 +496,7 @@ function OperationDetails({ signature, mode, getOperationTypeLabel, onDelete }: 
                 <Stack gap="md" style={{padding: '4px'}}>
                   {signature.params?.map((param, index) => {
                     const displayName = param.name && param.name.length > 0 ? param.name : `Parameter ${index + 1}`;
-                    const typeLabel = formatParamTypeLabel(param.type ?? undefined);
-                    const hasReqCaps = param.reqCaps && param.reqCaps.values && param.reqCaps.values.length > 0;
+                    const typeLabel = getParamKindLabel(param);
                     return (
                         <Box
                             key={param.name || `param-${index}`}
@@ -479,14 +508,9 @@ function OperationDetails({ signature, mode, getOperationTypeLabel, onDelete }: 
                           <Text fw={600} size="sm" mb={4}>
                             {displayName} | {typeLabel}
                           </Text>
-                          {hasReqCaps && (
-                              <Text size="xs" c="blue" fw={500} mb="xs">
-                                Required Capabilities: {param.reqCaps!.values.join(', ')}
-                              </Text>
-                          )}
                           <ParamField
                               name=""
-                              type={param.type}
+                              type={getParamType(param)}
                               value={formValues[param.name]}
                               onChange={(value) => handleParamChange(param.name, value)}
                           />

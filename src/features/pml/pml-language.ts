@@ -9,7 +9,7 @@ export const PML_KEYWORDS = {
   definitions: ['adminop', 'resourceop', 'routine', 'function', 'query'],
 
   // Node argument annotation
-  annotations: ['@node'],
+  annotations: ['@node', '@reqcap'],
 
   // Node types
   nodeTypes: ['node', 'PC', 'OA', 'UA', 'U', 'O', 'pc', 'oa', 'ua', 'u', 'o'],
@@ -45,7 +45,11 @@ export const PML_KEYWORDS = {
   association: ['associate', 'and', 'with', 'dissociate'],
 
   // Prohibition/deny
-  prohibition: ['deny', 'prohibition'],
+  prohibition: [
+    'deny', 'prohibition', 'arset',
+    'disjunctive', 'disj', 'conjunctive', 'conj',
+    'inclusion', 'include', 'exclusion', 'exclude'
+  ],
 
   // User keyword
   user: ['user'],
@@ -133,8 +137,9 @@ export const PML_MONARCH_LANGUAGE: monaco.languages.IMonarchLanguage = {
       [/\bany user\b/, 'keyword.compound'],
       [/\bany operation\b/, 'keyword.compound'],
 
-      // Node argument annotation (use @@ to match literal @)
+      // Annotations (use @@ to match literal @)
       [/@@node/, 'annotation'],
+      [/@@reqcap/, 'annotation'],
 
       // Operation definition keywords
       [/\b(adminop|resourceop|routine|function|query)\b/, 'keyword.declaration'],
@@ -156,6 +161,10 @@ export const PML_MONARCH_LANGUAGE: monaco.languages.IMonarchLanguage = {
 
       // Set operations
       [/\b(intersection|inter|union)\b/, 'keyword.setop'],
+
+      // Prohibition keywords
+      [/\b(conj|conjunctive|disj|disjunctive)\b/, 'keyword.prohibition'],
+      [/\b(include|inclusion|exclude|exclusion|arset)\b/, 'keyword.prohibition'],
 
       // Deny keyword
       [/\bdeny\b/, 'keyword.deny'],
@@ -256,6 +265,7 @@ export const PML_THEME: monaco.editor.IStandaloneThemeData = {
     { token: 'keyword.check', foreground: 'D35400', fontStyle: 'bold' },
     { token: 'keyword.setop', foreground: '8E44AD' },
     { token: 'keyword.deny', foreground: 'C0392B', fontStyle: 'bold' },
+    { token: 'keyword.prohibition', foreground: 'C0392B' },
     { token: 'keyword', foreground: '0066CC' },
 
     // Node type keywords with specific colors matching getTypeColor

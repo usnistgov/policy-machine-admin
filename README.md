@@ -55,3 +55,11 @@ Admin UI for managing NGAC policies. Uses gRPC-Web with Envoy proxy.
 ## gRPC Backend
 
 Envoy forwards requests to `host.docker.internal:9090`. Update `grpc-proxy/envoy.yaml` to point to your Policy Machine gRPC server.
+
+## Update Protocol Buffers
+```
+git submodule update --remote --merge protos
+git add protos
+git commit -m "Update protos submodule"
+git push
+```
